@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: upvista-community-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: backend
+    envVars:
+      - key: GIN_MODE
+        value: release
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
+    autoDeploy: true
