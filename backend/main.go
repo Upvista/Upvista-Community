@@ -1,20 +1,60 @@
 package main
 
 import (
+	"log"
 	"net/http"
-	"os"
+	"time"
 
+	"upvista-community-backend/internal/auth"
+	"upvista-community-backend/internal/config"
+	"upvista-community-backend/internal/repository"
+	"upvista-community-backend/internal/utils"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Set Gin mode based on environment
-	if os.Getenv("GIN_MODE") == "release" {
+	// Load configuration
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// Set Gin mode based on configuration
+	if cfg.Server.GinMode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Create a Gin router with default middleware
+	// Initialize repository (provider selected via env)
+	userRepo, err := repository.NewUserRepository(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize repository: %v", err)
+	}
+
+	// Initialize services
+	emailSvc := utils.NewEmailService(&cfg.Email)
+	jwtSvc := utils.NewJWTService(cfg.JWT.Secret, 15*time.Minute)
+
+	// Initialize authentication service
+	authSvc := auth.NewAuthService(userRepo, emailSvc, jwtSvc)
+
+	// Initialize handlers
+	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc)
+
+	// Create Gin router with middleware
 	r := gin.Default()
+
+	// CORS middleware
+	corsConfig := cors.Config{
+		AllowOrigins:     cfg.GetCORSOrigins(),
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
+	r.Use(cors.New(corsConfig))
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -28,7 +68,7 @@ func main() {
 	// Welcome endpoint
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Welcome to Upvista's Community Backend API",
+			"message": "Welcome to UpVista Community Backend API",
 			"service": "upvista-community-backend",
 			"version": "1.0.0",
 		})
@@ -43,14 +83,14 @@ func main() {
 				"api":    "v1",
 			})
 		})
-	}
 
-	// Get port from environment variable or default to 8080
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+		// Setup authentication routes
+		authHandlers.SetupRoutes(api)
 	}
 
 	// Start server
-	r.Run(":" + port)
+	log.Printf("Starting server on port %s", cfg.Server.Port)
+	if err := r.Run(":" + cfg.Server.Port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
