@@ -124,6 +124,23 @@ func (r *SupabaseUserRepository) CreateUser(ctx context.Context, user *models.Us
 		userData["last_login_at"] = user.LastLoginAt.Format("2006-01-02T15:04:05.999999999Z07:00")
 	}
 
+	// Add OAuth fields if they exist
+	if user.GoogleID != nil {
+		userData["google_id"] = *user.GoogleID
+	}
+	if user.GitHubID != nil {
+		userData["github_id"] = *user.GitHubID
+	}
+	if user.LinkedInID != nil {
+		userData["linkedin_id"] = *user.LinkedInID
+	}
+	if user.OAuthProvider != nil {
+		userData["oauth_provider"] = *user.OAuthProvider
+	}
+	if user.ProfilePicture != nil {
+		userData["profile_picture"] = *user.ProfilePicture
+	}
+
 	body, err := json.Marshal(userData)
 	if err != nil {
 		log.Printf("[Supabase] CreateUser marshal error: %v", err)
@@ -219,6 +236,23 @@ func (r *SupabaseUserRepository) fetchOne(ctx context.Context, q url.Values) (*m
 		user.IsActive = isActive
 	}
 
+	// Parse OAuth fields
+	if googleID, ok := rawUser["google_id"].(string); ok && googleID != "" {
+		user.GoogleID = &googleID
+	}
+	if githubID, ok := rawUser["github_id"].(string); ok && githubID != "" {
+		user.GitHubID = &githubID
+	}
+	if linkedinID, ok := rawUser["linkedin_id"].(string); ok && linkedinID != "" {
+		user.LinkedInID = &linkedinID
+	}
+	if oauthProvider, ok := rawUser["oauth_provider"].(string); ok && oauthProvider != "" {
+		user.OAuthProvider = &oauthProvider
+	}
+	if profilePicture, ok := rawUser["profile_picture"].(string); ok && profilePicture != "" {
+		user.ProfilePicture = &profilePicture
+	}
+
 	// Parse timestamps with flexible format
 	if createdAtStr, ok := rawUser["created_at"].(string); ok {
 		if t := parseFlexibleTime(createdAtStr); !t.IsZero() {
@@ -266,6 +300,24 @@ func (r *SupabaseUserRepository) GetUserByUsername(ctx context.Context, username
 func (r *SupabaseUserRepository) GetUserByEmailOrUsername(ctx context.Context, emailOrUsername string) (*models.User, error) {
 	q := url.Values{}
 	q.Set("or", fmt.Sprintf("(email.eq.%s,username.eq.%s)", emailOrUsername, emailOrUsername))
+	return r.fetchOne(ctx, q)
+}
+
+func (r *SupabaseUserRepository) GetUserByGoogleID(ctx context.Context, googleID string) (*models.User, error) {
+	q := url.Values{}
+	q.Set("google_id", "eq."+googleID)
+	return r.fetchOne(ctx, q)
+}
+
+func (r *SupabaseUserRepository) GetUserByGitHubID(ctx context.Context, githubID string) (*models.User, error) {
+	q := url.Values{}
+	q.Set("github_id", "eq."+githubID)
+	return r.fetchOne(ctx, q)
+}
+
+func (r *SupabaseUserRepository) GetUserByLinkedInID(ctx context.Context, linkedinID string) (*models.User, error) {
+	q := url.Values{}
+	q.Set("linkedin_id", "eq."+linkedinID)
 	return r.fetchOne(ctx, q)
 }
 

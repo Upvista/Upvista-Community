@@ -16,6 +16,9 @@ type Config struct {
 	Email     EmailConfig     `mapstructure:"email"`
 	Server    ServerConfig    `mapstructure:"server"`
 	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+	Google    GoogleConfig    `mapstructure:"google"`
+	GitHub    GitHubConfig    `mapstructure:"github"`
+	LinkedIn  LinkedInConfig  `mapstructure:"linkedin"`
 }
 
 type DatabaseConfig struct {
@@ -52,6 +55,24 @@ type RateLimitConfig struct {
 	Reset       int    `mapstructure:"reset"`
 	Window      string `mapstructure:"window"`
 	Forgiveness int    `mapstructure:"forgiveness"`
+}
+
+type GoogleConfig struct {
+	ClientID     string `mapstructure:"client_id"`
+	ClientSecret string `mapstructure:"client_secret"`
+	RedirectURL  string `mapstructure:"redirect_url"`
+}
+
+type GitHubConfig struct {
+	ClientID     string `mapstructure:"client_id"`
+	ClientSecret string `mapstructure:"client_secret"`
+	RedirectURL  string `mapstructure:"redirect_url"`
+}
+
+type LinkedInConfig struct {
+	ClientID     string `mapstructure:"client_id"`
+	ClientSecret string `mapstructure:"client_secret"`
+	RedirectURL  string `mapstructure:"redirect_url"`
 }
 
 // LoadConfig loads configuration from environment variables and .env file
@@ -99,6 +120,15 @@ func LoadConfig() (*Config, error) {
 	viper.BindEnv("rate_limit.reset", "RATE_LIMIT_RESET")
 	viper.BindEnv("rate_limit.window", "RATE_LIMIT_WINDOW")
 	viper.BindEnv("rate_limit.forgiveness", "RATE_LIMIT_FORGIVENESS")
+	viper.BindEnv("google.client_id", "GOOGLE_CLIENT_ID")
+	viper.BindEnv("google.client_secret", "GOOGLE_CLIENT_SECRET")
+	viper.BindEnv("google.redirect_url", "GOOGLE_REDIRECT_URL")
+	viper.BindEnv("github.client_id", "GITHUB_CLIENT_ID")
+	viper.BindEnv("github.client_secret", "GITHUB_CLIENT_SECRET")
+	viper.BindEnv("github.redirect_url", "GITHUB_REDIRECT_URL")
+	viper.BindEnv("linkedin.client_id", "LINKEDIN_CLIENT_ID")
+	viper.BindEnv("linkedin.client_secret", "LINKEDIN_CLIENT_SECRET")
+	viper.BindEnv("linkedin.redirect_url", "LINKEDIN_REDIRECT_URL")
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {

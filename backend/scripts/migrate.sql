@@ -63,11 +63,6 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own profile" ON users;
 DROP POLICY IF EXISTS "Users can update own profile" ON users;
 DROP POLICY IF EXISTS "Allow public registration" ON users;
-DROP POLICY IF EXISTS "Service role full access" ON users;
-
--- Policy: Service role (backend) has full access (bypasses RLS)
-CREATE POLICY "Service role full access" ON users
-    FOR ALL USING (auth.jwt()->>'role' = 'service_role');
 
 -- Policy: Users can view their own data
 CREATE POLICY "Users can view own profile" ON users
@@ -109,20 +104,6 @@ CREATE TRIGGER update_users_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- Insert a test user (optional - remove in production)
--- Password: "password123" (hashed with bcrypt)
-INSERT INTO users (
-    id, email, username, password_hash, display_name, age, is_email_verified
-) VALUES (
-    uuid_generate_v4(),
-    'test@example.com',
-    'testuser',
-    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/8Kz8Kz2', -- password123
-    'Test User',
-    25,
-    true
-) ON CONFLICT (email) DO NOTHING;
-
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
@@ -138,3 +119,16 @@ BEGIN
     RAISE NOTICE 'Row Level Security policies configured';
     RAISE NOTICE 'Test user created: test@example.com / password123';
 END $$;
+
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE,
+ADD COLUMN IF NOT EXISTS github_id VARCHAR(255) UNIQUE,
+ADD COLUMN IF NOT EXISTS linkedin_id VARCHAR(255) UNIQUE,
+ADD COLUMN IF NOT EXISTS oauth_provider VARCHAR(50),
+ADD COLUMN IF NOT EXISTS profile_picture TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id);
+CREATE INDEX IF NOT EXISTS idx_users_linkedin_id ON users(linkedin_id);

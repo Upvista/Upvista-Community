@@ -20,6 +20,9 @@ type UserRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 	GetUserByEmailOrUsername(ctx context.Context, emailOrUsername string) (*models.User, error)
+	GetUserByGoogleID(ctx context.Context, googleID string) (*models.User, error)
+	GetUserByGitHubID(ctx context.Context, githubID string) (*models.User, error)
+	GetUserByLinkedInID(ctx context.Context, linkedinID string) (*models.User, error)
 	UpdateUser(ctx context.Context, user *models.User) error
 	UpdateEmailVerification(ctx context.Context, email, code string, expiresAt time.Time) error
 	VerifyEmail(ctx context.Context, email, code string) error

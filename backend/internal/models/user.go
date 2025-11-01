@@ -20,6 +20,11 @@ type User struct {
 	EmailVerificationExpiresAt *time.Time `json:"-" db:"email_verification_expires_at"`
 	PasswordResetToken         *string    `json:"-" db:"password_reset_token"`
 	PasswordResetExpiresAt     *time.Time `json:"-" db:"password_reset_expires_at"`
+	GoogleID                   *string    `json:"-" db:"google_id"`
+	GitHubID                   *string    `json:"-" db:"github_id"`
+	LinkedInID                 *string    `json:"-" db:"linkedin_id"`
+	OAuthProvider              *string    `json:"oauth_provider,omitempty" db:"oauth_provider"`
+	ProfilePicture             *string    `json:"profile_picture,omitempty" db:"profile_picture"`
 	IsActive                   bool       `json:"is_active" db:"is_active"`
 	LastLoginAt                *time.Time `json:"last_login_at" db:"last_login_at"`
 	CreatedAt                  time.Time  `json:"created_at" db:"created_at"`
@@ -122,6 +127,8 @@ func (u *User) ToSafeUser() *User {
 		DisplayName:     u.DisplayName,
 		Age:             u.Age,
 		IsEmailVerified: u.IsEmailVerified,
+		OAuthProvider:   u.OAuthProvider,
+		ProfilePicture:  u.ProfilePicture,
 		IsActive:        u.IsActive,
 		LastLoginAt:     u.LastLoginAt,
 		CreatedAt:       u.CreatedAt,

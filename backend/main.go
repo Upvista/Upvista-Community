@@ -48,8 +48,13 @@ func main() {
 	// Initialize authentication service
 	authSvc := auth.NewAuthService(userRepo, emailSvc, jwtSvc, tokenBlacklist)
 
+	// Initialize OAuth services
+	googleOAuth := auth.NewGoogleOAuthService(&cfg.Google, userRepo, jwtSvc)
+	githubOAuth := auth.NewGitHubOAuthService(&cfg.GitHub, userRepo, jwtSvc)
+	linkedinOAuth := auth.NewLinkedInOAuthService(&cfg.LinkedIn, userRepo, jwtSvc)
+
 	// Initialize handlers
-	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc, rateLimiter, cfg)
+	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc, rateLimiter, cfg, googleOAuth, githubOAuth, linkedinOAuth)
 
 	// Create Gin router with middleware
 	r := gin.Default()
