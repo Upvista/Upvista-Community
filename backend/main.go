@@ -36,11 +36,20 @@ func main() {
 	emailSvc := utils.NewEmailService(&cfg.Email)
 	jwtSvc := utils.NewJWTService(cfg.JWT.Secret, 15*time.Minute)
 
+	// Initialize rate limiter with forgiveness
+	rateLimiter := utils.NewRateLimiter(cfg.RateLimit.Forgiveness)
+
+	// Initialize token blacklist for logout functionality
+	tokenBlacklist := utils.NewTokenBlacklist()
+
+	// Set blacklist on JWT service for token validation
+	jwtSvc.SetBlacklist(tokenBlacklist)
+
 	// Initialize authentication service
-	authSvc := auth.NewAuthService(userRepo, emailSvc, jwtSvc)
+	authSvc := auth.NewAuthService(userRepo, emailSvc, jwtSvc, tokenBlacklist)
 
 	// Initialize handlers
-	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc)
+	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc, rateLimiter, cfg)
 
 	// Create Gin router with middleware
 	r := gin.Default()
@@ -81,6 +90,25 @@ func main() {
 			c.JSON(http.StatusOK, gin.H{
 				"status": "running",
 				"api":    "v1",
+			})
+		})
+
+		// Test Supabase connectivity endpoint
+		api.GET("/test-db", func(c *gin.Context) {
+			log.Println("[Test] Testing Supabase connection...")
+			emailExists, err := userRepo.CheckEmailExists(c.Request.Context(), "test@example.com")
+			if err != nil {
+				log.Printf("[Test] Database error: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"success": false,
+					"error":   err.Error(),
+				})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success":     true,
+				"message":     "Database connection successful",
+				"emailExists": emailExists,
 			})
 		})
 

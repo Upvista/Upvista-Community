@@ -47,10 +47,11 @@ type ServerConfig struct {
 }
 
 type RateLimitConfig struct {
-	Login    int    `mapstructure:"login"`
-	Register int    `mapstructure:"register"`
-	Reset    int    `mapstructure:"reset"`
-	Window   string `mapstructure:"window"`
+	Login       int    `mapstructure:"login"`
+	Register    int    `mapstructure:"register"`
+	Reset       int    `mapstructure:"reset"`
+	Window      string `mapstructure:"window"`
+	Forgiveness int    `mapstructure:"forgiveness"`
 }
 
 // LoadConfig loads configuration from environment variables and .env file
@@ -71,6 +72,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("rate_limit.register", 3)
 	viper.SetDefault("rate_limit.reset", 3)
 	viper.SetDefault("rate_limit.window", "1m")
+	viper.SetDefault("rate_limit.forgiveness", 2)
 
 	// Set environment variable prefix
 	viper.SetEnvPrefix("")
@@ -96,6 +98,7 @@ func LoadConfig() (*Config, error) {
 	viper.BindEnv("rate_limit.register", "RATE_LIMIT_REGISTER")
 	viper.BindEnv("rate_limit.reset", "RATE_LIMIT_RESET")
 	viper.BindEnv("rate_limit.window", "RATE_LIMIT_WINDOW")
+	viper.BindEnv("rate_limit.forgiveness", "RATE_LIMIT_FORGIVENESS")
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {

@@ -85,5 +85,16 @@ func GetAppError(err error) *AppError {
 	if appErr, ok := err.(*AppError); ok {
 		return appErr
 	}
-	return ErrInternalServer
+	// If it's a wrapped error, try to extract the underlying AppError
+	if unwrapped, ok := err.(interface{ Unwrap() error }); ok {
+		if appErr, ok := unwrapped.Unwrap().(*AppError); ok {
+			return appErr
+		}
+	}
+	// Return error with details from the error message
+	return &AppError{
+		Code:    http.StatusInternalServerError,
+		Message: "Internal server error",
+		Details: err.Error(),
+	}
 }

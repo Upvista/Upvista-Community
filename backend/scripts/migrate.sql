@@ -59,6 +59,16 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
 -- Enable RLS on users table
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Users can view own profile" ON users;
+DROP POLICY IF EXISTS "Users can update own profile" ON users;
+DROP POLICY IF EXISTS "Allow public registration" ON users;
+DROP POLICY IF EXISTS "Service role full access" ON users;
+
+-- Policy: Service role (backend) has full access (bypasses RLS)
+CREATE POLICY "Service role full access" ON users
+    FOR ALL USING (auth.jwt()->>'role' = 'service_role');
+
 -- Policy: Users can view their own data
 CREATE POLICY "Users can view own profile" ON users
     FOR SELECT USING (auth.uid() = id);
@@ -74,6 +84,9 @@ CREATE POLICY "Allow public registration" ON users
 -- Enable RLS on user_sessions table
 ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policy if it exists (for idempotency)
+DROP POLICY IF EXISTS "Users can access own sessions" ON user_sessions;
+
 -- Policy: Users can only access their own sessions
 CREATE POLICY "Users can access own sessions" ON user_sessions
     FOR ALL USING (auth.uid() = user_id);
@@ -86,6 +99,9 @@ BEGIN
     RETURN NEW;
 END;
 $$ language 'plpgsql';
+
+-- Drop existing trigger if it exists (for idempotency)
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 
 -- Create trigger to automatically update updated_at
 CREATE TRIGGER update_users_updated_at 

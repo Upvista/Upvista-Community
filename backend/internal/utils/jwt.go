@@ -14,6 +14,7 @@ import (
 type JWTService struct {
 	secretKey []byte
 	expiry    time.Duration
+	blacklist *TokenBlacklist // Optional token blacklist
 }
 
 // NewJWTService creates a new JWT service
@@ -22,6 +23,11 @@ func NewJWTService(secretKey string, expiry time.Duration) *JWTService {
 		secretKey: []byte(secretKey),
 		expiry:    expiry,
 	}
+}
+
+// SetBlacklist sets the token blacklist for the JWT service
+func (j *JWTService) SetBlacklist(blacklist *TokenBlacklist) {
+	j.blacklist = blacklist
 }
 
 // GenerateToken generates a JWT token for a user
@@ -48,6 +54,11 @@ func (j *JWTService) GenerateToken(user *models.User) (string, error) {
 
 // ValidateToken validates a JWT token and returns the claims
 func (j *JWTService) ValidateToken(tokenString string) (*models.JWTClaims, error) {
+	// Check if token is blacklisted (before parsing to save resources)
+	if j.blacklist != nil && j.blacklist.IsBlacklisted(tokenString) {
+		return nil, errors.New("token has been revoked")
+	}
+
 	token, err := jwt.ParseWithClaims(tokenString, &models.JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// Verify the signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

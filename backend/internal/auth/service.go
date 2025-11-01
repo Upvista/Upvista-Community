@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
+	"log"
 	"time"
 
 	"upvista-community-backend/internal/models"
@@ -17,9 +17,10 @@ import (
 
 // AuthService handles authentication business logic
 type AuthService struct {
-	userRepo repository.UserRepository
-	emailSvc *utils.EmailService
-	jwtSvc   *utils.JWTService
+	userRepo  repository.UserRepository
+	emailSvc  *utils.EmailService
+	jwtSvc    *utils.JWTService
+	blacklist *utils.TokenBlacklist
 }
 
 // NewAuthService creates a new authentication service
@@ -27,11 +28,13 @@ func NewAuthService(
 	userRepo repository.UserRepository,
 	emailSvc *utils.EmailService,
 	jwtSvc *utils.JWTService,
+	blacklist *utils.TokenBlacklist,
 ) *AuthService {
 	return &AuthService{
-		userRepo: userRepo,
-		emailSvc: emailSvc,
-		jwtSvc:   jwtSvc,
+		userRepo:  userRepo,
+		emailSvc:  emailSvc,
+		jwtSvc:    jwtSvc,
+		blacklist: blacklist,
 	}
 }
 
@@ -49,20 +52,20 @@ func (s *AuthService) RegisterUser(ctx context.Context, req *models.RegisterRequ
 	// Check if email already exists
 	emailExists, err := s.userRepo.CheckEmailExists(ctx, email)
 	if err != nil {
-		return nil, errors.ErrDatabaseError
+		return nil, err
 	}
 	if emailExists {
 		return nil, errors.ErrEmailAlreadyExists
 	}
 
 	// Check if username already exists
-	usernameExists, err := s.userRepo.CheckUsernameExists(ctx, username)
-	if err != nil {
-		return nil, errors.ErrDatabaseError
-	}
-	if usernameExists {
-		return nil, errors.ErrUsernameExists
-	}
+	// usernameExists, err := s.userRepo.CheckUsernameExists(ctx, username)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if usernameExists {
+	// 	return nil, errors.ErrUsernameExists
+	// }
 
 	// Hash password
 	passwordHash, err := utils.HashPassword(req.Password)
@@ -92,13 +95,13 @@ func (s *AuthService) RegisterUser(ctx context.Context, req *models.RegisterRequ
 
 	// Save user to database
 	if err := s.userRepo.CreateUser(ctx, user); err != nil {
-		return nil, errors.ErrDatabaseError
+		return nil, err
 	}
 
 	// Send verification email
 	if err := s.emailSvc.SendVerificationEmail(email, verificationCode); err != nil {
 		// Log error but don't fail registration
-		fmt.Printf("Failed to send verification email: %v\n", err)
+		log.Printf("[AuthService] Failed to send verification email: %v", err)
 	}
 
 	return &models.AuthResponse{
@@ -132,6 +135,7 @@ func (s *AuthService) VerifyEmail(ctx context.Context, req *models.VerifyEmailRe
 	// Generate JWT token
 	token, err := s.jwtSvc.GenerateToken(user)
 	if err != nil {
+		log.Printf("[AuthService] VerifyEmail - Token generation failed: %v", err)
 		return nil, errors.ErrInternalServer
 	}
 
@@ -236,7 +240,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, req *models.ForgotPass
 	// Send reset email
 	if err := s.emailSvc.SendPasswordResetEmail(email, resetToken); err != nil {
 		// Log error but don't fail the request
-		fmt.Printf("Failed to send password reset email: %v\n", err)
+		log.Printf("[AuthService] Failed to send password reset email: %v", err)
 	}
 
 	return &models.MessageResponse{
@@ -309,12 +313,24 @@ func (s *AuthService) RefreshToken(ctx context.Context, userID uuid.UUID) (*mode
 	}, nil
 }
 
-// LogoutUser handles user logout (optional implementation)
-func (s *AuthService) LogoutUser(ctx context.Context, userID uuid.UUID) (*models.MessageResponse, error) {
-	// For JWT-based auth, logout is typically handled client-side
-	// by removing the token. Server-side logout would require
-	// maintaining a blacklist of tokens, which we're not implementing
-	// in this basic version.
+// LogoutUser handles user logout by blacklisting the token
+func (s *AuthService) LogoutUser(ctx context.Context, userID uuid.UUID, token string) (*models.MessageResponse, error) {
+	// Validate the token first to get expiry
+	claims, err := s.jwtSvc.ValidateToken(token)
+	if err != nil {
+		// Even if token is invalid/expired, we return success
+		// to prevent token enumeration attacks
+		return &models.MessageResponse{
+			Success: true,
+			Message: "Logged out successfully",
+		}, nil
+	}
+
+	// Add token to blacklist until it expires
+	// The blacklist service will automatically clean it up
+	if s.blacklist != nil {
+		s.blacklist.Add(token, claims.ExpiresAt.Time)
+	}
 
 	return &models.MessageResponse{
 		Success: true,
