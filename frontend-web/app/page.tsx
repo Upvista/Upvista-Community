@@ -1,16 +1,38 @@
-export default function Home() {
+'use client';
+
+/**
+ * Landing/Root Page
+ * Created by: Hamza Hafeez - Founder & CEO of Upvista
+ * 
+ * Redirects to /home if authenticated, otherwise to /auth
+ */
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function RootPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      // User is logged in, redirect to home
+      router.push('/home');
+    } else {
+      // User is not logged in, redirect to auth
+      router.push('/auth');
+    }
+  }, [router]);
+
+  // Show loading state while redirecting
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-4xl flex-col items-center justify-center py-32 px-16 bg-white dark:bg-black">
-        <div className="flex flex-col items-center gap-8 text-center">
-          <h1 className="text-5xl font-bold leading-tight tracking-tight text-black dark:text-zinc-50">
-            Welcome to Upvista's Community Web Application (frontend-web) made with NEXT.js
-          </h1>
-          <p className="max-w-2xl text-xl leading-8 text-zinc-600 dark:text-zinc-400">
-            Join our vibrant community platform where ideas flourish, connections grow, and innovation thrives.
-          </p>
-        </div>
-      </main>
+    <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
+      <div className="text-center">
+        <img src="/assets/u.png" alt="Upvista" className="w-20 h-20 mx-auto mb-4 animate-pulse" />
+        <p className="text-neutral-600 dark:text-neutral-400">Loading...</p>
+      </div>
     </div>
   );
 }

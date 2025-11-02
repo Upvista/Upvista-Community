@@ -246,6 +246,20 @@ func (r *SupabaseUserRepository) fetchOne(ctx context.Context, q url.Values) (*m
 	if linkedinID, ok := rawUser["linkedin_id"].(string); ok && linkedinID != "" {
 		user.LinkedInID = &linkedinID
 	}
+
+	// Parse pending email change fields
+	if pendingEmail, ok := rawUser["pending_email"].(string); ok && pendingEmail != "" {
+		user.PendingEmail = &pendingEmail
+	}
+	if pendingEmailCode, ok := rawUser["pending_email_code"].(string); ok && pendingEmailCode != "" {
+		user.PendingEmailCode = &pendingEmailCode
+	}
+	if pendingEmailExpiresAtStr, ok := rawUser["pending_email_expires_at"].(string); ok && pendingEmailExpiresAtStr != "" {
+		t := parseFlexibleTime(pendingEmailExpiresAtStr)
+		if !t.IsZero() {
+			user.PendingEmailExpiresAt = &t
+		}
+	}
 	if oauthProvider, ok := rawUser["oauth_provider"].(string); ok && oauthProvider != "" {
 		user.OAuthProvider = &oauthProvider
 	}

@@ -69,7 +69,7 @@ export default function AuthPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/v1/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ export default function AuthPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/${provider}/login`);
+      const response = await fetch(`${API_BASE_URL}/v1/auth/${provider}/login`);
       const data = await response.json();
 
       if (data.success && data.auth_url) {
@@ -144,7 +144,7 @@ export default function AuthPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/v1/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

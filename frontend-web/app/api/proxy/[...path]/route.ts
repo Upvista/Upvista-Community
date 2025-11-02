@@ -36,6 +36,14 @@ export async function PUT(
   return proxyRequest(request, path, 'PUT');
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await params;
+  return proxyRequest(request, path, 'PATCH');
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
@@ -53,16 +61,32 @@ async function proxyRequest(
     const path = pathSegments.join('/');
     const url = new URL(request.url);
     const queryString = url.searchParams.toString();
-    const backendUrl = `${BACKEND_URL}/${path}${queryString ? `?${queryString}` : ''}`;
+    
+    // Add /api prefix since backend routes are under /api/v1/...
+    const backendUrl = `${BACKEND_URL}/api/${path}${queryString ? `?${queryString}` : ''}`;
+    
+    // Check content type to determine how to handle the body
+    const contentType = request.headers.get('content-type');
+    const isFormData = contentType?.includes('multipart/form-data');
 
     console.log(`[Proxy] ${method} ${backendUrl}`);
+    console.log(`[Proxy] Path segments:`, pathSegments);
+    console.log(`[Proxy] Content-Type:`, contentType);
+    console.log(`[Proxy] Is FormData:`, isFormData);
     console.log(`[Proxy] Using BACKEND_URL: ${BACKEND_URL}`);
 
-    // Get request body if present
-    let body = null;
+    // Get request body if present (for POST, PUT, PATCH)
+    let body: any = null;
+    
     if (method !== 'GET' && method !== 'DELETE') {
       try {
-        body = await request.text();
+        if (isFormData) {
+          // For file uploads, pass FormData as-is
+          body = await request.formData();
+        } else {
+          // For JSON requests, get text
+          body = await request.text();
+        }
       } catch (e) {
         // No body
       }
@@ -72,8 +96,8 @@ async function proxyRequest(
     // Since this is a server-to-server request, we don't want to forward Origin, Referer, etc.
     const headers: HeadersInit = {};
     
-    // Only set Content-Type for requests with body
-    if (method !== 'GET' && method !== 'DELETE' && body) {
+    // Only set Content-Type for JSON requests (NOT for FormData - fetch will set it automatically with boundary)
+    if (method !== 'GET' && method !== 'DELETE' && body && !isFormData) {
       headers['Content-Type'] = 'application/json';
     }
     
@@ -141,7 +165,7 @@ async function proxyRequest(
     const path = pathSegments.join('/');
     const url = new URL(request.url);
     const queryString = url.searchParams.toString();
-    const attemptedUrl = `${BACKEND_URL}/${path}${queryString ? `?${queryString}` : ''}`;
+    const attemptedUrl = `${BACKEND_URL}/api/${path}${queryString ? `?${queryString}` : ''}`;
     
     console.error('[Proxy] Error details:');
     console.error('  Message:', errorMessage);

@@ -53,7 +53,7 @@ function OAuthCallbackContent() {
       try {
         // Call the exchange endpoint to swap code for JWT token
         const response = await fetch(
-          `${API_BASE_URL}/api/v1/auth/${provider}/exchange`,
+          `${API_BASE_URL}/v1/auth/${provider}/exchange`,
           {
             method: 'POST',
             headers: {
