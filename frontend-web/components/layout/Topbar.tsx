@@ -16,6 +16,7 @@ import {
   MessageCircle, 
   Menu, 
   X,
+  Search,
   Settings,
   Activity,
   Bookmark,
@@ -33,6 +34,7 @@ import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const moreMenu = [
+  { name: 'Search', href: '/search', icon: Search },
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Your Activity', href: '/activity', icon: Activity },
   { name: 'Saved', href: '/saved', icon: Bookmark },
@@ -50,29 +52,34 @@ export function Topbar() {
 
   return (
     <>
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-14 md:h-16 z-50 bg-white/80 dark:bg-gray-900/60 backdrop-blur-2xl border-b border-neutral-200/50 dark:border-neutral-800/50">
-        <div className="h-full px-4 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/home" className="flex items-center gap-2.5">
-            <img src="/assets/u.png" alt="Upvista" className="w-9 h-9 md:w-8 md:h-8" />
-            <span className="text-xl md:text-lg font-bold bg-gradient-to-r from-brand-purple-600 to-brand-purple-400 bg-clip-text text-transparent">
-              Upvista
-            </span>
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-14 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-neutral-200/30 dark:border-neutral-800/30 shadow-sm">
+        <div className="h-full px-3 flex items-center justify-between">
+          {/* Logo with Stacked Text */}
+          <Link href="/home" className="flex items-center gap-2">
+            <img src="/assets/u.png" alt="Upvista" className="w-8 h-8" />
+            <div className="flex flex-col leading-none">
+              <span className="text-base font-bold text-neutral-900 dark:text-white">
+                Upvista
+              </span>
+              <span className="text-[10px] font-semibold text-brand-purple-600 dark:text-brand-purple-400 -mt-0.5">
+                Community
+              </span>
+            </div>
           </Link>
 
           {/* Action Icons */}
-          <div className="flex items-center gap-0.5">
-            <IconButton onClick={() => setShowMenu(true)} className="w-11 h-11 md:w-10 md:h-10">
-              <Menu className="w-6 h-6 md:w-5 md:h-5" />
+          <div className="flex items-center gap-0">
+            <IconButton onClick={() => setShowMenu(true)} className="w-10 h-10">
+              <Menu className="w-5 h-5" />
             </IconButton>
-            <IconButton badge={12} className="w-11 h-11 md:w-10 md:h-10">
-              <Bell className="w-6 h-6 md:w-5 md:h-5" />
+            <IconButton badge={12} className="w-10 h-10">
+              <Bell className="w-5 h-5" />
             </IconButton>
-            <IconButton className="w-11 h-11 md:w-10 md:h-10">
-              <Briefcase className="w-6 h-6 md:w-5 md:h-5" />
+            <IconButton className="w-10 h-10">
+              <Briefcase className="w-5 h-5" />
             </IconButton>
-            <IconButton badge={3} className="w-11 h-11 md:w-10 md:h-10">
-              <MessageCircle className="w-6 h-6 md:w-5 md:h-5" />
+            <IconButton badge={3} className="w-10 h-10">
+              <MessageCircle className="w-5 h-5" />
             </IconButton>
           </div>
         </div>

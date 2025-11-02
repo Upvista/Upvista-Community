@@ -29,10 +29,10 @@ export function Button({
   const baseStyles = 'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variants = {
-    primary: 'bg-brand-purple-600 hover:bg-brand-purple-700 active:bg-brand-purple-800 text-white shadow-lg shadow-brand-purple-500/30 hover:shadow-xl hover:shadow-brand-purple-500/40',
+    primary: 'bg-brand-purple-600 hover:bg-brand-purple-700 active:bg-brand-purple-800 text-white shadow-md shadow-brand-purple-500/20 hover:shadow-lg hover:shadow-brand-purple-500/25',
     secondary: 'border-2 border-brand-purple-600 hover:border-brand-purple-700 text-brand-purple-600 dark:text-brand-purple-400 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-950/30',
     ghost: 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800',
-    danger: 'bg-error hover:bg-red-600 active:bg-red-700 text-white shadow-lg shadow-error/30 hover:shadow-xl hover:shadow-error/40',
+    danger: 'bg-error hover:bg-red-600 active:bg-red-700 text-white shadow-md shadow-error/20 hover:shadow-lg hover:shadow-error/25',
   };
   
   const sizes = {

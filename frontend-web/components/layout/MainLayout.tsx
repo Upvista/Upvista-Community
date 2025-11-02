@@ -34,7 +34,7 @@ export function MainLayout({ children, showRightPanel = false, rightPanel }: Mai
         <div className="hidden lg:block w-60 flex-shrink-0" />
         
         {/* Main Content */}
-        <main className="flex-1 pt-14 pb-16 md:pt-16 md:pb-16 lg:pt-0 lg:pb-0 overflow-x-hidden">
+        <main className="flex-1 pt-14 pb-14 md:pt-16 md:pb-14 lg:pt-0 lg:pb-0 overflow-x-hidden">
           <div className={cn(
             'mx-auto px-4 md:px-6 py-5 md:py-6 w-full',
             showRightPanel ? 'max-w-5xl' : 'max-w-4xl'

@@ -30,7 +30,7 @@ export function IconButton({
     >
       {children}
       {badge !== undefined && badge !== 0 && (
-        <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-[20px] md:min-w-[18px] md:h-[18px] px-1 flex items-center justify-center bg-error text-white text-xs font-bold rounded-full">
+        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-error text-white text-[10px] font-bold rounded-full shadow-sm">
           {typeof badge === 'number' && badge > 99 ? '99+' : badge}
         </span>
       )}

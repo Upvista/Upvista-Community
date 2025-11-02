@@ -106,7 +106,7 @@ export default function HomePage() {
               className={`
                 px-4 py-2 md:px-4 md:py-2 rounded-full text-sm md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex-shrink-0
                 ${activeCategory === category
-                  ? 'bg-brand-purple-600 text-white shadow-lg shadow-brand-purple-500/30'
+                  ? 'bg-brand-purple-600 text-white shadow-md shadow-brand-purple-500/20'
                   : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                 }
               `}

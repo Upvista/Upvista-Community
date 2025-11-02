@@ -35,6 +35,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+import { useUser } from '@/lib/hooks/useUser';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 
@@ -65,14 +66,8 @@ const moreMenu = [
 export function Sidebar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
+  const { user } = useUser();
   const [showMore, setShowMore] = useState(false);
-  
-  // Mock user data - replace with actual user data
-  const user = {
-    name: 'Hamza Hafeez',
-    username: 'hamza',
-    avatar: null,
-  };
 
   const isActive = (href: string) => pathname === href;
 
@@ -102,6 +97,40 @@ export function Sidebar() {
           {navigation.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            
+            // Special handling for Profile tab (show user avatar)
+            if (item.name === 'Profile' && user) {
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-4 px-4 py-3 rounded-xl font-medium transition-all duration-200',
+                    active
+                      ? 'bg-brand-purple-100 dark:bg-brand-purple-900/30 text-brand-purple-600 dark:text-brand-purple-400 border-l-4 border-brand-purple-600'
+                      : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                  )}
+                >
+                  {user.profile_picture ? (
+                    <div className={cn(
+                      'rounded-full transition-all duration-200',
+                      active && 'ring-2 ring-brand-purple-600 dark:ring-brand-purple-400'
+                    )}>
+                      <Avatar 
+                        src={user.profile_picture} 
+                        alt="Profile" 
+                        fallback={user.display_name}
+                        size="sm"
+                        className="w-6 h-6"
+                      />
+                    </div>
+                  ) : (
+                    <Icon className="w-6 h-6 flex-shrink-0" />
+                  )}
+                  <span className="flex-1">{item.name}</span>
+                </Link>
+              );
+            }
             
             return (
               <Link
