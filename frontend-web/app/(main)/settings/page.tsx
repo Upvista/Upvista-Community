@@ -74,15 +74,15 @@ export default function SettingsPage() {
                     key={section.id}
                     onClick={() => setActiveSection(section.id)}
                     className={`
-                      w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer
+                      w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors cursor-pointer text-left
                       ${active
                         ? 'bg-brand-purple-100 dark:bg-brand-purple-900/30 text-brand-purple-600 dark:text-brand-purple-400'
                         : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
                       }
                     `}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span>{section.name}</span>
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="flex-1">{section.name}</span>
                   </button>
                 );
               })}
@@ -1281,7 +1281,7 @@ function DataSection() {
 }
 
 function AppearanceSection() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   return (
     <Card variant="solid" hoverable={false}>
@@ -1293,30 +1293,63 @@ function AppearanceSection() {
           <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3 block">
             Theme
           </label>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
+            {/* Light Theme */}
             <button
-              onClick={() => theme === 'dark' && toggleTheme()}
-              className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+              onClick={() => setTheme('light')}
+              className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                 theme === 'light'
                   ? 'border-brand-purple-600 bg-brand-purple-50 dark:bg-brand-purple-900/20'
                   : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
               }`}
             >
-              <div className="w-full h-24 bg-white rounded-md mb-2 border border-neutral-200" />
-              <p className="font-medium text-neutral-900 dark:text-neutral-50">Light</p>
+              <div className="w-full h-20 bg-white rounded-md mb-2 border border-neutral-200" />
+              <p className="font-medium text-neutral-900 dark:text-neutral-50 text-sm">Light</p>
             </button>
+            
+            {/* Dark Theme */}
             <button
-              onClick={() => theme === 'light' && toggleTheme()}
-              className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+              onClick={() => setTheme('dark')}
+              className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                 theme === 'dark'
                   ? 'border-brand-purple-600 bg-brand-purple-50 dark:bg-brand-purple-900/20'
                   : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
               }`}
             >
-              <div className="w-full h-24 bg-neutral-900 rounded-md mb-2 border border-neutral-700" />
-              <p className="font-medium text-neutral-900 dark:text-neutral-50">Dark</p>
+              <div className="w-full h-20 bg-neutral-900 rounded-md mb-2 border border-neutral-700" />
+              <p className="font-medium text-neutral-900 dark:text-neutral-50 text-sm">Dark</p>
+            </button>
+            
+            {/* iOS Theme */}
+            <button
+              onClick={() => setTheme('ios')}
+              className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                theme === 'ios'
+                  ? 'border-brand-purple-600 bg-brand-purple-50 dark:bg-brand-purple-900/20'
+                  : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
+              }`}
+            >
+              <div className="w-full h-20 rounded-md mb-2 border border-purple-200/40 relative overflow-hidden" 
+                style={{
+                  background: 'linear-gradient(135deg, #EDE7F6 0%, #D1C4E9 30%, #B39DDB 60%, #9575CD 90%, #7E57C2 100%)',
+                }}
+              >
+                {/* Glossy liquid highlight */}
+                <div className="absolute inset-0" 
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.15) 40%, rgba(255,255,255,0) 70%)',
+                  }}
+                />
+              </div>
+              <p className="font-medium text-neutral-900 dark:text-neutral-50 text-sm">iOS</p>
             </button>
           </div>
+          
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-3">
+            {theme === 'light' && 'Clean, minimal light theme'}
+            {theme === 'dark' && 'Professional dark theme for low-light environments'}
+            {theme === 'ios' && '✨ Premium glassmorphism with iOS-inspired design'}
+          </p>
         </div>
       </div>
     </Card>

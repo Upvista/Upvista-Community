@@ -1,3 +1,4 @@
+@config "../tailwind.config.ts";
 @import "tailwindcss";
 
 /* ========================================
@@ -104,6 +105,52 @@ body.dark {
   background-attachment: fixed;
 }
 
+/* iOS Theme - Fluid Liquid Glass (iPhone 14 Pro Max Aesthetic) */
+body.ios {
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(237, 231, 246, 0.8) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(179, 157, 219, 0.6) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(126, 87, 194, 0.3) 0%, transparent 70%),
+    linear-gradient(135deg, 
+      #EDE7F6 0%,      /* Lightest lavender */
+      #D1C4E9 25%,     /* Light purple */
+      #B39DDB 50%,     /* Soft purple */
+      #9575CD 75%,     /* Medium purple */
+      #7E57C2 100%     /* Deep Purple */
+    );
+  background-size: 100% 100%;
+  background-attachment: fixed;
+  position: relative;
+}
+
+/* Add fluid liquid highlights - Creates glossy reflections */
+body.ios::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: 
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.4) 0%, transparent 25%),
+    radial-gradient(circle at 70% 80%, rgba(255, 255, 255, 0.25) 0%, transparent 30%),
+    radial-gradient(circle at 50% 50%, rgba(237, 231, 246, 0.2) 0%, transparent 40%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure content appears above the highlights */
+.ios > * {
+  position: relative;
+  z-index: 1;
+}
+
+html.ios {
+  /* iOS Theme Variables */
+  --background: #EDE7F6;
+  --foreground: #1A1A2E;
+}
+
 html {
   overflow-x: hidden;
   width: 100%;
@@ -120,6 +167,138 @@ html {
   background: rgba(10, 10, 10, 0.4);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+}
+
+/* iOS Theme Specific Styles */
+.ios .glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 32px 0 rgba(147, 51, 234, 0.1),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+}
+
+.ios button, .ios a {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ios button:active, .ios a:active {
+  transform: scale(0.97);
+}
+
+/* iOS Card Hover Effects */
+.ios .hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px 0 rgba(147, 51, 234, 0.15),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+}
+
+/* iOS Theme - Liquid Glass Cards with Glossy Highlights */
+.ios [class*="bg-white"]:not([class*="bg-white/"]) {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.3) 0%, 
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(248, 246, 255, 0.25) 100%) !important;
+  backdrop-filter: blur(60px) saturate(200%) brightness(1.1);
+  -webkit-backdrop-filter: blur(60px) saturate(200%) brightness(1.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 
+    0 8px 32px rgba(103, 58, 183, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(179, 157, 219, 0.1) !important;
+  position: relative;
+}
+
+/* Glossy highlight on top of cards */
+.ios [class*="bg-white"]:not([class*="bg-white/"])::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 35%;
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.4) 0%, 
+    rgba(255, 255, 255, 0) 100%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.ios [class*="bg-neutral-50"] {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.25) 0%, 
+    rgba(250, 248, 255, 0.2) 100%) !important;
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 
+    0 4px 16px rgba(103, 58, 183, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+.ios [class*="bg-neutral-100"] {
+  background: linear-gradient(135deg, 
+    rgba(237, 231, 246, 0.35) 0%, 
+    rgba(225, 215, 240, 0.25) 100%) !important;
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(179, 157, 219, 0.3);
+  box-shadow: 
+    0 4px 16px rgba(103, 58, 183, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+.ios [class*="shadow"] {
+  box-shadow: 
+    0 8px 32px 0 rgba(103, 58, 183, 0.12),
+    0 2px 8px 0 rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+/* iOS Button Styles - Glossy Deep Purple */
+.ios button[class*="bg-brand-purple"] {
+  background: linear-gradient(135deg, #7E57C2 0%, #673AB7 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 4px 16px rgba(103, 58, 183, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1) !important;
+  color: #FFFFFF !important;
+}
+
+.ios button[class*="bg-brand-purple"]:hover {
+  background: linear-gradient(135deg, #9575CD 0%, #7E57C2 100%) !important;
+  box-shadow: 
+    0 6px 24px rgba(103, 58, 183, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+/* iOS Input Styles - Frosted Glass */
+.ios input, .ios textarea, .ios select {
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(30px) saturate(150%);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  border: 1.5px solid rgba(179, 157, 219, 0.25);
+  box-shadow: 
+    0 2px 8px rgba(103, 58, 183, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+.ios input:focus, .ios textarea:focus, .ios select:focus {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(103, 58, 183, 0.4);
+  box-shadow: 
+    0 0 0 4px rgba(103, 58, 183, 0.1),
+    0 2px 12px rgba(103, 58, 183, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
 }
 
 /* Custom Scrollbar (Minimal) */

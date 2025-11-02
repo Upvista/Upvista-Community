@@ -10,7 +10,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-type Theme = 'light' | 'dark';
+type Theme = 'light' | 'dark' | 'ios';
 
 interface ThemeContextType {
   theme: Theme;
@@ -28,9 +28,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setMounted(true);
     // Load theme from localStorage or system preference
     const stored = localStorage.getItem('upvista-theme') as Theme;
-    if (stored) {
+    if (stored && (stored === 'light' || stored === 'dark' || stored === 'ios')) {
       setTheme(stored);
-      document.documentElement.classList.toggle('dark', stored === 'dark');
+      document.documentElement.classList.remove('dark', 'ios');
+      if (stored === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else if (stored === 'ios') {
+        document.documentElement.classList.add('ios');
+      }
     } else {
       // Check system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -43,12 +48,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const handleSetTheme = (newTheme: Theme) => {
     setTheme(newTheme);
     localStorage.setItem('upvista-theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    
+    // Remove all theme classes first
+    document.documentElement.classList.remove('dark', 'ios');
+    
+    // Add appropriate theme class
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (newTheme === 'ios') {
+      document.documentElement.classList.add('ios');
+    }
   };
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    handleSetTheme(newTheme);
+    // Cycle through: light → ios → dark → light
+    const themeOrder: Theme[] = ['light', 'ios', 'dark'];
+    const currentIndex = themeOrder.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themeOrder.length;
+    handleSetTheme(themeOrder[nextIndex]);
   };
 
   // Prevent flash of wrong theme

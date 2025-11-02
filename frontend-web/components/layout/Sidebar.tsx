@@ -168,10 +168,10 @@ export function Sidebar() {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-200"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-200 text-left"
                   >
-                    <Icon className="w-5 h-5" />
-                    <span>{item.name}</span>
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="flex-1">{item.name}</span>
                   </Link>
                 );
               })}
@@ -179,10 +179,10 @@ export function Sidebar() {
               {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
-                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-200"
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors duration-200 text-left"
               >
-                <SunMoon className="w-5 h-5" />
-                <span>Switch Theme ({theme})</span>
+                <SunMoon className="w-5 h-5 flex-shrink-0" />
+                <span className="flex-1">Switch Theme ({theme})</span>
               </button>
               
               {/* Logout */}
@@ -191,10 +191,10 @@ export function Sidebar() {
                   localStorage.removeItem('token');
                   window.location.href = '/auth';
                 }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-error hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors duration-200"
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-error hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors duration-200 text-left"
               >
-                <LogOut className="w-5 h-5" />
-                <span>Logout</span>
+                <LogOut className="w-5 h-5 flex-shrink-0" />
+                <span className="flex-1">Logout</span>
               </button>
             </div>
           )}
