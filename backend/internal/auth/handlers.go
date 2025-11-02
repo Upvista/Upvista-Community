@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"upvista-community-backend/internal/config"
 	"upvista-community-backend/internal/models"
+	"upvista-community-backend/internal/repository"
 	"upvista-community-backend/internal/utils"
 	"upvista-community-backend/pkg/errors"
 
@@ -24,6 +26,7 @@ type AuthHandlers struct {
 	googleOAuth   *GoogleOAuthService
 	githubOAuth   *GitHubOAuthService
 	linkedinOAuth *LinkedInOAuthService
+	sessionRepo   repository.SessionRepository
 }
 
 // NewAuthHandlers creates new authentication handlers
@@ -35,6 +38,7 @@ func NewAuthHandlers(
 	googleOAuth *GoogleOAuthService,
 	githubOAuth *GitHubOAuthService,
 	linkedinOAuth *LinkedInOAuthService,
+	sessionRepo repository.SessionRepository,
 ) *AuthHandlers {
 	return &AuthHandlers{
 		authSvc:       authSvc,
@@ -44,7 +48,30 @@ func NewAuthHandlers(
 		googleOAuth:   googleOAuth,
 		githubOAuth:   githubOAuth,
 		linkedinOAuth: linkedinOAuth,
+		sessionRepo:   sessionRepo,
 	}
+}
+
+// Helper function to create session from login
+func (h *AuthHandlers) createSession(ctx context.Context, userID uuid.UUID, token string, c *gin.Context) error {
+	// Hash the token for storage
+	tokenHash := utils.HashToken(token)
+
+	// Extract device info from request
+	userAgent := c.GetHeader("User-Agent")
+	ipAddress := c.ClientIP()
+
+	// Create session
+	session := &models.UserSession{
+		UserID:    userID,
+		TokenHash: tokenHash,
+		UserAgent: &userAgent,
+		IPAddress: &ipAddress,
+		ExpiresAt: time.Now().Add(15 * time.Minute), // Same as JWT expiry
+		CreatedAt: time.Now(),
+	}
+
+	return h.sessionRepo.CreateSession(ctx, session)
 }
 
 // RegisterHandler handles user registration
@@ -96,6 +123,11 @@ func (h *AuthHandlers) VerifyEmailHandler(c *gin.Context) {
 		return
 	}
 
+	// Create session after successful email verification (login)
+	if response.User != nil && response.Token != "" {
+		go h.createSession(c.Request.Context(), response.User.ID, response.Token, c)
+	}
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -120,6 +152,11 @@ func (h *AuthHandlers) LoginHandler(c *gin.Context) {
 			"error":   appErr.Details,
 		})
 		return
+	}
+
+	// Create session to track this login
+	if response.User != nil && response.Token != "" {
+		go h.createSession(c.Request.Context(), response.User.ID, response.Token, c)
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -286,6 +323,12 @@ func (h *AuthHandlers) LogoutHandler(c *gin.Context) {
 		return
 	}
 
+	// Delete session from database
+	if token != "" {
+		tokenHash := utils.HashToken(token)
+		go h.sessionRepo.DeleteSessionByTokenHash(c.Request.Context(), tokenHash)
+	}
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -329,6 +372,11 @@ func (h *AuthHandlers) GoogleExchangeHandler(c *gin.Context) {
 			"error":   appErr.Details,
 		})
 		return
+	}
+
+	// Create session for OAuth login
+	if response.User != nil && response.Token != "" {
+		go h.createSession(c.Request.Context(), response.User.ID, response.Token, c)
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -394,6 +442,11 @@ func (h *AuthHandlers) GitHubExchangeHandler(c *gin.Context) {
 		return
 	}
 
+	// Create session for OAuth login
+	if response.User != nil && response.Token != "" {
+		go h.createSession(c.Request.Context(), response.User.ID, response.Token, c)
+	}
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -452,6 +505,11 @@ func (h *AuthHandlers) LinkedInExchangeHandler(c *gin.Context) {
 			"error":   appErr.Details,
 		})
 		return
+	}
+
+	// Create session for OAuth login
+	if response.User != nil && response.Token != "" {
+		go h.createSession(c.Request.Context(), response.User.ID, response.Token, c)
 	}
 
 	c.JSON(http.StatusOK, response)

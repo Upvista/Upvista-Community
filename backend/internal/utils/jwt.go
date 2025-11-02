@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"time"
 
@@ -128,4 +130,10 @@ func (j *JWTService) IsTokenExpired(tokenString string) bool {
 		return true
 	}
 	return time.Now().After(claims.ExpiresAt.Time)
+}
+
+// HashToken creates a SHA256 hash of a JWT token for storage
+func HashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
 }

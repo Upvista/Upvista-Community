@@ -20,6 +20,10 @@ type User struct {
 	EmailVerificationExpiresAt *time.Time `json:"-" db:"email_verification_expires_at"`
 	PasswordResetToken         *string    `json:"-" db:"password_reset_token"`
 	PasswordResetExpiresAt     *time.Time `json:"-" db:"password_reset_expires_at"`
+	PendingEmail               *string    `json:"-" db:"pending_email"`
+	PendingEmailCode           *string    `json:"-" db:"pending_email_code"`
+	PendingEmailExpiresAt      *time.Time `json:"-" db:"pending_email_expires_at"`
+	UsernameChangedAt          *time.Time `json:"-" db:"username_changed_at"`
 	GoogleID                   *string    `json:"-" db:"google_id"`
 	GitHubID                   *string    `json:"-" db:"github_id"`
 	LinkedInID                 *string    `json:"-" db:"linkedin_id"`
@@ -116,6 +120,55 @@ type JWTClaims struct {
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
+}
+
+// UpdateProfileRequest represents the request payload for updating user profile
+type UpdateProfileRequest struct {
+	DisplayName    *string `json:"display_name,omitempty" validate:"omitempty,min=2,max=50"`
+	Age            *int    `json:"age,omitempty" validate:"omitempty,min=13,max=120"`
+	ProfilePicture *string `json:"profile_picture,omitempty" validate:"omitempty,url"`
+}
+
+// ChangePasswordRequest represents the request payload for changing password
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password" validate:"required,min=8"`
+	ConfirmPassword string `json:"confirm_password" validate:"required,min=8"`
+}
+
+// DeleteAccountRequest represents the request payload for account deletion
+type DeleteAccountRequest struct {
+	Password     string `json:"password" validate:"required"`
+	Confirmation string `json:"confirmation" validate:"required,eqfield=DELETE MY ACCOUNT"`
+}
+
+// ChangeEmailRequest represents the request payload for initiating email change
+type ChangeEmailRequest struct {
+	NewEmail string `json:"new_email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+// VerifyEmailChangeRequest represents the request payload for verifying new email
+type VerifyEmailChangeRequest struct {
+	VerificationCode string `json:"verification_code" validate:"required,len=6"`
+}
+
+// ChangeUsernameRequest represents the request payload for changing username
+type ChangeUsernameRequest struct {
+	NewUsername string `json:"new_username" validate:"required,min=3,max=20,alphanum"`
+	Password    string `json:"password" validate:"required"`
+}
+
+// DeactivateAccountRequest represents the request payload for account deactivation
+type DeactivateAccountRequest struct {
+	Password string `json:"password" validate:"required"`
+	Reason   string `json:"reason,omitempty"`
+}
+
+// SessionsResponse represents the response containing active sessions
+type SessionsResponse struct {
+	Success  bool           `json:"success"`
+	Sessions []*UserSession `json:"sessions"`
 }
 
 // ToUser converts User model to a safe version without sensitive data

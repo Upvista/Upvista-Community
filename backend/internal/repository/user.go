@@ -31,4 +31,11 @@ type UserRepository interface {
 	UpdateLastLogin(ctx context.Context, userID uuid.UUID) error
 	CheckEmailExists(ctx context.Context, email string) (bool, error)
 	CheckUsernameExists(ctx context.Context, username string) (bool, error)
+	UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) error
+	UpdatePassword(ctx context.Context, userID uuid.UUID, newPasswordHash string) error
+	DeleteUser(ctx context.Context, userID uuid.UUID) error
+	InitiateEmailChange(ctx context.Context, userID uuid.UUID, newEmail, code string, expiresAt time.Time) error
+	VerifyEmailChange(ctx context.Context, userID uuid.UUID, code string) error
+	ChangeUsername(ctx context.Context, userID uuid.UUID, newUsername string) error
+	DeactivateAccount(ctx context.Context, userID uuid.UUID) error
 }

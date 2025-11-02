@@ -22,3 +22,18 @@ func NewUserRepository(cfg *config.Config) (UserRepository, error) {
 
 	return nil, fmt.Errorf("unsupported data provider: %s", provider)
 }
+
+// NewSessionRepository creates a concrete SessionRepository based on config
+func NewSessionRepository(cfg *config.Config) (SessionRepository, error) {
+	provider := strings.ToLower(strings.TrimSpace(cfg.Server.DataProvider))
+	if provider == "" {
+		provider = "supabase" // default
+	}
+
+	// Supabase via PostgREST
+	if provider == "supabase" {
+		return NewSupabaseSessionRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey), nil
+	}
+
+	return nil, fmt.Errorf("unsupported data provider: %s", provider)
+}

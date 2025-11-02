@@ -591,3 +591,278 @@ func (r *SupabaseUserRepository) CheckUsernameExists(ctx context.Context, userna
 	}
 	return len(users) > 0, nil
 }
+
+// UpdateProfile updates user profile fields
+func (r *SupabaseUserRepository) UpdateProfile(ctx context.Context, userID uuid.UUID, updates map[string]interface{}) error {
+	// Always update the updated_at timestamp
+	updates["updated_at"] = time.Now()
+
+	body, err := json.Marshal(updates)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(req, "return=minimal")
+
+	resp, err := r.http.Do(req)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] UpdateProfile failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// UpdatePassword updates user's password hash
+func (r *SupabaseUserRepository) UpdatePassword(ctx context.Context, userID uuid.UUID, newPasswordHash string) error {
+	update := map[string]interface{}{
+		"password_hash": newPasswordHash,
+		"updated_at":    time.Now(),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(req, "return=minimal")
+
+	resp, err := r.http.Do(req)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] UpdatePassword failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// DeleteUser permanently deletes a user account
+func (r *SupabaseUserRepository) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, r.usersURL(q), nil)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(req, "return=minimal")
+
+	resp, err := r.http.Do(req)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] DeleteUser failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// InitiateEmailChange stores pending email change request
+func (r *SupabaseUserRepository) InitiateEmailChange(ctx context.Context, userID uuid.UUID, newEmail, code string, expiresAt time.Time) error {
+	update := map[string]interface{}{
+		"pending_email":            newEmail,
+		"pending_email_code":       code,
+		"pending_email_expires_at": expiresAt,
+		"updated_at":               time.Now(),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(req, "return=minimal")
+
+	resp, err := r.http.Do(req)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] InitiateEmailChange failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// VerifyEmailChange completes the email change process
+func (r *SupabaseUserRepository) VerifyEmailChange(ctx context.Context, userID uuid.UUID, code string) error {
+	// First, fetch user to validate code
+	user, err := r.GetUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// Validate pending email exists
+	if user.PendingEmail == nil || *user.PendingEmail == "" {
+		return apperr.NewAppError(400, "No pending email change request found")
+	}
+
+	// Validate code
+	if user.PendingEmailCode == nil || *user.PendingEmailCode != code {
+		return apperr.NewAppError(400, "Invalid verification code")
+	}
+
+	// Check expiration
+	if user.PendingEmailExpiresAt == nil || time.Now().After(*user.PendingEmailExpiresAt) {
+		return apperr.NewAppError(400, "Verification code has expired")
+	}
+
+	// Update email and clear pending fields
+	update := map[string]interface{}{
+		"email":                    *user.PendingEmail,
+		"pending_email":            nil,
+		"pending_email_code":       nil,
+		"pending_email_expires_at": nil,
+		"updated_at":               time.Now(),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(req, "return=minimal")
+
+	resp, err := r.http.Do(req)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] VerifyEmailChange failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// ChangeUsername updates the username with tracking
+func (r *SupabaseUserRepository) ChangeUsername(ctx context.Context, userID uuid.UUID, newUsername string) error {
+	update := map[string]interface{}{
+		"username":            newUsername,
+		"username_changed_at": time.Now(),
+		"updated_at":          time.Now(),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(req, "return=minimal")
+
+	resp, err := r.http.Do(req)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] ChangeUsername failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// DeactivateAccount soft deletes the account
+func (r *SupabaseUserRepository) DeactivateAccount(ctx context.Context, userID uuid.UUID) error {
+	update := map[string]interface{}{
+		"is_active":  false,
+		"updated_at": time.Now(),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(req, "return=minimal")
+
+	resp, err := r.http.Do(req)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] DeactivateAccount failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}

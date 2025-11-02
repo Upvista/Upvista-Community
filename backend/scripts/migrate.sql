@@ -22,6 +22,14 @@ CREATE TABLE IF NOT EXISTS users (
     password_reset_token VARCHAR(255),
     password_reset_expires_at TIMESTAMP,
     
+    -- Email change (pending verification)
+    pending_email VARCHAR(255),
+    pending_email_code VARCHAR(6),
+    pending_email_expires_at TIMESTAMP,
+    
+    -- Username change tracking
+    username_changed_at TIMESTAMP,
+    
     -- Account status
     is_active BOOLEAN DEFAULT TRUE,
     last_login_at TIMESTAMP,
@@ -132,3 +140,13 @@ ADD COLUMN IF NOT EXISTS profile_picture TEXT;
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
 CREATE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id);
 CREATE INDEX IF NOT EXISTS idx_users_linkedin_id ON users(linkedin_id);
+
+-- Phase 2: Add email change and username tracking columns
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS pending_email VARCHAR(255),
+ADD COLUMN IF NOT EXISTS pending_email_code VARCHAR(6),
+ADD COLUMN IF NOT EXISTS pending_email_expires_at TIMESTAMP,
+ADD COLUMN IF NOT EXISTS username_changed_at TIMESTAMP;
+
+-- Create index for pending email code (after column is added)
+CREATE INDEX IF NOT EXISTS idx_users_pending_email ON users(pending_email_code);

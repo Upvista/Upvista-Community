@@ -19,12 +19,19 @@ type Config struct {
 	Google    GoogleConfig    `mapstructure:"google"`
 	GitHub    GitHubConfig    `mapstructure:"github"`
 	LinkedIn  LinkedInConfig  `mapstructure:"linkedin"`
+	Storage   StorageConfig   `mapstructure:"storage"`
 }
 
 type DatabaseConfig struct {
 	SupabaseURL        string `mapstructure:"supabase_url"`
 	SupabaseAnonKey    string `mapstructure:"supabase_anon_key"`
 	SupabaseServiceKey string `mapstructure:"supabase_service_role_key"`
+}
+
+type StorageConfig struct {
+	BucketName       string `mapstructure:"bucket_name"`
+	MaxFileSize      int64  `mapstructure:"max_file_size"`
+	AllowedFileTypes string `mapstructure:"allowed_file_types"`
 }
 
 type JWTConfig struct {
@@ -34,12 +41,13 @@ type JWTConfig struct {
 }
 
 type EmailConfig struct {
-	Host      string `mapstructure:"host"`
-	Port      int    `mapstructure:"port"`
-	Username  string `mapstructure:"username"`
-	Password  string `mapstructure:"password"`
-	FromName  string `mapstructure:"from_name"`
-	FromEmail string `mapstructure:"from_email"`
+	Host        string `mapstructure:"host"`
+	Port        int    `mapstructure:"port"`
+	Username    string `mapstructure:"username"`
+	Password    string `mapstructure:"password"`
+	FromName    string `mapstructure:"from_name"`
+	FromEmail   string `mapstructure:"from_email"`
+	FrontendURL string `mapstructure:"frontend_url"`
 }
 
 type ServerConfig struct {
@@ -94,6 +102,10 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("rate_limit.reset", 3)
 	viper.SetDefault("rate_limit.window", "1m")
 	viper.SetDefault("rate_limit.forgiveness", 2)
+	viper.SetDefault("email.frontend_url", "http://localhost:3001")
+	viper.SetDefault("storage.bucket_name", "profile-pictures")
+	viper.SetDefault("storage.max_file_size", 5242880) // 5MB
+	viper.SetDefault("storage.allowed_file_types", "image/jpeg,image/png,image/gif,image/webp")
 
 	// Set environment variable prefix
 	viper.SetEnvPrefix("")
@@ -112,6 +124,7 @@ func LoadConfig() (*Config, error) {
 	viper.BindEnv("email.password", "SMTP_PASSWORD")
 	viper.BindEnv("email.from_name", "SMTP_FROM_NAME")
 	viper.BindEnv("email.from_email", "SMTP_FROM_EMAIL")
+	viper.BindEnv("email.frontend_url", "FRONTEND_URL")
 	viper.BindEnv("server.port", "PORT")
 	viper.BindEnv("server.gin_mode", "GIN_MODE")
 	viper.BindEnv("server.cors_allowed_origins", "CORS_ALLOWED_ORIGINS")
@@ -129,6 +142,9 @@ func LoadConfig() (*Config, error) {
 	viper.BindEnv("linkedin.client_id", "LINKEDIN_CLIENT_ID")
 	viper.BindEnv("linkedin.client_secret", "LINKEDIN_CLIENT_SECRET")
 	viper.BindEnv("linkedin.redirect_url", "LINKEDIN_REDIRECT_URL")
+	viper.BindEnv("storage.bucket_name", "STORAGE_BUCKET_NAME")
+	viper.BindEnv("storage.max_file_size", "STORAGE_MAX_FILE_SIZE")
+	viper.BindEnv("storage.allowed_file_types", "STORAGE_ALLOWED_FILE_TYPES")
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {

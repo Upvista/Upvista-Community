@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"upvista-community-backend/internal/account"
 	"upvista-community-backend/internal/auth"
 	"upvista-community-backend/internal/config"
 	"upvista-community-backend/internal/repository"
@@ -26,10 +27,15 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Initialize repository (provider selected via env)
+	// Initialize repositories (provider selected via env)
 	userRepo, err := repository.NewUserRepository(cfg)
 	if err != nil {
-		log.Fatalf("Failed to initialize repository: %v", err)
+		log.Fatalf("Failed to initialize user repository: %v", err)
+	}
+
+	sessionRepo, err := repository.NewSessionRepository(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize session repository: %v", err)
 	}
 
 	// Initialize services
@@ -53,8 +59,15 @@ func main() {
 	githubOAuth := auth.NewGitHubOAuthService(&cfg.GitHub, userRepo, jwtSvc)
 	linkedinOAuth := auth.NewLinkedInOAuthService(&cfg.LinkedIn, userRepo, jwtSvc)
 
+	// Initialize storage service
+	storageSvc := utils.NewStorageService(&cfg.Storage, cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+
+	// Initialize account service
+	accountSvc := account.NewAccountService(userRepo, sessionRepo, emailSvc, storageSvc)
+
 	// Initialize handlers
-	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc, rateLimiter, cfg, googleOAuth, githubOAuth, linkedinOAuth)
+	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc, rateLimiter, cfg, googleOAuth, githubOAuth, linkedinOAuth, sessionRepo)
+	accountHandlers := account.NewAccountHandlers(accountSvc)
 
 	// Create Gin router with middleware
 	r := gin.Default()
@@ -119,6 +132,11 @@ func main() {
 
 		// Setup authentication routes
 		authHandlers.SetupRoutes(api)
+
+		// Setup account management routes (protected by JWT middleware)
+		protected := api.Group("")
+		protected.Use(auth.JWTAuthMiddleware(jwtSvc))
+		accountHandlers.SetupRoutes(protected)
 	}
 
 	// Start server

@@ -102,7 +102,7 @@ func (e *EmailService) SendVerificationEmail(to, code string) error {
 // SendPasswordResetEmail sends a password reset email
 func (e *EmailService) SendPasswordResetEmail(to, resetToken string) error {
 	subject := "Password Reset Request - Upvista Community"
-	resetURL := fmt.Sprintf("http://localhost:3000/reset-password?token=%s", resetToken)
+	resetURL := fmt.Sprintf("%s/auth/reset-password?token=%s", e.config.FrontendURL, resetToken)
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 	<html>
@@ -300,4 +300,338 @@ func ValidateEmailFormat(email string) bool {
 	}
 
 	return hasAt && hasDot
+}
+
+// SendPasswordChangedEmail sends notification when password is changed
+func (e *EmailService) SendPasswordChangedEmail(to, displayName string) error {
+	subject := "Password Changed - Upvista Community"
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; line-height: 1.6;">
+	<table width="100%%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+		<tr>
+			<td align="center">
+				<table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 600px;">
+					<!-- Header -->
+					<tr>
+						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+						</td>
+					</tr>
+					<!-- Content -->
+					<tr>
+						<td style="padding: 50px 50px 40px;">
+							<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Password Changed Successfully</h2>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Hello %s,</p>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Your password was successfully changed. If you made this change, no further action is required.</p>
+							
+							<div style="margin: 35px 0; padding: 20px; background-color: #f7f9fc; border-left: 4px solid #1a1f3a; border-radius: 4px;">
+								<p style="margin: 0; color: #1a1f3a; font-size: 14px; font-weight: 600;">Security Notice</p>
+								<p style="margin: 10px 0 0; color: #4a5568; font-size: 14px; line-height: 1.6;">If you did not make this change, please secure your account immediately by resetting your password and contacting our support team.</p>
+							</div>
+							
+							<p style="margin: 25px 0 0; color: #718096; font-size: 14px; line-height: 1.6;">Changed on: <strong style="color: #1a1f3a;">%s</strong></p>
+						</td>
+					</tr>
+					<!-- Footer -->
+					<tr>
+						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated security notification. Please do not reply to this email.</p>
+						</td>
+					</tr>
+				</table>
+				<!-- Footer Text -->
+				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
+					<tr>
+						<td align="center">
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
+	`, displayName, time.Now().Format("January 2, 2006 at 3:04 PM MST"), time.Now().Year())
+
+	return e.sendEmail(to, subject, body)
+}
+
+// SendAccountDeletedEmail sends notification when account is deleted
+func (e *EmailService) SendAccountDeletedEmail(to, displayName string) error {
+	subject := "Account Deleted - Upvista Community"
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; line-height: 1.6;">
+	<table width="100%%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+		<tr>
+			<td align="center">
+				<table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 600px;">
+					<!-- Header -->
+					<tr>
+						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+						</td>
+					</tr>
+					<!-- Content -->
+					<tr>
+						<td style="padding: 50px 50px 40px;">
+							<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Account Deletion Confirmation</h2>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Hello %s,</p>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Your UpVista Community account has been permanently deleted as requested. All your data has been removed from our systems.</p>
+							
+							<div style="margin: 35px 0; padding: 20px; background-color: #fef5e7; border-left: 4px solid: #f39c12; border-radius: 4px;">
+								<p style="margin: 0; color: #1a1f3a; font-size: 14px; font-weight: 600;">Important</p>
+								<p style="margin: 10px 0 0; color: #4a5568; font-size: 14px; line-height: 1.6;">This action is permanent and cannot be undone. If you did not request this deletion, please contact our support team immediately.</p>
+							</div>
+							
+							<p style="margin: 25px 0 0; color: #4a5568; font-size: 16px; line-height: 1.7;">We're sorry to see you go. If you'd like to return in the future, you're always welcome to create a new account.</p>
+							<p style="margin: 25px 0 0; color: #718096; font-size: 14px; line-height: 1.6;">Deleted on: <strong style="color: #1a1f3a;">%s</strong></p>
+						</td>
+					</tr>
+					<!-- Footer -->
+					<tr>
+						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated notification. Please do not reply to this email.</p>
+						</td>
+					</tr>
+				</table>
+				<!-- Footer Text -->
+				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
+					<tr>
+						<td align="center">
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
+	`, displayName, time.Now().Format("January 2, 2006 at 3:04 PM MST"), time.Now().Year())
+
+	return e.sendEmail(to, subject, body)
+}
+
+// SendEmailChangeVerificationEmail sends verification code for email change
+func (e *EmailService) SendEmailChangeVerificationEmail(to, code string) error {
+	subject := "Verify New Email Address - Upvista Community"
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; line-height: 1.6;">
+	<table width="100%%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+		<tr>
+			<td align="center">
+				<table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 600px;">
+					<!-- Header -->
+					<tr>
+						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+						</td>
+					</tr>
+					<!-- Content -->
+					<tr>
+						<td style="padding: 50px 50px 40px;">
+							<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Verify Your New Email Address</h2>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">You requested to change your email address. Please verify this new email address by entering the following code:</p>
+							
+							<!-- Verification Code Box -->
+							<table width="100%%" cellpadding="0" cellspacing="0" style="margin: 35px 0;">
+								<tr>
+									<td align="center">
+										<div style="display: inline-block; background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 20px 40px; border-radius: 8px;">
+											<p style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 8px; font-family: 'Courier New', monospace;">%s</p>
+										</div>
+									</td>
+								</tr>
+							</table>
+							
+							<p style="margin: 25px 0 0; color: #718096; font-size: 14px; line-height: 1.6;">This code will expire in <strong style="color: #1a1f3a;">1 hour</strong>.</p>
+							
+							<div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #e2e8f0;">
+								<p style="margin: 0 0 15px; color: #718096; font-size: 13px; line-height: 1.6;">If you did not request this email change, please ignore this message and secure your account by changing your password.</p>
+							</div>
+						</td>
+					</tr>
+					<!-- Footer -->
+					<tr>
+						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
+						</td>
+					</tr>
+				</table>
+				<!-- Footer Text -->
+				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
+					<tr>
+						<td align="center">
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
+	`, code, time.Now().Year())
+
+	return e.sendEmail(to, subject, body)
+}
+
+// SendUsernameChangedEmail sends notification when username is changed
+func (e *EmailService) SendUsernameChangedEmail(to, displayName, oldUsername, newUsername string) error {
+	subject := "Username Changed - Upvista Community"
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; line-height: 1.6;">
+	<table width="100%%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+		<tr>
+			<td align="center">
+				<table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 600px;">
+					<!-- Header -->
+					<tr>
+						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+						</td>
+					</tr>
+					<!-- Content -->
+					<tr>
+						<td style="padding: 50px 50px 40px;">
+							<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Username Changed Successfully</h2>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Hello %s,</p>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Your username was successfully changed:</p>
+							
+							<div style="margin: 35px 0; padding: 20px; background-color: #f7f9fc; border-left: 4px solid #1a1f3a; border-radius: 4px;">
+								<p style="margin: 0 0 10px; color: #718096; font-size: 13px;">Previous Username:</p>
+								<p style="margin: 0 0 15px; color: #1a1f3a; font-size: 16px; font-weight: 600;">%s</p>
+								<p style="margin: 0 0 10px; color: #718096; font-size: 13px;">New Username:</p>
+								<p style="margin: 0; color: #1a1f3a; font-size: 16px; font-weight: 600;">%s</p>
+							</div>
+							
+							<div style="margin: 35px 0; padding: 20px; background-color: #fef5e7; border-left: 4px solid #f39c12; border-radius: 4px;">
+								<p style="margin: 0; color: #1a1f3a; font-size: 14px; font-weight: 600;">Security Notice</p>
+								<p style="margin: 10px 0 0; color: #4a5568; font-size: 14px; line-height: 1.6;">If you did not make this change, please contact our support team immediately.</p>
+							</div>
+						</td>
+					</tr>
+					<!-- Footer -->
+					<tr>
+						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated security notification. Please do not reply to this email.</p>
+						</td>
+					</tr>
+				</table>
+				<!-- Footer Text -->
+				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
+					<tr>
+						<td align="center">
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
+	`, displayName, oldUsername, newUsername, time.Now().Year())
+
+	return e.sendEmail(to, subject, body)
+}
+
+// SendEmailChangeNotificationToOldEmail notifies the old email address about email change request
+func (e *EmailService) SendEmailChangeNotificationToOldEmail(oldEmail, displayName, newEmail string) error {
+	subject := "Email Change Request - Upvista Community"
+	body := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; line-height: 1.6;">
+	<table width="100%%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
+		<tr>
+			<td align="center">
+				<table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 600px;">
+					<!-- Header -->
+					<tr>
+						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+						</td>
+					</tr>
+					<!-- Content -->
+					<tr>
+						<td style="padding: 50px 50px 40px;">
+							<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Email Change Request</h2>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Hello %s,</p>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">A request was made to change the email address associated with your UpVista Community account.</p>
+							
+							<div style="margin: 35px 0; padding: 20px; background-color: #f7f9fc; border-left: 4px solid #1a1f3a; border-radius: 4px;">
+								<p style="margin: 0 0 10px; color: #718096; font-size: 13px;">Current Email (this address):</p>
+								<p style="margin: 0 0 15px; color: #1a1f3a; font-size: 16px; font-weight: 600;">%s</p>
+								<p style="margin: 0 0 10px; color: #718096; font-size: 13px;">Requested New Email:</p>
+								<p style="margin: 0; color: #1a1f3a; font-size: 16px; font-weight: 600;">%s</p>
+							</div>
+							
+							<p style="margin: 25px 0 0; color: #4a5568; font-size: 16px; line-height: 1.7;">A verification code has been sent to the new email address. The change will only be completed after the new address is verified.</p>
+							
+							<div style="margin: 35px 0; padding: 20px; background-color: #fef5e7; border-left: 4px solid #f39c12; border-radius: 4px;">
+								<p style="margin: 0; color: #1a1f3a; font-size: 14px; font-weight: 600;">Security Alert</p>
+								<p style="margin: 10px 0 0; color: #4a5568; font-size: 14px; line-height: 1.6;">If you did not request this change, please secure your account immediately by changing your password. Someone may have unauthorized access to your account.</p>
+							</div>
+							
+							<p style="margin: 25px 0 0; color: #718096; font-size: 14px; line-height: 1.6;">Request time: <strong style="color: #1a1f3a;">%s</strong></p>
+						</td>
+					</tr>
+					<!-- Footer -->
+					<tr>
+						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated security notification. Please do not reply to this email.</p>
+						</td>
+					</tr>
+				</table>
+				<!-- Footer Text -->
+				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
+					<tr>
+						<td align="center">
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+</body>
+</html>
+	`, displayName, oldEmail, newEmail, time.Now().Format("January 2, 2006 at 3:04 PM MST"), time.Now().Year())
+
+	return e.sendEmail(oldEmail, subject, body)
 }

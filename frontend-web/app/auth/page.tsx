@@ -398,10 +398,20 @@ export default function AuthPage() {
               </button>
             </div>
 
+            {/* Forgot Password Link */}
+            <div className="text-right">
+              <a
+                href="/auth/forgot-password"
+                className="cursor-pointer text-sm font-medium text-blue-600 transition-colors hover:text-blue-700 hover:underline"
+              >
+                Forgot password?
+              </a>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 w-full cursor-pointer rounded-2xl bg-black px-4 py-4 text-base font-semibold text-white transition-all hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full cursor-pointer rounded-2xl bg-black px-4 py-4 text-base font-semibold text-white transition-all hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? 'Signing in...' : 'Continue'}
             </button>
