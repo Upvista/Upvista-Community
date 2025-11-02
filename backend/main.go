@@ -38,9 +38,14 @@ func main() {
 		log.Fatalf("Failed to initialize session repository: %v", err)
 	}
 
+	// Initialize experience and education repositories
+	expRepo := repository.NewSupabaseExperienceRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	eduRepo := repository.NewSupabaseEducationRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+
 	// Initialize services
 	emailSvc := utils.NewEmailService(&cfg.Email)
-	jwtSvc := utils.NewJWTService(cfg.JWT.Secret, 15*time.Minute)
+	// JWT tokens valid for 30 days with sliding window refresh
+	jwtSvc := utils.NewJWTService(cfg.JWT.Secret, 30*24*time.Hour)
 
 	// Initialize rate limiter with forgiveness
 	rateLimiter := utils.NewRateLimiter(cfg.RateLimit.Forgiveness)
@@ -65,9 +70,16 @@ func main() {
 	// Initialize account service
 	accountSvc := account.NewAccountService(userRepo, sessionRepo, emailSvc, storageSvc)
 
+	// Initialize profile service
+	profileSvc := account.NewProfileService(userRepo)
+
+	// Initialize experience and education service
+	expEduSvc := account.NewExperienceEducationService(expRepo, eduRepo)
+
 	// Initialize handlers
 	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc, rateLimiter, cfg, googleOAuth, githubOAuth, linkedinOAuth, sessionRepo)
-	accountHandlers := account.NewAccountHandlers(accountSvc)
+	accountHandlers := account.NewAccountHandlers(accountSvc, profileSvc)
+	expEduHandlers := account.NewExperienceEducationHandlers(expEduSvc)
 
 	// Create Gin router with middleware
 	r := gin.Default()
@@ -137,6 +149,17 @@ func main() {
 		protected := api.Group("")
 		protected.Use(auth.JWTAuthMiddleware(jwtSvc))
 		accountHandlers.SetupRoutes(protected)
+
+		// Experience and education routes (protected)
+		protected.POST("/account/experiences", expEduHandlers.CreateExperience)
+		protected.GET("/account/experiences", expEduHandlers.GetMyExperiences)
+		protected.PATCH("/account/experiences/:id", expEduHandlers.UpdateExperience)
+		protected.DELETE("/account/experiences/:id", expEduHandlers.DeleteExperience)
+
+		protected.POST("/account/education", expEduHandlers.CreateEducation)
+		protected.GET("/account/education", expEduHandlers.GetMyEducation)
+		protected.PATCH("/account/education/:id", expEduHandlers.UpdateEducation)
+		protected.DELETE("/account/education/:id", expEduHandlers.DeleteEducation)
 	}
 
 	// Start server

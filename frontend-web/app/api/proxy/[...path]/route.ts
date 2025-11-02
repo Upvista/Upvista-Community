@@ -151,11 +151,20 @@ async function proxyRequest(
       jsonData = data;
     }
 
+    // Forward important headers from backend (including token refresh)
+    const responseHeaders: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Forward X-New-Token for sliding window authentication
+    const newToken = response.headers.get('X-New-Token');
+    if (newToken) {
+      responseHeaders['X-New-Token'] = newToken;
+    }
+
     return NextResponse.json(jsonData, {
       status: response.status,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: responseHeaders,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -93,8 +93,8 @@ func LoadConfig() (*Config, error) {
 	// Set default values
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("server.gin_mode", "debug")
-	viper.SetDefault("jwt.expiry", "15m")
-	viper.SetDefault("jwt.refresh_expiry", "7d")
+	viper.SetDefault("jwt.expiry", "720h")         // 30 days (720 hours)
+	viper.SetDefault("jwt.refresh_expiry", "720h") // Same as expiry for sliding window
 	viper.SetDefault("email.host", "smtp.gmail.com")
 	viper.SetDefault("email.port", 587)
 	viper.SetDefault("rate_limit.login", 5)

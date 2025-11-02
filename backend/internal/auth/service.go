@@ -149,7 +149,7 @@ func (s *AuthService) VerifyEmail(ctx context.Context, req *models.VerifyEmailRe
 		Success:   true,
 		Message:   "Email verified successfully",
 		Token:     token,
-		ExpiresAt: time.Now().Add(15 * time.Minute), // 15 minutes
+		ExpiresAt: time.Now().Add(30 * 24 * time.Hour), // 30 days
 		User:      user.ToSafeUser(),
 	}, nil
 }
@@ -198,7 +198,7 @@ func (s *AuthService) LoginUser(ctx context.Context, req *models.LoginRequest) (
 		Success:   true,
 		Message:   "Login successful",
 		Token:     token,
-		ExpiresAt: time.Now().Add(15 * time.Minute), // 15 minutes
+		ExpiresAt: time.Now().Add(30 * 24 * time.Hour), // 30 days
 		User:      user.ToSafeUser(),
 	}, nil
 }
@@ -309,7 +309,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, userID uuid.UUID) (*mode
 		Success:   true,
 		Message:   "Token refreshed successfully",
 		Token:     token,
-		ExpiresAt: time.Now().Add(15 * time.Minute), // 15 minutes
+		ExpiresAt: time.Now().Add(30 * 24 * time.Hour), // 30 days
 	}, nil
 }
 

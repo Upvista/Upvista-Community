@@ -67,7 +67,7 @@ func (h *AuthHandlers) createSession(ctx context.Context, userID uuid.UUID, toke
 		TokenHash: tokenHash,
 		UserAgent: &userAgent,
 		IPAddress: &ipAddress,
-		ExpiresAt: time.Now().Add(15 * time.Minute), // Same as JWT expiry
+		ExpiresAt: time.Now().Add(30 * 24 * time.Hour), // 30 days - same as JWT
 		CreatedAt: time.Now(),
 	}
 

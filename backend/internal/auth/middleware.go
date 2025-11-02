@@ -1,13 +1,17 @@
 package auth
 
 import (
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"upvista-community-backend/internal/models"
 	"upvista-community-backend/internal/utils"
 	"upvista-community-backend/pkg/errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // JWTAuthMiddleware validates JWT tokens
@@ -52,6 +56,28 @@ func JWTAuthMiddleware(jwtSvc *utils.JWTService) gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_username", claims.Username)
+
+		// Sliding Window Token Refresh
+		// If token is more than halfway to expiry (15+ days old), issue a new one
+		timeUntilExpiry := time.Until(claims.ExpiresAt.Time)
+		halfLife := 15 * 24 * time.Hour // Half of 30 days
+
+		if timeUntilExpiry < halfLife {
+			// Token is past halfway - issue a fresh 30-day token
+			userID, _ := uuid.Parse(claims.UserID)
+			user := &models.User{
+				ID:       userID,
+				Email:    claims.Email,
+				Username: claims.Username,
+			}
+
+			newToken, err := jwtSvc.GenerateToken(user)
+			if err == nil {
+				// Send new token in response header for frontend to update
+				c.Header("X-New-Token", newToken)
+				log.Printf("[Auth] Token refreshed for user %s (was expiring in %v, refreshed to 30 days)", claims.UserID, timeUntilExpiry)
+			}
+		}
 
 		// Continue to next handler
 		c.Next()

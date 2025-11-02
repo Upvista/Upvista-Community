@@ -18,6 +18,30 @@ export interface UserProfile {
   profile_picture: string | null;
   created_at: string;
   updated_at: string;
+  
+  // Profile System Phase 1 Fields
+  bio?: string | null;
+  location?: string | null;
+  gender?: string | null;
+  gender_custom?: string | null;
+  website?: string | null;
+  is_verified?: boolean;
+  profile_privacy?: string;
+  field_visibility?: {
+    location: boolean;
+    gender: boolean;
+    age: boolean;
+    website: boolean;
+    joined_date: boolean;
+    email: boolean;
+    [key: string]: boolean; // Index signature for dynamic access
+  };
+  story?: string | null;
+  ambition?: string | null;
+  posts_count?: number;
+  projects_count?: number;
+  followers_count?: number;
+  following_count?: number;
 }
 
 export function useUser() {
@@ -41,6 +65,12 @@ export function useUser() {
           'Authorization': `Bearer ${token}`,
         },
       });
+
+      // Auto-refresh token (sliding window authentication)
+      const newToken = response.headers.get('x-new-token');
+      if (newToken) {
+        localStorage.setItem('token', newToken);
+      }
 
       if (response.ok) {
         const data = await response.json();

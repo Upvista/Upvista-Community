@@ -168,10 +168,10 @@ func (r *SupabaseUserRepository) CreateUser(ctx context.Context, user *models.Us
 func (r *SupabaseUserRepository) fetchOne(ctx context.Context, q url.Values) (*models.User, error) {
 	// Only set select and limit if not already set
 	if q.Get("select") == "" {
-		q.Set("select", "*")
+	q.Set("select", "*")
 	}
 	if q.Get("limit") == "" {
-		q.Set("limit", "1")
+	q.Set("limit", "1")
 	}
 	url := r.usersURL(q)
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -265,6 +265,58 @@ func (r *SupabaseUserRepository) fetchOne(ctx context.Context, q url.Values) (*m
 	}
 	if profilePicture, ok := rawUser["profile_picture"].(string); ok && profilePicture != "" {
 		user.ProfilePicture = &profilePicture
+	}
+
+	// Parse Profile System Phase 1 fields
+	if bio, ok := rawUser["bio"].(string); ok && bio != "" {
+		user.Bio = &bio
+	}
+	if location, ok := rawUser["location"].(string); ok && location != "" {
+		user.Location = &location
+	}
+	if gender, ok := rawUser["gender"].(string); ok && gender != "" {
+		user.Gender = &gender
+	}
+	if genderCustom, ok := rawUser["gender_custom"].(string); ok && genderCustom != "" {
+		user.GenderCustom = &genderCustom
+	}
+	if website, ok := rawUser["website"].(string); ok && website != "" {
+		user.Website = &website
+	}
+	if isVerified, ok := rawUser["is_verified"].(bool); ok {
+		user.IsVerified = isVerified
+	}
+	if profilePrivacy, ok := rawUser["profile_privacy"].(string); ok {
+		user.ProfilePrivacy = profilePrivacy
+	} else {
+		user.ProfilePrivacy = "public" // default
+	}
+	if fieldVisibilityRaw, ok := rawUser["field_visibility"].(map[string]interface{}); ok {
+		fieldVisibility := make(map[string]bool)
+		for k, v := range fieldVisibilityRaw {
+			if boolVal, ok := v.(bool); ok {
+				fieldVisibility[k] = boolVal
+			}
+		}
+		user.FieldVisibility = fieldVisibility
+	}
+	if story, ok := rawUser["story"].(string); ok && story != "" {
+		user.Story = &story
+	}
+	if ambition, ok := rawUser["ambition"].(string); ok && ambition != "" {
+		user.Ambition = &ambition
+	}
+	if postsCount, ok := rawUser["posts_count"].(float64); ok {
+		user.PostsCount = int(postsCount)
+	}
+	if projectsCount, ok := rawUser["projects_count"].(float64); ok {
+		user.ProjectsCount = int(projectsCount)
+	}
+	if followersCount, ok := rawUser["followers_count"].(float64); ok {
+		user.FollowersCount = int(followersCount)
+	}
+	if followingCount, ok := rawUser["following_count"].(float64); ok {
+		user.FollowingCount = int(followingCount)
 	}
 
 	// Parse timestamps with flexible format
@@ -875,6 +927,176 @@ func (r *SupabaseUserRepository) DeactivateAccount(ctx context.Context, userID u
 	if resp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		log.Printf("[Supabase] DeactivateAccount failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// UpdateBasicProfile updates basic profile information
+func (r *SupabaseUserRepository) UpdateBasicProfile(ctx context.Context, userID uuid.UUID, req *models.UpdateBasicProfileRequest) error {
+	update := make(map[string]interface{})
+
+	if req.DisplayName != nil {
+		update["display_name"] = *req.DisplayName
+	}
+	if req.Bio != nil {
+		update["bio"] = *req.Bio
+	}
+	if req.Location != nil {
+		update["location"] = *req.Location
+	}
+	if req.Gender != nil {
+		update["gender"] = *req.Gender
+	}
+	if req.GenderCustom != nil {
+		update["gender_custom"] = *req.GenderCustom
+	}
+	if req.Age != nil {
+		update["age"] = *req.Age
+	}
+	if req.Website != nil {
+		update["website"] = *req.Website
+	}
+
+	update["updated_at"] = time.Now().Format("2006-01-02T15:04:05.999999999Z07:00")
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(httpReq, "return=minimal")
+
+	resp, err := r.http.Do(httpReq)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] UpdateBasicProfile failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// UpdatePrivacySettings updates user privacy settings
+func (r *SupabaseUserRepository) UpdatePrivacySettings(ctx context.Context, userID uuid.UUID, req *models.UpdatePrivacySettingsRequest) error {
+	update := map[string]interface{}{
+		"profile_privacy":  req.ProfilePrivacy,
+		"field_visibility": req.FieldVisibility,
+		"updated_at":       time.Now().Format("2006-01-02T15:04:05.999999999Z07:00"),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(httpReq, "return=minimal")
+
+	resp, err := r.http.Do(httpReq)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] UpdatePrivacySettings failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// UpdateStory updates the user's story section
+func (r *SupabaseUserRepository) UpdateStory(ctx context.Context, userID uuid.UUID, story *string) error {
+	update := map[string]interface{}{
+		"story":      story,
+		"updated_at": time.Now().Format("2006-01-02T15:04:05.999999999Z07:00"),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(httpReq, "return=minimal")
+
+	resp, err := r.http.Do(httpReq)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] UpdateStory failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// UpdateAmbition updates the user's ambition section
+func (r *SupabaseUserRepository) UpdateAmbition(ctx context.Context, userID uuid.UUID, ambition *string) error {
+	update := map[string]interface{}{
+		"ambition":   ambition,
+		"updated_at": time.Now().Format("2006-01-02T15:04:05.999999999Z07:00"),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(httpReq, "return=minimal")
+
+	resp, err := r.http.Do(httpReq)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] UpdateAmbition failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
 		return apperr.ErrDatabaseError
 	}
 

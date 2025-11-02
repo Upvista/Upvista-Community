@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useUser } from '@/lib/hooks/useUser';
+import GenderSelect from '@/components/ui/GenderSelect';
+import ProfilePictureEditor from '@/components/profile/ProfilePictureEditor';
 
 const settingsSections = [
   { id: 'account', name: 'Account', icon: User },
@@ -109,12 +111,18 @@ function AccountSection() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [pictureEditorOpen, setPictureEditorOpen] = useState(false);
   const [emailChangeLoading, setEmailChangeLoading] = useState(false);
   const [usernameChangeLoading, setUsernameChangeLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     display_name: '',
     age: '',
+    bio: '',
+    location: '',
+    gender: '',
+    gender_custom: '',
+    website: '',
   });
 
   const [emailData, setEmailData] = useState({
@@ -136,27 +144,39 @@ function AccountSection() {
       setFormData({
         display_name: user.display_name,
         age: user.age?.toString() || '',
+        bio: user.bio || '',
+        location: user.location || '',
+        gender: user.gender || '',
+        gender_custom: user.gender_custom || '',
+        website: user.website || '',
       });
     }
   }, [user]);
 
-  // Update Profile
+  // Update Profile (Basic Profile endpoint)
   const handleUpdateProfile = async () => {
     setIsLoading(true);
     setMessage('');
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/proxy/v1/account/profile', {
+      const payload: any = {
+        display_name: formData.display_name,
+        age: parseInt(formData.age),
+        bio: formData.bio || null,
+        location: formData.location || null,
+        gender: formData.gender || null,
+        gender_custom: formData.gender === 'custom' ? formData.gender_custom || null : null,
+        website: formData.website || null,
+      };
+
+      const response = await fetch('/api/proxy/v1/account/profile/basic', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          display_name: formData.display_name,
-          age: parseInt(formData.age),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -174,28 +194,13 @@ function AccountSection() {
     }
   };
 
-  // Upload Profile Picture
-  const handleProfilePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage('File size must be less than 5MB');
-      return;
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setMessage('Only image files are allowed');
-      return;
-    }
-
+  // Upload Profile Picture (called from ProfilePictureEditor after compression)
+  const handleProfilePictureUpload = async (compressedFile: File) => {
     setUploadLoading(true);
     setMessage('');
     
     const formData = new FormData();
-    formData.append('profile_picture', file);
+    formData.append('profile_picture', compressedFile);
 
     try {
       const token = localStorage.getItem('token');
@@ -208,14 +213,14 @@ function AccountSection() {
       const data = await response.json();
       
       if (response.ok) {
-        setMessage('Profile picture updated successfully!');
+        setMessage('✓ Profile picture updated successfully! Optimized to ' + (compressedFile.size / 1024).toFixed(2) + ' KB');
         refetch();
       } else {
-        setMessage(data.message || 'Upload failed');
+        throw new Error(data.message || 'Upload failed');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      setMessage('Upload failed. Please try again.');
+      throw error; // Re-throw to be caught by the editor
     } finally {
       setUploadLoading(false);
     }
@@ -358,40 +363,34 @@ function AccountSection() {
         <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-4">
           Profile Picture
         </h3>
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col md:flex-row items-center md:items-center gap-4 md:gap-6">
           <Avatar 
             src={user?.profile_picture} 
             alt="Profile" 
             fallback={user?.display_name || 'User'} 
             size="3xl" 
           />
-          <div className="space-y-2">
-            <label 
-              htmlFor="profile-upload" 
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-xl font-semibold transition-all duration-200 cursor-pointer border-2 border-brand-purple-600 hover:border-brand-purple-700 text-brand-purple-600 dark:text-brand-purple-400 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-950/30"
+          <div className="space-y-2 w-full md:w-auto text-center md:text-left">
+            <Button
+              variant="primary"
+              onClick={() => setPictureEditorOpen(true)}
+              disabled={uploadLoading}
+              className="w-full md:w-auto text-sm"
             >
               {uploadLoading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-brand-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Uploading...
                 </>
               ) : (
                 <>
                   <Upload className="w-4 h-4" />
-                  Upload New
+                  Edit Photo
                 </>
               )}
-            </label>
-            <input
-              id="profile-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleProfilePictureUpload}
-              disabled={uploadLoading}
-            />
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              JPG, PNG or GIF. Max size 5MB.
+            </Button>
+            <p className="text-xs md:text-sm text-neutral-500 dark:text-neutral-400">
+              Up to 5MB • Auto-compressed to ~150KB
             </p>
           </div>
         </div>
@@ -414,6 +413,51 @@ function AccountSection() {
             type="number"
             value={formData.age}
             onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+              Bio (optional)
+            </label>
+            <textarea
+              value={formData.bio}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              placeholder="Tell us about yourself..."
+              maxLength={150}
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-brand-purple-500 resize-none"
+            />
+            <div className="mt-1 text-xs text-neutral-500 text-right">
+              {formData.bio.length} / 150
+            </div>
+          </div>
+
+          <Input
+            label="Location (optional)"
+            value={formData.location}
+            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+            placeholder="e.g., New York, USA"
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+              Gender (optional)
+            </label>
+            <GenderSelect
+              value={formData.gender}
+              customValue={formData.gender_custom}
+              onChange={(gender, customValue) => 
+                setFormData({ ...formData, gender: gender || '', gender_custom: customValue || '' })
+              }
+            />
+          </div>
+
+          <Input
+            label="Website (optional)"
+            type="url"
+            value={formData.website}
+            onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+            placeholder="https://yourwebsite.com"
           />
 
           <Button 
@@ -548,6 +592,14 @@ function AccountSection() {
           </p>
         </div>
       </Card>
+
+      {/* Profile Picture Editor Modal */}
+      <ProfilePictureEditor
+        isOpen={pictureEditorOpen}
+        onClose={() => setPictureEditorOpen(false)}
+        onSave={handleProfilePictureUpload}
+        currentImageUrl={user?.profile_picture || null}
+      />
     </div>
   );
 }
@@ -705,32 +757,185 @@ function SecuritySection() {
 }
 
 function PrivacySection() {
+  const { user, loading, refetch } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [privacyData, setPrivacyData] = useState<{
+    profile_privacy: string;
+    field_visibility: {
+      location: boolean;
+      gender: boolean;
+      age: boolean;
+      website: boolean;
+      joined_date: boolean;
+      email: boolean;
+      [key: string]: boolean;
+    };
+  }>({
+    profile_privacy: 'public',
+    field_visibility: {
+      location: true,
+      gender: true,
+      age: true,
+      website: true,
+      joined_date: true,
+      email: false,
+    },
+  });
+
+  useEffect(() => {
+    if (user) {
+      setPrivacyData({
+        profile_privacy: user.profile_privacy || 'public',
+        field_visibility: user.field_visibility || {
+          location: true,
+          gender: true,
+          age: true,
+          website: true,
+          joined_date: true,
+          email: false,
+        },
+      });
+    }
+  }, [user]);
+
+  const handleUpdatePrivacy = async () => {
+    setIsLoading(true);
+    setMessage('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/proxy/v1/account/profile/privacy', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(privacyData),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setMessage('Privacy settings updated successfully!');
+        refetch();
+      } else {
+        setMessage(data.message || 'Failed to update privacy settings');
+      }
+    } catch (error) {
+      setMessage('Network error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card variant="solid" hoverable={false}>
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-brand-purple-200 border-t-brand-purple-600"></div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <Card variant="solid" hoverable={false}>
-      <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-4">
-        Privacy Settings
-      </h3>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
-          <div>
-            <p className="font-medium text-neutral-900 dark:text-neutral-50">Profile Visibility</p>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">Who can see your profile</p>
-          </div>
-          <select className="px-4 py-2 rounded-lg border-2 border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 cursor-pointer">
-            <option>Everyone</option>
-            <option>Connections</option>
-            <option>Only Me</option>
-          </select>
+    <div className="space-y-6">
+      {message && (
+        <div className={`p-4 rounded-xl ${
+          message.includes('success') 
+            ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200' 
+            : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+        }`}>
+          {message}
         </div>
-        <div className="flex items-center justify-between py-3">
-          <div>
-            <p className="font-medium text-neutral-900 dark:text-neutral-50">Activity Status</p>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">Show when you're active</p>
+      )}
+
+      <Card variant="solid" hoverable={false}>
+        <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-4">
+          Profile Visibility
+        </h3>
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            Choose who can view your profile
+          </p>
+
+          <div className="space-y-3">
+            {[
+              { value: 'public', label: 'Public', description: 'Anyone can view your profile' },
+              { value: 'connections', label: 'Connections Only', description: 'Only your connections can view your profile' },
+              { value: 'private', label: 'Private', description: 'Only you can view your profile' },
+            ].map((option) => (
+              <label
+                key={option.value}
+                className="flex items-start gap-3 p-4 rounded-xl border-2 border-neutral-200 dark:border-neutral-700 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+              >
+                <input
+                  type="radio"
+                  name="profile_privacy"
+                  value={option.value}
+                  checked={privacyData.profile_privacy === option.value}
+                  onChange={(e) => setPrivacyData({ ...privacyData, profile_privacy: e.target.value })}
+                  className="mt-1 w-5 h-5 text-brand-purple-600 cursor-pointer"
+                />
+                <div>
+                  <p className="font-medium text-neutral-900 dark:text-neutral-50">{option.label}</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">{option.description}</p>
+                </div>
+              </label>
+            ))}
           </div>
-          <input type="checkbox" className="w-5 h-5 cursor-pointer" defaultChecked />
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      <Card variant="solid" hoverable={false}>
+        <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-4">
+          Field Visibility
+        </h3>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+          Control which fields are visible on your public profile
+        </p>
+        
+        <div className="space-y-3">
+          {[
+            { key: 'location', label: 'Location' },
+            { key: 'gender', label: 'Gender' },
+            { key: 'age', label: 'Age' },
+            { key: 'website', label: 'Website' },
+            { key: 'joined_date', label: 'Joined Date' },
+          ].map((field) => (
+            <label
+              key={field.key}
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+            >
+              <span className="font-medium text-neutral-900 dark:text-neutral-50">{field.label}</span>
+              <input
+                type="checkbox"
+                checked={privacyData.field_visibility[field.key] || false}
+                onChange={(e) => setPrivacyData({
+                  ...privacyData,
+                  field_visibility: {
+                    ...privacyData.field_visibility,
+                    [field.key]: e.target.checked,
+                  },
+                })}
+                className="w-5 h-5 text-brand-purple-600 rounded cursor-pointer"
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="mt-6">
+          <Button
+            variant="primary"
+            onClick={handleUpdatePrivacy}
+            isLoading={isLoading}
+          >
+            Save Privacy Settings
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
 }
 

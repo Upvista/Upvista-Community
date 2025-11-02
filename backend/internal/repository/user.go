@@ -38,4 +38,10 @@ type UserRepository interface {
 	VerifyEmailChange(ctx context.Context, userID uuid.UUID, code string) error
 	ChangeUsername(ctx context.Context, userID uuid.UUID, newUsername string) error
 	DeactivateAccount(ctx context.Context, userID uuid.UUID) error
+
+	// Profile System Phase 1 methods
+	UpdateBasicProfile(ctx context.Context, userID uuid.UUID, req *models.UpdateBasicProfileRequest) error
+	UpdatePrivacySettings(ctx context.Context, userID uuid.UUID, req *models.UpdatePrivacySettingsRequest) error
+	UpdateStory(ctx context.Context, userID uuid.UUID, story *string) error
+	UpdateAmbition(ctx context.Context, userID uuid.UUID, ambition *string) error
 }

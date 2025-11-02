@@ -112,18 +112,13 @@ export function Sidebar() {
                   )}
                 >
                   {user.profile_picture ? (
-                    <div className={cn(
-                      'rounded-full transition-all duration-200',
-                      active && 'ring-2 ring-brand-purple-600 dark:ring-brand-purple-400'
-                    )}>
-                      <Avatar 
-                        src={user.profile_picture} 
-                        alt="Profile" 
-                        fallback={user.display_name}
-                        size="sm"
-                        className="w-6 h-6"
-                      />
-                    </div>
+                    <Avatar 
+                      src={user.profile_picture} 
+                      alt="Profile" 
+                      fallback={user.display_name}
+                      size="sm"
+                      className="w-6 h-6"
+                    />
                   ) : (
                     <Icon className="w-6 h-6 flex-shrink-0" />
                   )}

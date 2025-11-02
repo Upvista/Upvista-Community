@@ -33,6 +33,22 @@ type User struct {
 	LastLoginAt                *time.Time `json:"last_login_at" db:"last_login_at"`
 	CreatedAt                  time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt                  time.Time  `json:"updated_at" db:"updated_at"`
+
+	// Profile System Phase 1 Fields
+	Bio             *string         `json:"bio,omitempty" db:"bio"`
+	Location        *string         `json:"location,omitempty" db:"location"`
+	Gender          *string         `json:"gender,omitempty" db:"gender"`
+	GenderCustom    *string         `json:"gender_custom,omitempty" db:"gender_custom"`
+	Website         *string         `json:"website,omitempty" db:"website"`
+	IsVerified      bool            `json:"is_verified" db:"is_verified"`
+	ProfilePrivacy  string          `json:"profile_privacy" db:"profile_privacy"`
+	FieldVisibility map[string]bool `json:"field_visibility" db:"field_visibility"`
+	Story           *string         `json:"story,omitempty" db:"story"`
+	Ambition        *string         `json:"ambition,omitempty" db:"ambition"`
+	PostsCount      int             `json:"posts_count" db:"posts_count"`
+	ProjectsCount   int             `json:"projects_count" db:"projects_count"`
+	FollowersCount  int             `json:"followers_count" db:"followers_count"`
+	FollowingCount  int             `json:"following_count" db:"following_count"`
 }
 
 // UserSession represents a user session (optional for advanced session management)
@@ -171,6 +187,136 @@ type SessionsResponse struct {
 	Sessions []*UserSession `json:"sessions"`
 }
 
+// UpdateBasicProfileRequest represents the request payload for updating basic profile info
+type UpdateBasicProfileRequest struct {
+	DisplayName  *string `json:"display_name,omitempty" validate:"omitempty,min=2,max=100"`
+	Bio          *string `json:"bio,omitempty" validate:"omitempty,max=150"`
+	Location     *string `json:"location,omitempty" validate:"omitempty,max=100"`
+	Gender       *string `json:"gender,omitempty" validate:"omitempty,oneof=male female non-binary prefer-not-to-say custom"`
+	GenderCustom *string `json:"gender_custom,omitempty" validate:"omitempty,max=50"`
+	Age          *int    `json:"age,omitempty" validate:"omitempty,min=13,max=120"`
+	Website      *string `json:"website,omitempty" validate:"omitempty,url"`
+}
+
+// UpdatePrivacySettingsRequest represents the request payload for updating privacy settings
+type UpdatePrivacySettingsRequest struct {
+	ProfilePrivacy  string          `json:"profile_privacy" validate:"required,oneof=public private connections"`
+	FieldVisibility map[string]bool `json:"field_visibility" validate:"required"`
+}
+
+// UpdateStoryRequest represents the request payload for updating story section
+type UpdateStoryRequest struct {
+	Story *string `json:"story" validate:"omitempty,max=800"`
+}
+
+// UpdateAmbitionRequest represents the request payload for updating ambition section
+type UpdateAmbitionRequest struct {
+	Ambition *string `json:"ambition" validate:"omitempty,max=200"`
+}
+
+// PublicProfileResponse represents a public-facing user profile with privacy filtering applied
+type PublicProfileResponse struct {
+	ID             uuid.UUID `json:"id"`
+	Username       string    `json:"username"`
+	DisplayName    string    `json:"display_name"`
+	ProfilePicture *string   `json:"profile_picture,omitempty"`
+	IsVerified     bool      `json:"is_verified"`
+	Bio            *string   `json:"bio,omitempty"`
+	Location       *string   `json:"location,omitempty"`
+	Gender         *string   `json:"gender,omitempty"`
+	GenderCustom   *string   `json:"gender_custom,omitempty"`
+	Age            *int      `json:"age,omitempty"`
+	Website        *string   `json:"website,omitempty"`
+	JoinedAt       time.Time `json:"joined_at"`
+	Story          *string   `json:"story,omitempty"`
+	Ambition       *string   `json:"ambition,omitempty"`
+	PostsCount     int       `json:"posts_count"`
+	ProjectsCount  int       `json:"projects_count"`
+	FollowersCount int       `json:"followers_count"`
+	FollowingCount int       `json:"following_count"`
+	IsOwnProfile   bool      `json:"is_own_profile"`
+	ProfilePrivacy *string   `json:"profile_privacy,omitempty"` // Only sent for own profile
+}
+
+// UserExperience represents a user's work experience entry
+type UserExperience struct {
+	ID             uuid.UUID  `json:"id" db:"id"`
+	UserID         uuid.UUID  `json:"user_id" db:"user_id"`
+	CompanyName    string     `json:"company_name" db:"company_name"`
+	Title          string     `json:"title" db:"title"`
+	EmploymentType *string    `json:"employment_type,omitempty" db:"employment_type"`
+	StartDate      time.Time  `json:"start_date" db:"start_date"`
+	EndDate        *time.Time `json:"end_date,omitempty" db:"end_date"`
+	IsCurrent      bool       `json:"is_current" db:"is_current"`
+	Description    *string    `json:"description,omitempty" db:"description"`
+	IsPublic       bool       `json:"is_public" db:"is_public"`
+	DisplayOrder   int        `json:"display_order" db:"display_order"`
+	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// UserEducation represents a user's education entry
+type UserEducation struct {
+	ID           uuid.UUID  `json:"id" db:"id"`
+	UserID       uuid.UUID  `json:"user_id" db:"user_id"`
+	SchoolName   string     `json:"school_name" db:"school_name"`
+	Degree       *string    `json:"degree,omitempty" db:"degree"`
+	FieldOfStudy *string    `json:"field_of_study,omitempty" db:"field_of_study"`
+	StartDate    time.Time  `json:"start_date" db:"start_date"`
+	EndDate      *time.Time `json:"end_date,omitempty" db:"end_date"`
+	IsCurrent    bool       `json:"is_current" db:"is_current"`
+	Description  *string    `json:"description,omitempty" db:"description"`
+	DisplayOrder int        `json:"display_order" db:"display_order"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// CreateExperienceRequest represents the request to add experience
+type CreateExperienceRequest struct {
+	CompanyName    string  `json:"company_name" validate:"required,max=150"`
+	Title          string  `json:"title" validate:"required,max=150"`
+	EmploymentType *string `json:"employment_type,omitempty" validate:"omitempty,oneof=full-time part-time contract internship freelance self-employed"`
+	StartDate      string  `json:"start_date" validate:"required"` // YYYY-MM-DD
+	EndDate        *string `json:"end_date,omitempty"`             // YYYY-MM-DD or null
+	IsCurrent      bool    `json:"is_current"`
+	Description    *string `json:"description,omitempty" validate:"omitempty,max=200"`
+	IsPublic       bool    `json:"is_public"`
+}
+
+// UpdateExperienceRequest represents the request to update experience
+type UpdateExperienceRequest struct {
+	CompanyName    *string `json:"company_name,omitempty" validate:"omitempty,max=150"`
+	Title          *string `json:"title,omitempty" validate:"omitempty,max=150"`
+	EmploymentType *string `json:"employment_type,omitempty" validate:"omitempty,oneof=full-time part-time contract internship freelance self-employed"`
+	StartDate      *string `json:"start_date,omitempty"` // YYYY-MM-DD
+	EndDate        *string `json:"end_date,omitempty"`   // YYYY-MM-DD or null
+	IsCurrent      *bool   `json:"is_current,omitempty"`
+	Description    *string `json:"description,omitempty" validate:"omitempty,max=200"`
+	IsPublic       *bool   `json:"is_public,omitempty"`
+}
+
+// CreateEducationRequest represents the request to add education
+type CreateEducationRequest struct {
+	SchoolName   string  `json:"school_name" validate:"required,max=150"`
+	Degree       *string `json:"degree,omitempty" validate:"omitempty,max=150"`
+	FieldOfStudy *string `json:"field_of_study,omitempty" validate:"omitempty,max=150"`
+	StartDate    string  `json:"start_date" validate:"required"` // YYYY-MM-DD
+	EndDate      *string `json:"end_date,omitempty"`             // YYYY-MM-DD or null
+	IsCurrent    bool    `json:"is_current"`
+	Description  *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
+// UpdateEducationRequest represents the request to update education
+type UpdateEducationRequest struct {
+	SchoolName   *string `json:"school_name,omitempty" validate:"omitempty,max=150"`
+	Degree       *string `json:"degree,omitempty" validate:"omitempty,max=150"`
+	FieldOfStudy *string `json:"field_of_study,omitempty" validate:"omitempty,max=150"`
+	StartDate    *string `json:"start_date,omitempty"` // YYYY-MM-DD
+	EndDate      *string `json:"end_date,omitempty"`   // YYYY-MM-DD or null
+	IsCurrent    *bool   `json:"is_current,omitempty"`
+	Description  *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
 // ToUser converts User model to a safe version without sensitive data
 func (u *User) ToSafeUser() *User {
 	return &User{
@@ -186,5 +332,19 @@ func (u *User) ToSafeUser() *User {
 		LastLoginAt:     u.LastLoginAt,
 		CreatedAt:       u.CreatedAt,
 		UpdatedAt:       u.UpdatedAt,
+		Bio:             u.Bio,
+		Location:        u.Location,
+		Gender:          u.Gender,
+		GenderCustom:    u.GenderCustom,
+		Website:         u.Website,
+		IsVerified:      u.IsVerified,
+		ProfilePrivacy:  u.ProfilePrivacy,
+		FieldVisibility: u.FieldVisibility,
+		Story:           u.Story,
+		Ambition:        u.Ambition,
+		PostsCount:      u.PostsCount,
+		ProjectsCount:   u.ProjectsCount,
+		FollowersCount:  u.FollowersCount,
+		FollowingCount:  u.FollowingCount,
 	}
 }

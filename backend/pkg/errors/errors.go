@@ -31,6 +31,11 @@ func NewAppError(code int, message string, details ...string) *AppError {
 	return err
 }
 
+// New creates a new application error (alias for NewAppError for convenience)
+func New(code int, message string, details ...string) *AppError {
+	return NewAppError(code, message, details...)
+}
+
 // Predefined errors
 var (
 	// Authentication errors
@@ -64,6 +69,10 @@ var (
 	ErrUserNotFound      = NewAppError(http.StatusNotFound, "User not found")
 	ErrUserInactive      = NewAppError(http.StatusForbidden, "User account is inactive")
 	ErrUserAlreadyExists = NewAppError(http.StatusConflict, "User already exists")
+	ErrForbidden         = NewAppError(http.StatusForbidden, "Access forbidden")
+
+	// Request errors
+	ErrBadRequest = NewAppError(http.StatusBadRequest, "Bad request")
 
 	// Rate limiting errors
 	ErrTooManyRequests = NewAppError(http.StatusTooManyRequests, "Too many requests")

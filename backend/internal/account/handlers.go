@@ -13,12 +13,14 @@ import (
 // AccountHandlers handles HTTP requests for account management
 type AccountHandlers struct {
 	accountSvc *AccountService
+	profileSvc *ProfileService
 }
 
 // NewAccountHandlers creates new account handlers
-func NewAccountHandlers(accountSvc *AccountService) *AccountHandlers {
+func NewAccountHandlers(accountSvc *AccountService, profileSvc *ProfileService) *AccountHandlers {
 	return &AccountHandlers{
 		accountSvc: accountSvc,
+		profileSvc: profileSvc,
 	}
 }
 
@@ -617,6 +619,256 @@ func (h *AccountHandlers) ExportDataHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, data)
 }
 
+// UpdateBasicProfile handles PATCH /api/v1/account/profile/basic
+func (h *AccountHandlers) UpdateBasicProfile(c *gin.Context) {
+	// Get user ID from JWT
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	// Parse user ID
+	id, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	// Bind request
+	var req models.UpdateBasicProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request body",
+		})
+		return
+	}
+
+	// Update basic profile
+	err = h.profileSvc.UpdateBasicProfile(c.Request.Context(), id, &req)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Profile updated successfully",
+	})
+}
+
+// UpdatePrivacySettings handles PATCH /api/v1/account/profile/privacy
+func (h *AccountHandlers) UpdatePrivacySettings(c *gin.Context) {
+	// Get user ID from JWT
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	// Parse user ID
+	id, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	// Bind request
+	var req models.UpdatePrivacySettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request body",
+		})
+		return
+	}
+
+	// Update privacy settings
+	err = h.profileSvc.UpdatePrivacySettings(c.Request.Context(), id, &req)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Privacy settings updated successfully",
+	})
+}
+
+// UpdateStory handles PATCH /api/v1/account/profile/story
+func (h *AccountHandlers) UpdateStory(c *gin.Context) {
+	// Get user ID from JWT
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	// Parse user ID
+	id, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	// Bind request
+	var req models.UpdateStoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request body",
+		})
+		return
+	}
+
+	// Validate story length if provided
+	if req.Story != nil && len(*req.Story) > 2000 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Story must be 2000 characters or less",
+		})
+		return
+	}
+
+	// Update story
+	err = h.profileSvc.UpdateStory(c.Request.Context(), id, req.Story)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Story updated successfully",
+	})
+}
+
+// UpdateAmbition handles PATCH /api/v1/account/profile/ambition
+func (h *AccountHandlers) UpdateAmbition(c *gin.Context) {
+	// Get user ID from JWT
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	// Parse user ID
+	id, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	// Bind request
+	var req models.UpdateAmbitionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request body",
+		})
+		return
+	}
+
+	// Validate ambition length if provided
+	if req.Ambition != nil && len(*req.Ambition) > 500 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Ambition must be 500 characters or less",
+		})
+		return
+	}
+
+	// Update ambition
+	err = h.profileSvc.UpdateAmbition(c.Request.Context(), id, req.Ambition)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Ambition updated successfully",
+	})
+}
+
+// GetPublicProfile handles GET /api/v1/profile/:username
+func (h *AccountHandlers) GetPublicProfile(c *gin.Context) {
+	username := c.Param("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Username is required",
+		})
+		return
+	}
+
+	// Get viewer ID from JWT (optional - for privacy checks)
+	var viewerID *uuid.UUID
+	if userIDStr, exists := c.Get("user_id"); exists {
+		if id, err := uuid.Parse(userIDStr.(string)); err == nil {
+			viewerID = &id
+		}
+	}
+
+	// Get public profile
+	profile, err := h.profileSvc.GetPublicProfile(c.Request.Context(), username, viewerID)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"profile": profile,
+	})
+}
+
 // SetupRoutes registers account management routes
 func (h *AccountHandlers) SetupRoutes(router *gin.RouterGroup) {
 	account := router.Group("/account")
@@ -638,5 +890,14 @@ func (h *AccountHandlers) SetupRoutes(router *gin.RouterGroup) {
 		account.GET("/sessions", h.GetActiveSessionsHandler)
 		account.DELETE("/sessions/:session_id", h.DeleteSessionHandler)
 		account.POST("/logout-all", h.LogoutAllDevicesHandler)
+
+		// Profile System Phase 1
+		account.PATCH("/profile/basic", h.UpdateBasicProfile)
+		account.PATCH("/profile/privacy", h.UpdatePrivacySettings)
+		account.PATCH("/profile/story", h.UpdateStory)
+		account.PATCH("/profile/ambition", h.UpdateAmbition)
 	}
+
+	// Public profile endpoint (no auth required, but optional auth for privacy checks)
+	router.GET("/profile/:username", h.GetPublicProfile)
 }

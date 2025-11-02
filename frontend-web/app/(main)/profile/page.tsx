@@ -1,198 +1,1113 @@
 'use client';
 
 /**
- * Profile Page
+ * Professional Profile Page - Instagram-Style with Wantedly Features
  * Created by: Hamza Hafeez - Founder & CEO of Upvista
  * 
- * User profile page with cover, avatar, stats, and tabs
- * iOS-inspired design with glassmorphism
+ * Clean, professional profile system with privacy controls
+ * Instagram-like layout with Wantedly's professional touch
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { MapPin, Link as LinkIcon, Calendar, Share2, MoreVertical } from 'lucide-react';
-import { formatNumber } from '@/lib/utils';
+import ProfilePrivacyGuard from '@/components/profile/ProfilePrivacyGuard';
+import InlineEditor from '@/components/profile/InlineEditor';
+import VerifiedBadge from '@/components/ui/VerifiedBadge';
+import ExperienceCard from '@/components/profile/ExperienceCard';
+import EducationCard from '@/components/profile/EducationCard';
+import ExperienceModal from '@/components/profile/ExperienceModal';
+import EducationModal from '@/components/profile/EducationModal';
+import { useUser } from '@/lib/hooks/useUser';
+import { 
+  MapPin, 
+  Link as LinkIcon, 
+  Calendar, 
+  User as UserIcon,
+  Edit3,
+  Plus,
+  CheckCircle2,
+  Briefcase,
+  GraduationCap,
+  Award,
+  Target,
+  Share2,
+  Grid3x3,
+  Users,
+  Rocket,
+  FileText,
+  Lock,
+  Globe,
+  Eye
+} from 'lucide-react';
 
-const tabs = ['Posts', 'Research', 'Communities', 'Projects', 'About'];
+const tabs = [
+  { id: 'Feed', label: 'Feed', icon: Grid3x3 },
+  { id: 'Communities', label: 'Communities', icon: Users },
+  { id: 'Projects', label: 'Projects', icon: Rocket },
+  { id: 'About', label: 'About', icon: FileText },
+];
 
-// Demo user data
-const demoUser = {
-  name: 'Hamza Hafeez',
-  username: 'hamzahafeez',
-  bio: 'Founder & CEO of Upvista | Building the future of professional social networking | AI enthusiast | Investor',
-  location: 'San Francisco, CA',
-  website: 'https://upvista.com',
-  joinedDate: 'January 2024',
-  verified: true,
-  avatar: null,
-  coverImage: null,
-  stats: {
-    posts: 250,
-    followers: 1200,
-    following: 340,
-  },
-};
+interface PublicProfile {
+  id: string;
+  username: string;
+  display_name: string;
+  profile_picture: string | null;
+  is_verified: boolean;
+  bio: string | null;
+  location: string | null;
+  gender: string | null;
+  gender_custom: string | null;
+  age: number | null;
+  website: string | null;
+  joined_at: string;
+  story: string | null;
+  ambition: string | null;
+  posts_count: number;
+  followers_count: number;
+  following_count: number;
+  projects_count: number;
+  is_own_profile: boolean;
+  profile_privacy?: string; // Only returned for own profile
+}
 
 export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState('Posts');
-  const [isFollowing, setIsFollowing] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const viewUsername = searchParams.get('u'); // View other user's profile
+  const { user: currentUser, loading: currentUserLoading } = useUser();
+  
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('About');
+  const [shareMessage, setShareMessage] = useState('');
+  const [previewMode, setPreviewMode] = useState(false); // Preview as public
+  
+  // Inline editing states
+  const [storyEditorOpen, setStoryEditorOpen] = useState(false);
+  const [ambitionEditorOpen, setAmbitionEditorOpen] = useState(false);
+  const [isStoryExpanded, setIsStoryExpanded] = useState(false);
+  
+  // Experience and Education states
+  const [experiences, setExperiences] = useState<any[]>([]);
+  const [education, setEducation] = useState<any[]>([]);
+  const [experienceModalOpen, setExperienceModalOpen] = useState(false);
+  const [educationModalOpen, setEducationModalOpen] = useState(false);
+  const [editingExperience, setEditingExperience] = useState<any | null>(null);
+  const [editingEducation, setEditingEducation] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!currentUserLoading) {
+      fetchProfile();
+    }
+  }, [currentUserLoading, viewUsername]);
+
+  useEffect(() => {
+    // Fetch experiences and education after profile is loaded
+    if (profile?.is_own_profile) {
+      fetchExperiences();
+      fetchEducation();
+    }
+  }, [profile]);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Determine which profile to fetch
+      const username = viewUsername || currentUser?.username;
+      
+      if (!username) {
+        setError('No username specified');
+        setLoading(false);
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/proxy/v1/profile/${username}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProfile(data.profile);
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to fetch profile');
+      }
+    } catch (err) {
+      setError('Network error occurred');
+      console.error('Profile fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchExperiences = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/proxy/v1/account/experiences', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Experiences fetched:', data);
+        setExperiences(data.experiences || []);
+      } else {
+        console.error('Failed to fetch experiences:', response.status);
+      }
+    } catch (err) {
+      console.error('Failed to fetch experiences:', err);
+    }
+  };
+
+  const fetchEducation = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/proxy/v1/account/education', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Education fetched:', data);
+        setEducation(data.education || []);
+      } else {
+        console.error('Failed to fetch education:', response.status);
+      }
+    } catch (err) {
+      console.error('Failed to fetch education:', err);
+    }
+  };
+
+  const handleSaveStory = async (value: string | null) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/proxy/v1/account/profile/story', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ story: value }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Failed to save story');
+    }
+
+    // Refresh profile
+    await fetchProfile();
+  };
+
+  const handleSaveAmbition = async (value: string | null) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('/api/proxy/v1/account/profile/ambition', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ ambition: value }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Failed to save ambition');
+    }
+
+    // Refresh profile
+    await fetchProfile();
+  };
+
+  const formatJoinedDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const getGenderDisplay = (gender: string | null, customGender: string | null) => {
+    if (!gender) return null;
+    if (gender === 'custom' && customGender) return customGender;
+    const genderMap: { [key: string]: string } = {
+      'male': 'Male',
+      'female': 'Female',
+      'non-binary': 'Non-binary',
+      'prefer-not-to-say': 'Prefer not to say',
+    };
+    return genderMap[gender] || gender;
+  };
+
+  // Check if a field should be visible based on preview mode and field visibility settings
+  const isFieldVisible = (fieldName: string) => {
+    if (!previewMode || !profile?.is_own_profile) {
+      return true; // Always show when not in preview mode or viewing someone else's profile
+    }
+    // In preview mode, respect the field_visibility settings from user's own data
+    return currentUser?.field_visibility?.[fieldName] !== false;
+  };
+
+  const handleShareProfile = async () => {
+    const profileUrl = `${window.location.origin}/profile?u=${profile?.username}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${profile?.display_name} (@${profile?.username})`,
+          text: profile?.bio || `Check out ${profile?.display_name}'s profile on Upvista`,
+          url: profileUrl,
+        });
+      } catch (err) {
+        // User cancelled or error occurred
+      }
+    } else {
+      // Fallback: Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(profileUrl);
+        setShareMessage('Profile link copied!');
+        setTimeout(() => setShareMessage(''), 3000);
+      } catch (err) {
+        setShareMessage('Failed to copy link');
+        setTimeout(() => setShareMessage(''), 3000);
+      }
+    }
+  };
+
+  // Experience CRUD handlers
+  const handleSaveExperience = async (data: any) => {
+    const token = localStorage.getItem('token');
+    const url = editingExperience
+      ? `/api/proxy/v1/account/experiences/${editingExperience.id}`
+      : '/api/proxy/v1/account/experiences';
+    
+    const response = await fetch(url, {
+      method: editingExperience ? 'PATCH' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to save experience');
+    }
+
+    await fetchExperiences();
+    setEditingExperience(null);
+  };
+
+  const handleDeleteExperience = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this experience?')) return;
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/proxy/v1/account/experiences/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (response.ok) {
+      await fetchExperiences();
+    }
+  };
+
+  // Education CRUD handlers
+  const handleSaveEducation = async (data: any) => {
+    const token = localStorage.getItem('token');
+    const url = editingEducation
+      ? `/api/proxy/v1/account/education/${editingEducation.id}`
+      : '/api/proxy/v1/account/education';
+    
+    const response = await fetch(url, {
+      method: editingEducation ? 'PATCH' : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to save education');
+    }
+
+    await fetchEducation();
+    setEditingEducation(null);
+  };
+
+  const handleDeleteEducation = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this education?')) return;
+
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/proxy/v1/account/education/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+
+    if (response.ok) {
+      await fetchEducation();
+    }
+  };
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        {/* Cover & Profile Header */}
-        <Card variant="glass" hoverable={false} className="p-0 overflow-hidden">
-          {/* Cover Image */}
-          <div className="h-48 md:h-64 bg-gradient-to-r from-brand-purple-600 via-brand-purple-500 to-brand-purple-400 relative">
-            {/* Glassmorphic overlay pattern */}
-            <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-          </div>
+    <ProfilePrivacyGuard isLoading={loading || currentUserLoading} error={error}>
+      <MainLayout>
+        {profile && (
+          <div className="max-w-4xl mx-auto">
+            {/* Instagram-Style Profile Header */}
+            <div className="bg-white dark:bg-neutral-900 rounded-xl p-4 md:p-6 mb-1">
+              {/* Mobile Layout */}
+              <div className="md:hidden">
+                {/* Avatar and Name - Full Width */}
+                <div className="flex items-start gap-3 mb-4">
+                  {/* Avatar */}
+                  <div className="flex-shrink-0">
+                    <Avatar
+                      src={profile.profile_picture}
+                      alt={profile.display_name}
+                      fallback={profile.display_name}
+                      size="2xl"
+                      className={profile.is_own_profile ? 'ring-2 ring-brand-purple-500' : ''}
+                    />
+                  </div>
+                  
+                  {/* Name and Username - Full width without share button */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <h1 className="text-xl font-bold text-brand-purple-600 dark:text-brand-purple-400 truncate">
+                        {profile.display_name}
+                      </h1>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                        @{profile.username}
+                      </p>
+                      
+                      {/* Verified Badge - Always show */}
+                      <VerifiedBadge size="sm" variant="badge" showText={true} isVerified={profile.is_verified} />
+                      
+                      {/* Privacy Indicator */}
+                      {profile.is_own_profile && (
+                        <>
+                          {profile.profile_privacy === 'private' && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-500 dark:text-neutral-400">
+                              <Lock className="w-3 h-3" />
+                              <span>Private</span>
+                            </div>
+                          )}
+                          {profile.profile_privacy === 'connections' && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-500 dark:text-neutral-400">
+                              <Users className="w-3 h-3" />
+                              <span>Connections</span>
+                            </div>
+                          )}
+                          {profile.profile_privacy === 'public' && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-500 dark:text-neutral-400">
+                              <Globe className="w-3 h-3" />
+                              <span>Public</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
 
-          {/* Profile Info */}
-          <div className="px-6 pb-6">
-            {/* Avatar */}
-            <div className="relative -mt-16 mb-4">
-              <div className="inline-block rounded-full p-1 bg-white dark:bg-neutral-900">
-                <Avatar
-                  src={demoUser.avatar}
-                  alt={demoUser.name}
-                  fallback={demoUser.name}
-                  size="3xl"
-                />
-              </div>
-            </div>
+                    {/* Share Button - Below name */}
+                    <div className="mt-2">
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={handleShareProfile}
+                      >
+                        <Share2 className="w-4 h-4" />
+                        Share Profile
+                      </Button>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Name & Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
-                    {demoUser.name}
-                  </h1>
-                  {demoUser.verified && (
-                    <Badge variant="info">✓ Verified</Badge>
+                {/* Bio - Above Stats */}
+                {profile.bio && (
+                  <p className="text-sm text-neutral-700 dark:text-neutral-300 mb-3">
+                    {profile.bio}
+                  </p>
+                )}
+
+                {/* Stats */}
+                <div className="flex justify-around py-3 mb-3 border-y border-neutral-200 dark:border-neutral-800">
+                  <button className="text-center flex-1">
+                    <div className="text-base font-bold text-neutral-900 dark:text-neutral-50">
+                      {profile.posts_count}
+                    </div>
+                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400">
+                      Posts
+                    </div>
+                  </button>
+                  <button className="text-center flex-1">
+                    <div className="text-base font-bold text-neutral-900 dark:text-neutral-50">
+                      {profile.projects_count || 0}
+                    </div>
+                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400">
+                      Projects
+                    </div>
+                  </button>
+                  <button className="text-center flex-1">
+                    <div className="text-base font-bold text-neutral-900 dark:text-neutral-50">
+                      {profile.followers_count}
+                    </div>
+                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400">
+                      Followers
+                    </div>
+                  </button>
+                  <button className="text-center flex-1">
+                    <div className="text-base font-bold text-neutral-900 dark:text-neutral-50">
+                      {profile.following_count}
+                    </div>
+                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400">
+                      Following
+                    </div>
+                  </button>
+                </div>
+
+                {/* Meta Info */}
+
+                <div className="space-y-1 text-sm text-neutral-600 dark:text-neutral-400">
+                  {/* Location, Age, Gender - Inline on Mobile */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {profile.location && isFieldVisible('location') && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        <span>{profile.location}</span>
+                      </div>
+                    )}
+                    
+                    {profile.age && isFieldVisible('age') && (
+                      <div className="flex items-center gap-1">
+                        <span>{profile.age} years old</span>
+                      </div>
+                    )}
+                    
+                    {profile.gender && getGenderDisplay(profile.gender, profile.gender_custom) && isFieldVisible('gender') && (
+                      <div className="flex items-center gap-1">
+                        <UserIcon className="w-4 h-4" />
+                        <span>{getGenderDisplay(profile.gender, profile.gender_custom)}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Website */}
+                  {profile.website && isFieldVisible('website') && (
+                    <a 
+                      href={profile.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-brand-purple-600 dark:text-brand-purple-400"
+                    >
+                      <LinkIcon className="w-4 h-4" />
+                      <span>{new URL(profile.website).hostname}</span>
+                    </a>
+                  )}
+                  
+                  {/* Joined Date */}
+                  {isFieldVisible('joined_date') && (
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      <span>Joined {formatJoinedDate(profile.joined_at)}</span>
+                    </div>
                   )}
                 </div>
-                <p className="text-base text-neutral-500 dark:text-neutral-400">
-                  @{demoUser.username}
-                </p>
+
+                {/* Action Buttons at Bottom - Mobile Only */}
+                {profile.is_own_profile ? (
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      variant={previewMode ? "primary" : "secondary"}
+                      size="sm"
+                      onClick={() => setPreviewMode(!previewMode)}
+                      className="flex-1"
+                    >
+                      {previewMode ? 'Exit Preview' : 'Preview as Public'}
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => router.push('/settings')}
+                      className="flex-1"
+                    >
+                      Edit Profile
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 mt-4">
+                    <Button variant="primary" size="sm" className="flex-1">
+                      Follow
+                    </Button>
+                    <Button variant="secondary" size="sm" className="flex-1">
+                      Message
+                    </Button>
+                  </div>
+                )}
               </div>
 
-              <div className="flex gap-2">
-                <Button variant="secondary" size="sm">
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-                <Button variant="primary" size="sm">
-                  Edit Profile
-                </Button>
+              {/* Desktop Layout */}
+              <div className="hidden md:flex gap-8">
+                {/* Avatar */}
+                <div className="flex-shrink-0">
+                  <Avatar
+                    src={profile.profile_picture}
+                    alt={profile.display_name}
+                    fallback={profile.display_name}
+                    size="3xl"
+                    className={profile.is_own_profile ? 'ring-4 ring-brand-purple-500/20' : ''}
+                  />
+                </div>
+
+                {/* Info Section */}
+                <div className="flex-1 min-w-0">
+                  {/* Username and Actions */}
+                  <div className="flex items-center gap-4 mb-5">
+                    <h1 className="text-xl font-normal text-neutral-900 dark:text-neutral-50">
+                      {profile.username}
+                    </h1>
+                    
+                    {profile.is_own_profile ? (
+                      <>
+                        <Button 
+                          variant={previewMode ? "primary" : "secondary"}
+                          size="sm"
+                          onClick={() => setPreviewMode(!previewMode)}
+                        >
+                          {previewMode ? 'Exit Preview' : 'Preview as Public'}
+                        </Button>
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={() => router.push('/settings')}
+                        >
+                          Edit Profile
+                        </Button>
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={handleShareProfile}
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="primary" size="sm">
+                          Follow
+                        </Button>
+                        <Button variant="secondary" size="sm">
+                          Message
+                        </Button>
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          onClick={handleShareProfile}
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Name, Verified Badge, and Privacy */}
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xl font-bold text-brand-purple-600 dark:text-brand-purple-400">
+                        {profile.display_name}
+                      </span>
+                      
+                      {/* Verified Badge - Always show */}
+                      <VerifiedBadge size="md" variant="badge" showText={true} isVerified={profile.is_verified} />
+                      
+                      {/* Privacy Indicator */}
+                      {profile.is_own_profile && (
+                        <>
+                          {profile.profile_privacy === 'private' && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-600 dark:text-neutral-400">
+                              <Lock className="w-3 h-3" />
+                              <span>Private</span>
+                            </div>
+                          )}
+                          {profile.profile_privacy === 'connections' && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-600 dark:text-neutral-400">
+                              <Users className="w-3 h-3" />
+                              <span>Connections</span>
+                            </div>
+                          )}
+                          {profile.profile_privacy === 'public' && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-600 dark:text-neutral-400">
+                              <Globe className="w-3 h-3" />
+                              <span>Public</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bio */}
+                  {profile.bio && (
+                    <p className="text-sm text-neutral-700 dark:text-neutral-300 mb-3">
+                      {profile.bio}
+                    </p>
+                  )}
+
+                  {/* Stats - Below Bio */}
+                  <div className="flex gap-6 mb-5">
+                    <button>
+                      <span className="font-semibold text-neutral-900 dark:text-neutral-50 mr-1">
+                        {profile.posts_count}
+                      </span>
+                      <span className="text-neutral-600 dark:text-neutral-400">
+                        posts
+                      </span>
+                    </button>
+                    <button>
+                      <span className="font-semibold text-neutral-900 dark:text-neutral-50 mr-1">
+                        {profile.projects_count || 0}
+                      </span>
+                      <span className="text-neutral-600 dark:text-neutral-400">
+                        projects
+                      </span>
+                    </button>
+                    <button>
+                      <span className="font-semibold text-neutral-900 dark:text-neutral-50 mr-1">
+                        {profile.followers_count}
+                      </span>
+                      <span className="text-neutral-600 dark:text-neutral-400">
+                        followers
+                      </span>
+                    </button>
+                    <button>
+                      <span className="font-semibold text-neutral-900 dark:text-neutral-50 mr-1">
+                        {profile.following_count}
+                      </span>
+                      <span className="text-neutral-600 dark:text-neutral-400">
+                        following
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Meta Info */}
+                  <div className="space-y-1 text-sm text-neutral-600 dark:text-neutral-400">
+                    {/* Location, Age, Gender - Inline on Desktop */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {profile.location && isFieldVisible('location') && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          <span>{profile.location}</span>
+                        </div>
+                      )}
+                      
+                      {profile.age && isFieldVisible('age') && (
+                        <div className="flex items-center gap-1">
+                          <span>{profile.age} years old</span>
+                        </div>
+                      )}
+                      
+                      {profile.gender && getGenderDisplay(profile.gender, profile.gender_custom) && isFieldVisible('gender') && (
+                        <div className="flex items-center gap-1">
+                          <UserIcon className="w-4 h-4" />
+                          <span>{getGenderDisplay(profile.gender, profile.gender_custom)}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Website */}
+                    {profile.website && isFieldVisible('website') && (
+                      <a 
+                        href={profile.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-brand-purple-600 dark:text-brand-purple-400 hover:underline"
+                      >
+                        <LinkIcon className="w-4 h-4" />
+                        <span>{new URL(profile.website).hostname}</span>
+                      </a>
+                    )}
+                    
+                    {/* Joined Date */}
+                    {isFieldVisible('joined_date') && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>Joined {formatJoinedDate(profile.joined_at)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Bio */}
-            <p className="text-base text-neutral-700 dark:text-neutral-300 mb-4">
-              {demoUser.bio}
-            </p>
-
-            {/* Meta Info */}
-            <div className="flex flex-wrap gap-4 text-sm text-neutral-600 dark:text-neutral-400 mb-4">
-              {demoUser.location && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  <span>{demoUser.location}</span>
+              {/* Preview Mode Banner */}
+              {previewMode && profile.is_own_profile && (
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-center justify-center gap-2 text-sm text-blue-800 dark:text-blue-200">
+                    <Eye className="w-4 h-4" />
+                    <span className="font-medium">Preview Mode:</span>
+                    <span>This is how others see your profile based on your privacy settings</span>
+                  </div>
                 </div>
               )}
-              {demoUser.website && (
-                <a 
-                  href={demoUser.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-brand-purple-600 dark:text-brand-purple-400 hover:underline"
-                >
-                  <LinkIcon className="w-4 h-4" />
-                  <span>upvista.com</span>
-                </a>
+
+              {/* Share Message */}
+              {shareMessage && (
+                <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-lg text-sm text-center">
+                  {shareMessage}
+                </div>
               )}
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>Joined {demoUser.joinedDate}</span>
+            </div>
+
+            {/* Tabs - Instagram Style */}
+            <div className="mt-4 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+              <div className="grid grid-cols-4 md:flex md:justify-center md:gap-12">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`
+                        flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-3 md:py-4 text-xs md:text-sm font-semibold transition-colors border-t-2
+                        ${activeTab === tab.id
+                          ? 'border-neutral-900 dark:border-neutral-50 text-neutral-900 dark:text-neutral-50'
+                          : 'border-transparent text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400'
+                        }
+                      `}
+                    >
+                      <Icon className="w-5 h-5 md:w-4 md:h-4" />
+                      <span className="hidden md:inline">{tab.label}</span>
+                      <span className="md:hidden text-[10px]">{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-6 pt-4 border-t border-neutral-200/50 dark:border-neutral-700/50">
-              <button className="hover:underline">
-                <span className="font-semibold text-neutral-900 dark:text-neutral-50">
-                  {formatNumber(demoUser.stats.posts)}
-                </span>
-                <span className="text-neutral-600 dark:text-neutral-400 ml-1">
-                  Posts
-                </span>
-              </button>
-              <button className="hover:underline">
-                <span className="font-semibold text-neutral-900 dark:text-neutral-50">
-                  {formatNumber(demoUser.stats.followers)}
-                </span>
-                <span className="text-neutral-600 dark:text-neutral-400 ml-1">
-                  Followers
-                </span>
-              </button>
-              <button className="hover:underline">
-                <span className="font-semibold text-neutral-900 dark:text-neutral-50">
-                  {formatNumber(demoUser.stats.following)}
-                </span>
-                <span className="text-neutral-600 dark:text-neutral-400 ml-1">
-                  Following
-                </span>
-              </button>
-            </div>
-          </div>
-        </Card>
+            {/* Tab Content */}
+            {activeTab === 'Feed' && (
+              <div className="mt-4 bg-white dark:bg-neutral-900 p-6 rounded-xl border border-neutral-200 dark:border-neutral-800">
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+                    <Grid3x3 className="w-10 h-10 text-neutral-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
+                    No Posts Yet
+                  </h3>
+                  <p className="text-base text-neutral-600 dark:text-neutral-400">
+                    Start sharing your ideas and connect with the community!
+                  </p>
+                </div>
+              </div>
+            )}
 
-        {/* Tabs */}
-        <Card variant="glass" hoverable={false} className="p-4">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`
-                  px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200
-                  ${activeTab === tab
-                    ? 'bg-brand-purple-600 text-white shadow-md'
-                    : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                  }
-                `}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </Card>
+            {activeTab === 'Communities' && (
+              <div className="mt-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+                    <Users className="w-10 h-10 text-neutral-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
+                    No Communities Joined
+                  </h3>
+                  <p className="text-base text-neutral-600 dark:text-neutral-400">
+                    Discover and join communities that match your interests!
+                  </p>
+                </div>
+              </div>
+            )}
 
-        {/* Tab Content */}
-        <Card variant="glass" hoverable={false}>
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
-              <span className="text-4xl">📝</span>
-            </div>
-            <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
-              No {activeTab} Yet
-            </h3>
-            <p className="text-base text-neutral-600 dark:text-neutral-400">
-              Start sharing your ideas and connect with the community!
-            </p>
+            {activeTab === 'Projects' && (
+              <div className="mt-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+                    <Rocket className="w-10 h-10 text-neutral-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
+                    No Projects Added
+                  </h3>
+                  <p className="text-base text-neutral-600 dark:text-neutral-400">
+                    Showcase your work and achievements here!
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'About' && (
+              <div className="mt-4 space-y-4">
+                {/* Tell Your Story */}
+                <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+                      My Story
+                    </h3>
+                    {profile.is_own_profile && (
+                      <button
+                        onClick={() => setStoryEditorOpen(true)}
+                        className="text-brand-purple-600 hover:text-brand-purple-700 transition-colors"
+                      >
+                        {profile.story ? (
+                          <Edit3 className="w-5 h-5" />
+                        ) : (
+                          <Plus className="w-5 h-5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {profile.story ? (
+                    <div>
+                      <p className="text-base text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap">
+                        {profile.story.length > 250 && !isStoryExpanded
+                          ? `${profile.story.slice(0, 250)}...`
+                          : profile.story
+                        }
+                      </p>
+                      {profile.story.length > 250 && (
+                        <button
+                          onClick={() => setIsStoryExpanded(!isStoryExpanded)}
+                          className="mt-2 text-sm font-medium text-brand-purple-600 hover:text-brand-purple-700 transition-colors cursor-pointer"
+                        >
+                          {isStoryExpanded ? 'Show less' : 'Read more'}
+                        </button>
+                      )}
+                    </div>
+                  ) : profile.is_own_profile ? (
+                    <button
+                      onClick={() => setStoryEditorOpen(true)}
+                      className="w-full py-8 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl hover:border-brand-purple-500 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-900/10 transition-colors text-neutral-500 dark:text-neutral-400 hover:text-brand-purple-600"
+                    >
+                      <Plus className="w-6 h-6 mx-auto mb-2" />
+                      <span className="text-sm font-medium">Add your story</span>
+                    </button>
+                  ) : (
+                    <p className="text-neutral-500 dark:text-neutral-400 italic">
+                      No story added yet
+                    </p>
+                  )}
+                </div>
+
+                {/* Ambition */}
+                <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Target className="w-5 h-5 text-brand-purple-600" />
+                      <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+                        Ambition
+                      </h3>
+                    </div>
+                    {profile.is_own_profile && (
+                      <button
+                        onClick={() => setAmbitionEditorOpen(true)}
+                        className="text-brand-purple-600 hover:text-brand-purple-700 transition-colors"
+                      >
+                        {profile.ambition ? (
+                          <Edit3 className="w-5 h-5" />
+                        ) : (
+                          <Plus className="w-5 h-5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {profile.ambition ? (
+                    <p className="text-base text-neutral-700 dark:text-neutral-300">
+                      {profile.ambition}
+                    </p>
+                  ) : profile.is_own_profile ? (
+                    <button
+                      onClick={() => setAmbitionEditorOpen(true)}
+                      className="w-full py-8 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl hover:border-brand-purple-500 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-900/10 transition-colors text-neutral-500 dark:text-neutral-400 hover:text-brand-purple-600"
+                    >
+                      <Plus className="w-6 h-6 mx-auto mb-2" />
+                      <span className="text-sm font-medium">Add your ambition</span>
+                    </button>
+                  ) : (
+                    <p className="text-neutral-500 dark:text-neutral-400 italic">
+                      No ambition added yet
+                    </p>
+                  )}
+                </div>
+
+                {/* Experience Section */}
+                <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="w-5 h-5 text-brand-purple-600" />
+                      <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+                        Experience
+                      </h3>
+                    </div>
+                    {profile.is_own_profile && (
+                      <button
+                        onClick={() => {
+                          setEditingExperience(null);
+                          setExperienceModalOpen(true);
+                        }}
+                        className="text-brand-purple-600 hover:text-brand-purple-700 transition-colors"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {experiences.length > 0 ? (
+                    <div className="space-y-6">
+                      {experiences.map((exp) => (
+                        <ExperienceCard
+                          key={exp.id}
+                          experience={exp}
+                          isOwnProfile={profile.is_own_profile}
+                          onEdit={() => {
+                            setEditingExperience(exp);
+                            setExperienceModalOpen(true);
+                          }}
+                          onDelete={() => handleDeleteExperience(exp.id)}
+                        />
+                      ))}
+                    </div>
+                  ) : profile.is_own_profile ? (
+                    <button
+                      onClick={() => {
+                        setEditingExperience(null);
+                        setExperienceModalOpen(true);
+                      }}
+                      className="w-full py-8 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl hover:border-brand-purple-500 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-900/10 transition-colors text-neutral-500 dark:text-neutral-400 hover:text-brand-purple-600"
+                    >
+                      <Plus className="w-6 h-6 mx-auto mb-2" />
+                      <span className="text-sm font-medium">Add your first experience</span>
+                    </button>
+                  ) : (
+                    <p className="text-neutral-500 dark:text-neutral-400 italic text-center py-4">
+                      No experience added yet
+                    </p>
+                  )}
+                </div>
+
+                {/* Education Section */}
+                <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-5 h-5 text-brand-purple-600" />
+                      <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+                        Education
+                      </h3>
+                    </div>
+                    {profile.is_own_profile && (
+                      <button
+                        onClick={() => {
+                          setEditingEducation(null);
+                          setEducationModalOpen(true);
+                        }}
+                        className="text-brand-purple-600 hover:text-brand-purple-700 transition-colors"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {education.length > 0 ? (
+                    <div className="space-y-6">
+                      {education.map((edu) => (
+                        <EducationCard
+                          key={edu.id}
+                          education={edu}
+                          isOwnProfile={profile.is_own_profile}
+                          onEdit={() => {
+                            setEditingEducation(edu);
+                            setEducationModalOpen(true);
+                          }}
+                          onDelete={() => handleDeleteEducation(edu.id)}
+                        />
+                      ))}
+                    </div>
+                  ) : profile.is_own_profile ? (
+                    <button
+                      onClick={() => {
+                        setEditingEducation(null);
+                        setEducationModalOpen(true);
+                      }}
+                      className="w-full py-8 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl hover:border-brand-purple-500 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-900/10 transition-colors text-neutral-500 dark:text-neutral-400 hover:text-brand-purple-600"
+                    >
+                      <Plus className="w-6 h-6 mx-auto mb-2" />
+                      <span className="text-sm font-medium">Add your first education</span>
+                    </button>
+                  ) : (
+                    <p className="text-neutral-500 dark:text-neutral-400 italic text-center py-4">
+                      No education added yet
+                    </p>
+                  )}
+                </div>
+
+                {/* Skills & Achievements - Coming Soon */}
+                <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Award className="w-5 h-5 text-neutral-400" />
+                    <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+                      Skills & Achievements
+                    </h3>
+                    <span className="ml-auto text-xs px-2 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
+                      Coming Soon
+                    </span>
+                  </div>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    Highlight your skills and accomplishments
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Inline Editors */}
+            <InlineEditor
+              title="Tell Your Story"
+              value={profile.story}
+              maxLength={2000}
+              placeholder="Share your journey, experiences, and what makes you unique..."
+              isOpen={storyEditorOpen}
+              onClose={() => setStoryEditorOpen(false)}
+              onSave={handleSaveStory}
+            />
+
+            <InlineEditor
+              title="Your Ambition"
+              value={profile.ambition}
+              maxLength={500}
+              placeholder="What drives you? What are your goals and aspirations?"
+              isOpen={ambitionEditorOpen}
+              onClose={() => setAmbitionEditorOpen(false)}
+              onSave={handleSaveAmbition}
+            />
+
+            {/* Experience Modal */}
+            <ExperienceModal
+              isOpen={experienceModalOpen}
+              experience={editingExperience}
+              onClose={() => {
+                setExperienceModalOpen(false);
+                setEditingExperience(null);
+              }}
+              onSave={handleSaveExperience}
+            />
+
+            {/* Education Modal */}
+            <EducationModal
+              isOpen={educationModalOpen}
+              education={editingEducation}
+              onClose={() => {
+                setEducationModalOpen(false);
+                setEditingEducation(null);
+              }}
+              onSave={handleSaveEducation}
+            />
           </div>
-        </Card>
-      </div>
-    </MainLayout>
+        )}
+      </MainLayout>
+    </ProfilePrivacyGuard>
   );
 }
 

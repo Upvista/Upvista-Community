@@ -87,7 +87,8 @@
 
 /* Base Styles */
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, #FAFAFA 0%, #F0F0F0 50%, #FAFAFA 100%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--font-size-base);
@@ -96,6 +97,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   width: 100%;
+}
+
+body.dark {
+  background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 50%, #0F0F0F 100%);
+  background-attachment: fixed;
 }
 
 html {

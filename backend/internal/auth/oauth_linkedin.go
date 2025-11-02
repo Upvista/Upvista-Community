@@ -179,7 +179,7 @@ func (s *LinkedInOAuthService) HandleCallback(ctx context.Context, code string) 
 		Success:   true,
 		Message:   "LinkedIn authentication successful",
 		Token:     jwtToken,
-		ExpiresAt: time.Now().Add(15 * time.Minute),
+		ExpiresAt: time.Now().Add(30 * 24 * time.Hour),
 		User:      user.ToSafeUser(),
 	}, nil
 }
