@@ -96,15 +96,15 @@ export default function HomePage() {
 
   return (
     <MainLayout showRightPanel={true} rightPanel={<RightPanel />}>
-      <div className="space-y-4 md:space-y-6">
+      <div className="space-y-4 md:space-y-6 w-full overflow-x-hidden">
         {/* Category Tabs */}
-        <div className="flex gap-2 md:gap-2 overflow-x-auto scrollbar-hide pb-1">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 md:mx-0 md:px-0">
           {categories.map((category) => (
             <button
               key={category}
               onClick={() => setActiveCategory(category)}
               className={`
-                px-5 py-2.5 md:px-4 md:py-2 rounded-full text-base md:text-sm font-semibold whitespace-nowrap transition-all duration-200
+                px-4 py-2 md:px-4 md:py-2 rounded-full text-sm md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex-shrink-0
                 ${activeCategory === category
                   ? 'bg-brand-purple-600 text-white shadow-lg shadow-brand-purple-500/30'
                   : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
@@ -120,13 +120,13 @@ export default function HomePage() {
         {filteredFeed.length === 0 || showEmptyState ? (
           <EmptyFeed />
         ) : (
-          <div className="space-y-5 md:space-y-6">
+          <div className="space-y-5 md:space-y-6 w-full">
             {filteredFeed.map((post) => (
               <FeedCard key={post.id} post={post} />
             ))}
             
             {/* Load More */}
-            <div className="flex justify-center py-6 md:py-4">
+            <div className="flex justify-center py-6 md:py-4 w-full">
               <Button variant="secondary" size="md">
                 Load More Posts
               </Button>
@@ -146,8 +146,9 @@ function FeedCard({ post }: { post: typeof demoFeed[0] }) {
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
+      className="w-full"
     >
-      <Card variant="glass" hoverable={false} className="p-5 md:p-6">
+      <Card variant="glass" hoverable={false} className="p-4 md:p-6 w-full overflow-hidden">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -178,19 +179,19 @@ function FeedCard({ post }: { post: typeof demoFeed[0] }) {
       </div>
 
       {/* Category Badge */}
-      <div className="mb-3">
-        <Badge variant="purple" size="md" className="md:text-xs md:px-2.5 md:py-0.5">{post.type}</Badge>
+      <div className="mb-2.5">
+        <Badge variant="purple" size="sm">{post.type}</Badge>
       </div>
 
       {/* Content */}
       <div className="mb-5">
-        <h2 className="text-xl md:text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2.5 leading-tight">
+        <h2 className="text-lg md:text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2 leading-snug">
           {post.title}
         </h2>
-        <p className="text-base md:text-base text-neutral-700 dark:text-neutral-300 line-clamp-3 leading-relaxed">
+        <p className="text-base md:text-base text-neutral-700 dark:text-neutral-300 line-clamp-4 md:line-clamp-3 leading-relaxed">
           {post.content}
         </p>
-        <button className="text-brand-purple-600 dark:text-brand-purple-400 text-base md:text-sm font-medium mt-2.5 hover:underline">
+        <button className="text-base md:text-sm font-medium text-brand-purple-600 dark:text-brand-purple-400 mt-2 hover:underline">
           Read more
         </button>
       </div>
@@ -201,21 +202,21 @@ function FeedCard({ post }: { post: typeof demoFeed[0] }) {
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-6 md:gap-6 text-neutral-600 dark:text-neutral-400 pt-5 md:pt-4 border-t border-neutral-200/50 dark:border-neutral-700/50">
+      <div className="flex items-center gap-5 md:gap-6 text-neutral-600 dark:text-neutral-400 pt-4 md:pt-4 border-t border-neutral-200/50 dark:border-neutral-700/50">
         <button 
           onClick={() => setLiked(!liked)}
           className={`flex items-center gap-2 transition-colors active:scale-95 ${liked ? 'text-red-500' : 'hover:text-brand-purple-600'}`}
         >
           <Heart className={`w-6 h-6 md:w-5 md:h-5 ${liked ? 'fill-current' : ''}`} />
-          <span className="text-base md:text-sm font-medium">{formatNumber(post.stats.likes + (liked ? 1 : 0))}</span>
+          <span className="text-sm md:text-sm font-medium">{formatNumber(post.stats.likes + (liked ? 1 : 0))}</span>
         </button>
         <button className="flex items-center gap-2 hover:text-brand-purple-600 transition-colors active:scale-95">
           <MessageCircle className="w-6 h-6 md:w-5 md:h-5" />
-          <span className="text-base md:text-sm font-medium">{formatNumber(post.stats.comments)}</span>
+          <span className="text-sm md:text-sm font-medium">{formatNumber(post.stats.comments)}</span>
         </button>
         <button className="flex items-center gap-2 hover:text-brand-purple-600 transition-colors active:scale-95">
           <Share2 className="w-6 h-6 md:w-5 md:h-5" />
-          <span className="text-base md:text-sm font-medium">{formatNumber(post.stats.shares)}</span>
+          <span className="text-sm md:text-sm font-medium">{formatNumber(post.stats.shares)}</span>
         </button>
         <button 
           onClick={() => setSaved(!saved)}

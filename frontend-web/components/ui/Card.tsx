@@ -22,7 +22,7 @@ export function Card({
   children,
   ...props
 }: CardProps) {
-  const baseStyles = 'rounded-2xl p-6 transition-all duration-300';
+  const baseStyles = 'rounded-2xl p-6 transition-all duration-300 w-full';
   
   const variants = {
     glass: 'bg-white/70 dark:bg-gray-900/40 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 shadow-xl shadow-neutral-200/50 dark:shadow-black/50',
