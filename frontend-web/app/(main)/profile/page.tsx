@@ -42,6 +42,14 @@ import {
   Globe,
   Eye
 } from 'lucide-react';
+import { 
+  FaXTwitter, 
+  FaInstagram, 
+  FaFacebook, 
+  FaLinkedin, 
+  FaGithub, 
+  FaYoutube 
+} from 'react-icons/fa6';
 
 const tabs = [
   { id: 'Feed', label: 'Feed', icon: Grid3x3 },
@@ -71,6 +79,14 @@ interface PublicProfile {
   projects_count: number;
   is_own_profile: boolean;
   profile_privacy?: string; // Only returned for own profile
+  social_links?: {
+    twitter?: string | null;
+    instagram?: string | null;
+    facebook?: string | null;
+    linkedin?: string | null;
+    github?: string | null;
+    youtube?: string | null;
+  };
 }
 
 export default function ProfilePage() {
@@ -134,6 +150,8 @@ export default function ProfilePage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Profile data fetched:', data.profile);
+        console.log('Social links:', data.profile?.social_links);
         setProfile(data.profile);
       } else {
         const data = await response.json();
@@ -239,6 +257,16 @@ export default function ProfilePage() {
     };
     return genderMap[gender] || gender;
   };
+
+  // Social media platform config with branded icons
+  const getSocialPlatformConfig = () => [
+    { key: 'twitter', icon: FaXTwitter, label: 'X (Twitter)', color: '#000000' },
+    { key: 'instagram', icon: FaInstagram, label: 'Instagram', color: '#E1306C' },
+    { key: 'facebook', icon: FaFacebook, label: 'Facebook', color: '#1877F2' },
+    { key: 'linkedin', icon: FaLinkedin, label: 'LinkedIn', color: '#0A66C2' },
+    { key: 'github', icon: FaGithub, label: 'GitHub', color: '#181717' },
+    { key: 'youtube', icon: FaYoutube, label: 'YouTube', color: '#FF0000' },
+  ];
 
   // Check if a field should be visible based on preview mode and field visibility settings
   const isFieldVisible = (fieldName: string) => {
@@ -520,6 +548,34 @@ export default function ProfilePage() {
                   )}
                 </div>
 
+                {/* Social Links - Mobile */}
+                {profile.social_links && (
+                  <div className="flex items-center gap-3 flex-wrap mt-3">
+                    {getSocialPlatformConfig().map((platform) => {
+                      const link = profile.social_links?.[platform.key as keyof typeof profile.social_links];
+                      if (!link) return null;
+                      
+                      const Icon = platform.icon;
+                      
+                      return (
+                        <a
+                          key={platform.key}
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer bg-neutral-100 dark:bg-neutral-800 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-900/20"
+                          title={platform.label}
+                        >
+                          <Icon 
+                            size={20} 
+                            className="text-neutral-900 dark:text-neutral-50"
+                          />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* Action Buttons at Bottom - Mobile Only */}
                 {profile.is_own_profile ? (
                   <div className="flex gap-2 mt-4">
@@ -738,6 +794,34 @@ export default function ProfilePage() {
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
                         <span>Joined {formatJoinedDate(profile.joined_at)}</span>
+                      </div>
+                    )}
+
+                    {/* Social Links - Desktop */}
+                    {profile.social_links && (
+                      <div className="flex items-center gap-2 flex-wrap mt-2">
+                        {getSocialPlatformConfig().map((platform) => {
+                          const link = profile.social_links?.[platform.key as keyof typeof profile.social_links];
+                          if (!link) return null;
+                          
+                          const Icon = platform.icon;
+                          
+                          return (
+                            <a
+                              key={platform.key}
+                              href={link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer bg-neutral-100 dark:bg-neutral-800 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-900/20"
+                              title={platform.label}
+                            >
+                              <Icon 
+                                size={18} 
+                                className="text-neutral-900 dark:text-neutral-50"
+                              />
+                            </a>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

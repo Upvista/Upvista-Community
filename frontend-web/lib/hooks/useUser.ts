@@ -42,6 +42,14 @@ export interface UserProfile {
   projects_count?: number;
   followers_count?: number;
   following_count?: number;
+  social_links?: {
+    twitter?: string | null;
+    instagram?: string | null;
+    facebook?: string | null;
+    linkedin?: string | null;
+    github?: string | null;
+    youtube?: string | null;
+  };
 }
 
 export function useUser() {

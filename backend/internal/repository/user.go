@@ -44,4 +44,5 @@ type UserRepository interface {
 	UpdatePrivacySettings(ctx context.Context, userID uuid.UUID, req *models.UpdatePrivacySettingsRequest) error
 	UpdateStory(ctx context.Context, userID uuid.UUID, story *string) error
 	UpdateAmbition(ctx context.Context, userID uuid.UUID, ambition *string) error
+	UpdateSocialLinks(ctx context.Context, userID uuid.UUID, socialLinks map[string]*string) error
 }

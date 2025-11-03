@@ -125,6 +125,15 @@ function AccountSection() {
     website: '',
   });
 
+  const [socialLinks, setSocialLinks] = useState({
+    twitter: '',
+    instagram: '',
+    facebook: '',
+    linkedin: '',
+    github: '',
+    youtube: '',
+  });
+
   const [emailData, setEmailData] = useState({
     new_email: '',
     password: '',
@@ -141,6 +150,9 @@ function AccountSection() {
   // Populate form when user data loads
   useEffect(() => {
     if (user) {
+      console.log('User data loaded in settings:', user);
+      console.log('Social links from user:', user.social_links);
+      
       setFormData({
         display_name: user.display_name,
         age: user.age?.toString() || '',
@@ -150,6 +162,20 @@ function AccountSection() {
         gender_custom: user.gender_custom || '',
         website: user.website || '',
       });
+      
+      // Populate social links
+      if (user.social_links) {
+        const links = {
+          twitter: user.social_links.twitter || '',
+          instagram: user.social_links.instagram || '',
+          facebook: user.social_links.facebook || '',
+          linkedin: user.social_links.linkedin || '',
+          github: user.social_links.github || '',
+          youtube: user.social_links.youtube || '',
+        };
+        console.log('Setting social links:', links);
+        setSocialLinks(links);
+      }
     }
   }, [user]);
 
@@ -223,6 +249,48 @@ function AccountSection() {
       throw error; // Re-throw to be caught by the editor
     } finally {
       setUploadLoading(false);
+    }
+  };
+
+  // Update Social Links
+  const handleUpdateSocialLinks = async () => {
+    setIsLoading(true);
+    setMessage('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {
+        twitter: socialLinks.twitter || null,
+        instagram: socialLinks.instagram || null,
+        facebook: socialLinks.facebook || null,
+        linkedin: socialLinks.linkedin || null,
+        github: socialLinks.github || null,
+        youtube: socialLinks.youtube || null,
+      };
+
+      console.log('Saving social links:', payload);
+
+      const response = await fetch('/api/proxy/v1/account/profile/social-links', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setMessage('✓ Social links updated successfully!');
+        refetch();
+      } else {
+        setMessage(data.message || 'Failed to update social links');
+      }
+    } catch (error) {
+      setMessage('Network error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -466,6 +534,73 @@ function AccountSection() {
             isLoading={isLoading}
           >
             Save Changes
+          </Button>
+        </div>
+      </Card>
+
+      {/* Social Links */}
+      <Card variant="solid" hoverable={false}>
+        <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-4">
+          Social Media Links
+        </h3>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+          Connect your social profiles to appear on your public profile page
+        </p>
+        <div className="space-y-3">
+          <Input
+            label="X (Twitter) Profile URL"
+            type="url"
+            value={socialLinks.twitter}
+            onChange={(e) => setSocialLinks({ ...socialLinks, twitter: e.target.value })}
+            placeholder="https://twitter.com/username"
+          />
+          
+          <Input
+            label="Instagram Profile URL"
+            type="url"
+            value={socialLinks.instagram}
+            onChange={(e) => setSocialLinks({ ...socialLinks, instagram: e.target.value })}
+            placeholder="https://instagram.com/username"
+          />
+          
+          <Input
+            label="Facebook Profile URL"
+            type="url"
+            value={socialLinks.facebook}
+            onChange={(e) => setSocialLinks({ ...socialLinks, facebook: e.target.value })}
+            placeholder="https://facebook.com/username"
+          />
+          
+          <Input
+            label="LinkedIn Profile URL"
+            type="url"
+            value={socialLinks.linkedin}
+            onChange={(e) => setSocialLinks({ ...socialLinks, linkedin: e.target.value })}
+            placeholder="https://linkedin.com/in/username"
+          />
+
+          <Input
+            label="GitHub Profile URL"
+            type="url"
+            value={socialLinks.github}
+            onChange={(e) => setSocialLinks({ ...socialLinks, github: e.target.value })}
+            placeholder="https://github.com/username"
+          />
+
+          <Input
+            label="YouTube Channel URL"
+            type="url"
+            value={socialLinks.youtube}
+            onChange={(e) => setSocialLinks({ ...socialLinks, youtube: e.target.value })}
+            placeholder="https://youtube.com/@username"
+          />
+
+          <Button 
+            variant="primary" 
+            onClick={handleUpdateSocialLinks}
+            isLoading={isLoading}
+          >
+            Save Social Links
           </Button>
         </div>
       </Card>

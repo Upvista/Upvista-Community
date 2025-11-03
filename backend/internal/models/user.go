@@ -35,20 +35,21 @@ type User struct {
 	UpdatedAt                  time.Time  `json:"updated_at" db:"updated_at"`
 
 	// Profile System Phase 1 Fields
-	Bio             *string         `json:"bio,omitempty" db:"bio"`
-	Location        *string         `json:"location,omitempty" db:"location"`
-	Gender          *string         `json:"gender,omitempty" db:"gender"`
-	GenderCustom    *string         `json:"gender_custom,omitempty" db:"gender_custom"`
-	Website         *string         `json:"website,omitempty" db:"website"`
-	IsVerified      bool            `json:"is_verified" db:"is_verified"`
-	ProfilePrivacy  string          `json:"profile_privacy" db:"profile_privacy"`
-	FieldVisibility map[string]bool `json:"field_visibility" db:"field_visibility"`
-	Story           *string         `json:"story,omitempty" db:"story"`
-	Ambition        *string         `json:"ambition,omitempty" db:"ambition"`
-	PostsCount      int             `json:"posts_count" db:"posts_count"`
-	ProjectsCount   int             `json:"projects_count" db:"projects_count"`
-	FollowersCount  int             `json:"followers_count" db:"followers_count"`
-	FollowingCount  int             `json:"following_count" db:"following_count"`
+	Bio             *string            `json:"bio,omitempty" db:"bio"`
+	Location        *string            `json:"location,omitempty" db:"location"`
+	Gender          *string            `json:"gender,omitempty" db:"gender"`
+	GenderCustom    *string            `json:"gender_custom,omitempty" db:"gender_custom"`
+	Website         *string            `json:"website,omitempty" db:"website"`
+	IsVerified      bool               `json:"is_verified" db:"is_verified"`
+	ProfilePrivacy  string             `json:"profile_privacy" db:"profile_privacy"`
+	FieldVisibility map[string]bool    `json:"field_visibility" db:"field_visibility"`
+	Story           *string            `json:"story,omitempty" db:"story"`
+	Ambition        *string            `json:"ambition,omitempty" db:"ambition"`
+	PostsCount      int                `json:"posts_count" db:"posts_count"`
+	ProjectsCount   int                `json:"projects_count" db:"projects_count"`
+	FollowersCount  int                `json:"followers_count" db:"followers_count"`
+	FollowingCount  int                `json:"following_count" db:"following_count"`
+	SocialLinks     map[string]*string `json:"social_links,omitempty" db:"social_links"`
 }
 
 // UserSession represents a user session (optional for advanced session management)
@@ -214,28 +215,39 @@ type UpdateAmbitionRequest struct {
 	Ambition *string `json:"ambition" validate:"omitempty,max=200"`
 }
 
+// UpdateSocialLinksRequest represents the request payload for updating social media links
+type UpdateSocialLinksRequest struct {
+	Twitter   *string `json:"twitter,omitempty" validate:"omitempty,url"`
+	Instagram *string `json:"instagram,omitempty" validate:"omitempty,url"`
+	Facebook  *string `json:"facebook,omitempty" validate:"omitempty,url"`
+	LinkedIn  *string `json:"linkedin,omitempty" validate:"omitempty,url"`
+	GitHub    *string `json:"github,omitempty" validate:"omitempty,url"`
+	YouTube   *string `json:"youtube,omitempty" validate:"omitempty,url"`
+}
+
 // PublicProfileResponse represents a public-facing user profile with privacy filtering applied
 type PublicProfileResponse struct {
-	ID             uuid.UUID `json:"id"`
-	Username       string    `json:"username"`
-	DisplayName    string    `json:"display_name"`
-	ProfilePicture *string   `json:"profile_picture,omitempty"`
-	IsVerified     bool      `json:"is_verified"`
-	Bio            *string   `json:"bio,omitempty"`
-	Location       *string   `json:"location,omitempty"`
-	Gender         *string   `json:"gender,omitempty"`
-	GenderCustom   *string   `json:"gender_custom,omitempty"`
-	Age            *int      `json:"age,omitempty"`
-	Website        *string   `json:"website,omitempty"`
-	JoinedAt       time.Time `json:"joined_at"`
-	Story          *string   `json:"story,omitempty"`
-	Ambition       *string   `json:"ambition,omitempty"`
-	PostsCount     int       `json:"posts_count"`
-	ProjectsCount  int       `json:"projects_count"`
-	FollowersCount int       `json:"followers_count"`
-	FollowingCount int       `json:"following_count"`
-	IsOwnProfile   bool      `json:"is_own_profile"`
-	ProfilePrivacy *string   `json:"profile_privacy,omitempty"` // Only sent for own profile
+	ID             uuid.UUID          `json:"id"`
+	Username       string             `json:"username"`
+	DisplayName    string             `json:"display_name"`
+	ProfilePicture *string            `json:"profile_picture,omitempty"`
+	IsVerified     bool               `json:"is_verified"`
+	Bio            *string            `json:"bio,omitempty"`
+	Location       *string            `json:"location,omitempty"`
+	Gender         *string            `json:"gender,omitempty"`
+	GenderCustom   *string            `json:"gender_custom,omitempty"`
+	Age            *int               `json:"age,omitempty"`
+	Website        *string            `json:"website,omitempty"`
+	JoinedAt       time.Time          `json:"joined_at"`
+	Story          *string            `json:"story,omitempty"`
+	Ambition       *string            `json:"ambition,omitempty"`
+	PostsCount     int                `json:"posts_count"`
+	ProjectsCount  int                `json:"projects_count"`
+	FollowersCount int                `json:"followers_count"`
+	FollowingCount int                `json:"following_count"`
+	IsOwnProfile   bool               `json:"is_own_profile"`
+	ProfilePrivacy *string            `json:"profile_privacy,omitempty"` // Only sent for own profile
+	SocialLinks    map[string]*string `json:"social_links,omitempty"`
 }
 
 // UserExperience represents a user's work experience entry
@@ -346,5 +358,6 @@ func (u *User) ToSafeUser() *User {
 		ProjectsCount:   u.ProjectsCount,
 		FollowersCount:  u.FollowersCount,
 		FollowingCount:  u.FollowingCount,
+		SocialLinks:     u.SocialLinks,
 	}
 }

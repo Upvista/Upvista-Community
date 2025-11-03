@@ -833,6 +833,55 @@ func (h *AccountHandlers) UpdateAmbition(c *gin.Context) {
 	})
 }
 
+// UpdateSocialLinks updates user's social media links
+func (h *AccountHandlers) UpdateSocialLinks(c *gin.Context) {
+	// Get user ID from JWT
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	// Parse user ID
+	id, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	// Bind request
+	var req models.UpdateSocialLinksRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request body",
+		})
+		return
+	}
+
+	// Update social links
+	err = h.profileSvc.UpdateSocialLinks(c.Request.Context(), id, &req)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Social links updated successfully",
+	})
+}
+
 // GetPublicProfile handles GET /api/v1/profile/:username
 func (h *AccountHandlers) GetPublicProfile(c *gin.Context) {
 	username := c.Param("username")
@@ -896,6 +945,7 @@ func (h *AccountHandlers) SetupRoutes(router *gin.RouterGroup) {
 		account.PATCH("/profile/privacy", h.UpdatePrivacySettings)
 		account.PATCH("/profile/story", h.UpdateStory)
 		account.PATCH("/profile/ambition", h.UpdateAmbition)
+		account.PATCH("/profile/social-links", h.UpdateSocialLinks)
 	}
 
 	// Public profile endpoint (no auth required, but optional auth for privacy checks)

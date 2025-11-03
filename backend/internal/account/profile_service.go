@@ -85,6 +85,7 @@ func filterProfileFields(user *models.User, isOwner bool) *models.PublicProfileR
 		profile.Website = user.Website
 		profile.Story = user.Story
 		profile.Ambition = user.Ambition
+		profile.SocialLinks = user.SocialLinks
 		profile.ProfilePrivacy = &user.ProfilePrivacy // Only send to owner
 		return profile
 	}
@@ -121,6 +122,9 @@ func filterProfileFields(user *models.User, isOwner bool) *models.PublicProfileR
 	profile.Story = user.Story
 	profile.Ambition = user.Ambition
 
+	// Social links are always public (they're meant to be shared)
+	profile.SocialLinks = user.SocialLinks
+
 	return profile
 }
 
@@ -149,4 +153,18 @@ func (s *ProfileService) UpdateStory(ctx context.Context, userID uuid.UUID, stor
 // UpdateAmbition updates the user's ambition section
 func (s *ProfileService) UpdateAmbition(ctx context.Context, userID uuid.UUID, ambition *string) error {
 	return s.userRepo.UpdateAmbition(ctx, userID, ambition)
+}
+
+// UpdateSocialLinks updates the user's social media links
+func (s *ProfileService) UpdateSocialLinks(ctx context.Context, userID uuid.UUID, req *models.UpdateSocialLinksRequest) error {
+	// Build social links map
+	socialLinks := make(map[string]*string)
+	socialLinks["twitter"] = req.Twitter
+	socialLinks["instagram"] = req.Instagram
+	socialLinks["facebook"] = req.Facebook
+	socialLinks["linkedin"] = req.LinkedIn
+	socialLinks["github"] = req.GitHub
+	socialLinks["youtube"] = req.YouTube
+
+	return s.userRepo.UpdateSocialLinks(ctx, userID, socialLinks)
 }

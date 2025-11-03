@@ -168,10 +168,10 @@ func (r *SupabaseUserRepository) CreateUser(ctx context.Context, user *models.Us
 func (r *SupabaseUserRepository) fetchOne(ctx context.Context, q url.Values) (*models.User, error) {
 	// Only set select and limit if not already set
 	if q.Get("select") == "" {
-	q.Set("select", "*")
+		q.Set("select", "*")
 	}
 	if q.Get("limit") == "" {
-	q.Set("limit", "1")
+		q.Set("limit", "1")
 	}
 	url := r.usersURL(q)
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -299,6 +299,19 @@ func (r *SupabaseUserRepository) fetchOne(ctx context.Context, q url.Values) (*m
 			}
 		}
 		user.FieldVisibility = fieldVisibility
+	}
+	if socialLinksRaw, ok := rawUser["social_links"].(map[string]interface{}); ok {
+		socialLinks := make(map[string]*string)
+		for k, v := range socialLinksRaw {
+			if v == nil {
+				socialLinks[k] = nil
+			} else if strVal, ok := v.(string); ok && strVal != "" {
+				socialLinks[k] = &strVal
+			} else {
+				socialLinks[k] = nil
+			}
+		}
+		user.SocialLinks = socialLinks
 	}
 	if story, ok := rawUser["story"].(string); ok && story != "" {
 		user.Story = &story
@@ -1097,6 +1110,44 @@ func (r *SupabaseUserRepository) UpdateAmbition(ctx context.Context, userID uuid
 	if resp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		log.Printf("[Supabase] UpdateAmbition failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// UpdateSocialLinks updates user's social media links
+func (r *SupabaseUserRepository) UpdateSocialLinks(ctx context.Context, userID uuid.UUID, socialLinks map[string]*string) error {
+	// Supabase PostgREST expects JSONB as a JSON object, not a string
+	update := map[string]interface{}{
+		"social_links": socialLinks, // Pass directly, not as string
+		"updated_at":   time.Now().Format("2006-01-02T15:04:05.999999999Z07:00"),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(httpReq, "return=minimal")
+
+	resp, err := r.http.Do(httpReq)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] UpdateSocialLinks failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
 		return apperr.ErrDatabaseError
 	}
 

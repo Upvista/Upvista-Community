@@ -12,10 +12,11 @@ import { cn } from '@/lib/utils';
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
+  labelBg?: string; // Custom background for label
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className, ...props }, ref) => {
+  ({ label, error, className, labelBg, ...props }, ref) => {
     return (
       <div className="relative">
         <input
@@ -32,9 +33,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         />
         <label
           className={cn(
-            'absolute -top-3 left-4 bg-white dark:bg-neutral-950 px-2 text-sm font-medium transition-all duration-200',
+            'absolute -top-3 left-4 px-2 text-sm font-medium transition-all duration-200 pointer-events-none',
             'peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400',
             'peer-focus:-top-3 peer-focus:text-sm',
+            labelBg || 'bg-white dark:bg-neutral-900',
             error
               ? 'text-error peer-focus:text-error'
               : 'text-brand-purple-600 dark:text-brand-purple-400 peer-focus:text-brand-purple-600 dark:peer-focus:text-brand-purple-400'
