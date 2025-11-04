@@ -59,6 +59,7 @@ export interface User {
   username: string;
   display_name?: string;
   avatar_url?: string;
+  profile_picture?: string; // Backend field name
   is_verified?: boolean;
 }
 

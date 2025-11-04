@@ -490,6 +490,16 @@ func (h *MessageHandlers) AddReaction(c *gin.Context) {
 		return
 	}
 
+	// If reaction is nil, it was toggled off (removed)
+	if reaction == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"removed": true,
+			"message": "Reaction removed",
+		})
+		return
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
 		"success":  true,
 		"reaction": reaction,

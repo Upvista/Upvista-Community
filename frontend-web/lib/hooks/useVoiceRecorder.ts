@@ -77,12 +77,13 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
 
       // Handle specific errors
       if (error instanceof Error) {
+        const { toast } = await import('@/components/ui/Toast');
         if (error.name === 'NotAllowedError') {
-          alert('Microphone permission denied. Please allow microphone access to send voice messages.');
+          toast.error('Microphone permission denied. Please allow microphone access.');
         } else if (error.name === 'NotFoundError') {
-          alert('No microphone found. Please connect a microphone to send voice messages.');
+          toast.error('No microphone found. Please connect a microphone.');
         } else {
-          alert('Failed to start recording: ' + error.message);
+          toast.error('Failed to start recording: ' + error.message);
         }
       }
 

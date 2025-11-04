@@ -381,6 +381,56 @@ html {
   animation: slide-in-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Toast and Dialog Animations */
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes zoom-in-95 {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-in.slide-in-from-right {
+  animation: slide-in-from-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-in.zoom-in-95 {
+  animation: zoom-in-95 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-in.fade-in {
+  animation: fade-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Prevent white flash during page transitions */
 html {
   background-color: #FAFAFA;

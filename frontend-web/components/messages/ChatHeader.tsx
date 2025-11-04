@@ -4,6 +4,7 @@ import { Conversation, formatLastSeen } from '@/lib/api/messages';
 import { Avatar } from '../ui/Avatar';
 import { ArrowLeft, Phone, Video, MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@/components/ui/Toast';
 
 interface ChatHeaderProps {
   conversation: Conversation;
@@ -35,15 +36,15 @@ export default function ChatHeader({ conversation, onClose }: ChatHeaderProps) {
         )}
 
         {/* Avatar */}
-        <div className="relative cursor-pointer" onClick={handleViewProfile}>
+        <div className="cursor-pointer" onClick={handleViewProfile}>
           <Avatar
-            src={otherUser.avatar_url}
+            src={otherUser.profile_picture || otherUser.avatar_url}
             alt={otherUser.display_name || otherUser.username}
+            fallback={otherUser.display_name || otherUser.username}
             size="sm"
+            showOnline={true}
+            isOnline={conversation.is_online}
           />
-          {conversation.is_online && (
-            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
-          )}
         </div>
 
         {/* User Info */}
@@ -67,7 +68,7 @@ export default function ChatHeader({ conversation, onClose }: ChatHeaderProps) {
       <div className="flex items-center gap-2">
         {/* Voice Call - Placeholder for Phase 2 */}
         <button
-          onClick={() => alert('Voice calls coming in Phase 2!')}
+          onClick={() => toast.info('Voice calls coming in Phase 2!')}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
           title="Voice call (coming soon)"
         >
@@ -76,7 +77,7 @@ export default function ChatHeader({ conversation, onClose }: ChatHeaderProps) {
 
         {/* Video Call - Placeholder for Phase 2 */}
         <button
-          onClick={() => alert('Video calls coming in Phase 2!')}
+          onClick={() => toast.info('Video calls coming in Phase 2!')}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
           title="Video call (coming soon)"
         >
@@ -85,7 +86,7 @@ export default function ChatHeader({ conversation, onClose }: ChatHeaderProps) {
 
         {/* More Options */}
         <button
-          onClick={() => alert('Chat settings coming soon!')}
+          onClick={() => toast.info('Chat settings coming soon!')}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
           title="More options"
         >

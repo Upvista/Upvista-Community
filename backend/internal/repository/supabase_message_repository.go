@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -622,7 +623,12 @@ func (r *supabaseMessageRepository) CreateMessage(ctx context.Context, message *
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, r.messagesURL(nil), bytes.NewReader(body))
+
+	// Request with full reply_to data populated
+	query := url.Values{}
+	query.Set("select", "*,sender:sender_id(id,username,display_name,profile_picture),reply_to:reply_to_id(id,content,message_type,sender_id,sender:sender_id(id,username,display_name,profile_picture))")
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, r.messagesURL(query), bytes.NewReader(body))
 	r.setHeaders(req, "return=representation")
 
 	resp, err := r.httpClient.Do(req)
@@ -630,6 +636,11 @@ func (r *supabaseMessageRepository) CreateMessage(ctx context.Context, message *
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to create message: %s", string(body))
+	}
 
 	var created []supabaseMessage
 	if err := json.NewDecoder(resp.Body).Decode(&created); err != nil {
@@ -641,7 +652,9 @@ func (r *supabaseMessageRepository) CreateMessage(ctx context.Context, message *
 		if err != nil {
 			return fmt.Errorf("failed to convert created message: %w", err)
 		}
+		// Update the message with full data including reply_to
 		*message = *convertedMsg
+		log.Printf("[MessageRepo] Created message with reply_to: %v", message.ReplyToMessage != nil)
 	}
 
 	return nil
@@ -651,7 +664,7 @@ func (r *supabaseMessageRepository) CreateMessage(ctx context.Context, message *
 func (r *supabaseMessageRepository) GetMessage(ctx context.Context, messageID uuid.UUID) (*models.Message, error) {
 	query := url.Values{}
 	query.Set("id", "eq."+messageID.String())
-	query.Set("select", "*,sender:sender_id(*),reply_to:reply_to_id(*),reactions:message_reactions(*,user:user_id(*))")
+	query.Set("select", "*,sender:sender_id(id,username,display_name,profile_picture),reply_to:reply_to_id(id,content,message_type,sender_id,sender:sender_id(id,username,display_name,profile_picture)),reactions:message_reactions(*,user:user_id(id,username,display_name,profile_picture))")
 
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, r.messagesURL(query), nil)
 	r.setHeaders(req, "")
@@ -678,8 +691,8 @@ func (r *supabaseMessageRepository) GetMessage(ctx context.Context, messageID uu
 func (r *supabaseMessageRepository) GetConversationMessages(ctx context.Context, conversationID uuid.UUID, limit, offset int) ([]*models.Message, error) {
 	query := url.Values{}
 	query.Set("conversation_id", "eq."+conversationID.String())
-	query.Set("select", "*,sender:sender_id(*),reply_to:reply_to_id(id,content,sender:sender_id(username,display_name)),reactions:message_reactions(*,user:user_id(*))")
-	query.Set("order", "created_at.desc")
+	query.Set("select", "*,sender:sender_id(id,username,display_name,profile_picture),reply_to:reply_to_id(id,content,message_type,sender_id,sender:sender_id(id,username,display_name,profile_picture)),reactions:message_reactions(*,user:user_id(id,username,display_name,profile_picture))")
+	query.Set("order", "created_at.asc") // Ascending order (oldest first, newest last)
 	query.Set("limit", fmt.Sprintf("%d", limit))
 	query.Set("offset", fmt.Sprintf("%d", offset))
 
@@ -708,10 +721,9 @@ func (r *supabaseMessageRepository) GetConversationMessages(ctx context.Context,
 		messages = append(messages, msg)
 	}
 
-	// Reverse to show oldest first
-	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
-		messages[i], messages[j] = messages[j], messages[i]
-	}
+	// Already in ascending order (oldest first) from database query
+	// No need to reverse anymore
+	log.Printf("[MessageRepo] Returning %d messages in chronological order (oldest first)", len(messages))
 
 	return messages, nil
 }
@@ -800,7 +812,12 @@ func (r *supabaseMessageRepository) AddReaction(ctx context.Context, messageID, 
 	}
 
 	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, r.reactionsURL(nil), bytes.NewReader(body))
+
+	// Include user data in the response
+	query := url.Values{}
+	query.Set("select", "*,user:user_id(id,username,display_name,profile_picture)")
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, r.reactionsURL(query), bytes.NewReader(body))
 	r.setHeaders(req, "return=representation,resolution=merge-duplicates")
 
 	resp, err := r.httpClient.Do(req)
@@ -809,16 +826,76 @@ func (r *supabaseMessageRepository) AddReaction(ctx context.Context, messageID, 
 	}
 	defer resp.Body.Close()
 
-	var reactions []models.MessageReaction
-	if err := json.NewDecoder(resp.Body).Decode(&reactions); err != nil {
-		return nil, err
+	// Log response details
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	log.Printf("[MessageRepo] AddReaction response - Status: %d, Body: %s", resp.StatusCode, string(bodyBytes))
+
+	// Handle 409 Conflict (reaction already exists) - toggle it off
+	if resp.StatusCode == http.StatusConflict {
+		log.Printf("[MessageRepo] Reaction already exists, removing it (toggle behavior)")
+		if err := r.RemoveUserReaction(ctx, messageID, userID); err != nil {
+			return nil, fmt.Errorf("failed to remove existing reaction: %w", err)
+		}
+		// Return nil to indicate successful toggle (removal)
+		return nil, nil
 	}
 
-	if len(reactions) == 0 {
-		return nil, fmt.Errorf("failed to create reaction")
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to add reaction (status %d): %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	return &reactions[0], nil
+	// Re-read body for decoding - use helper struct for timestamp parsing
+	bodyReader := bytes.NewReader(bodyBytes)
+
+	// Helper struct to handle Supabase timestamp format
+	type supabaseReaction struct {
+		ID        uuid.UUID     `json:"id"`
+		MessageID uuid.UUID     `json:"message_id"`
+		UserID    uuid.UUID     `json:"user_id"`
+		Emoji     string        `json:"emoji"`
+		CreatedAt string        `json:"created_at"` // String to parse manually
+		User      *supabaseUser `json:"user,omitempty"`
+	}
+
+	var supabaseReactions []supabaseReaction
+	if err := json.NewDecoder(bodyReader).Decode(&supabaseReactions); err != nil {
+		log.Printf("[MessageRepo] Failed to decode reaction response: %v, Body: %s", err, string(bodyBytes))
+		return nil, fmt.Errorf("failed to decode reaction: %v", err)
+	}
+
+	if len(supabaseReactions) == 0 {
+		return nil, fmt.Errorf("failed to create reaction - empty response")
+	}
+
+	// Convert to models.MessageReaction
+	sbReaction := supabaseReactions[0]
+	reaction := &models.MessageReaction{
+		ID:        sbReaction.ID,
+		MessageID: sbReaction.MessageID,
+		UserID:    sbReaction.UserID,
+		Emoji:     sbReaction.Emoji,
+	}
+
+	// Parse timestamp
+	if sbReaction.CreatedAt != "" {
+		createdAt, err := parseSupabaseTime(sbReaction.CreatedAt)
+		if err != nil {
+			log.Printf("[MessageRepo] Warning: Failed to parse created_at, using now: %v", err)
+			createdAt = time.Now()
+		}
+		reaction.CreatedAt = createdAt
+	}
+
+	// Convert user if present
+	if sbReaction.User != nil {
+		user, err := sbReaction.User.toUser()
+		if err == nil {
+			reaction.User = user
+		}
+	}
+
+	log.Printf("[MessageRepo] ✅ Reaction added successfully: %s", emoji)
+	return reaction, nil
 }
 
 // RemoveReaction removes a reaction by ID

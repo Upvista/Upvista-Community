@@ -134,17 +134,44 @@ export function useOptimisticMessages({
 
       setOptimisticMessages((prev) => new Map(prev).set(tempId, optimisticMsg));
 
-      // Message already sent via separate upload endpoint
-      // Just add to real messages
-      setTimeout(() => {
+      try {
+        // CRITICAL FIX: Actually send to server to persist in database!
+        const response = await messagesAPI.sendMessageWithAttachment(
+          conversationId,
+          content,
+          attachmentUrl,
+          attachmentName,
+          attachmentSize,
+          attachmentType,
+          messageType,
+          replyToId
+        );
+
+        // Replace optimistic with real message from server
         setOptimisticMessages((prev) => {
           const next = new Map(prev);
           next.delete(tempId);
           return next;
         });
 
-        setRealMessages((prev) => [...prev, optimisticMsg as Message]);
-      }, 500);
+        setRealMessages((prev) => [...prev, response.message]);
+
+        console.log('[OptimisticUI] ✅ Attachment message confirmed by server:', response.message.id);
+      } catch (error) {
+        console.error('[OptimisticUI] ❌ Failed to send attachment message:', error);
+        
+        // Mark as failed
+        setOptimisticMessages((prev) => {
+          const next = new Map(prev);
+          const msg = next.get(tempId);
+          if (msg) {
+            msg.isSending = false;
+            msg.sendError = 'Failed to send';
+            next.set(tempId, msg);
+          }
+          return next;
+        });
+      }
     },
     [conversationId]
   );
@@ -206,18 +233,19 @@ export function useOptimisticMessages({
   useEffect(() => {
     // Listen for new messages from WebSocket (INSTANT delivery)
     const unsubscribeNewMessage = messageWS.on('new_message', (message: Message) => {
-      console.log('[OptimisticUI] ⚡ Received via WebSocket:', message.id, 'is_mine:', message.is_mine);
+      console.log('[OptimisticUI] ⚡ Received via WebSocket:', message.id, 'is_mine:', message.is_mine, 'timestamp:', message.created_at);
       if (message.conversation_id === conversationId && !message.is_mine) {
         // Add IMMEDIATELY to UI
         setRealMessages((prev) => {
-          // Check if message already exists
+          // Check if message already exists (CRITICAL for deduplication)
           if (prev.some((m) => m.id === message.id)) {
-            console.log('[OptimisticUI] Duplicate message, ignoring');
+            console.log('[OptimisticUI] ⚠️ Duplicate message detected, ignoring:', message.id);
             return prev;
           }
+          
           console.log('[OptimisticUI] ✅ Adding new message to chat, prev count:', prev.length);
           
-          // Create NEW array to force React re-render
+          // Add to the END (newest messages at bottom)
           const updated = [...prev, message];
           console.log('[OptimisticUI] New messages array length:', updated.length);
           
@@ -231,12 +259,17 @@ export function useOptimisticMessages({
           
           return updated;
         });
+
+        // Trigger badge update immediately after adding message to chat
+        console.log('[OptimisticUI] 📬 New message added, will be marked as read');
       }
     });
 
     // Listen for delivery status updates (INSTANT)
     const unsubscribeDelivered = messageWS.on('message_delivered', (data: any) => {
+      console.log('[OptimisticUI] 📬 Received message_delivered event:', data);
       if (data.conversation_id === conversationId) {
+        console.log('[OptimisticUI] ✅ Updating message', data.message_id, 'to delivered');
         setRealMessages((prev) =>
           prev.map((msg) =>
             msg.id === data.message_id
@@ -244,20 +277,28 @@ export function useOptimisticMessages({
               : msg
           )
         );
+      } else {
+        console.log('[OptimisticUI] ⏭️ Ignoring delivery (different conversation)');
       }
     });
 
     // Listen for read receipts (INSTANT)
     const unsubscribeRead = messageWS.on('message_read', (data: any) => {
+      console.log('[OptimisticUI] 💙 Received message_read event:', data);
       if (data.conversation_id === conversationId) {
-        // Mark ALL messages as read instantly
-        setRealMessages((prev) =>
-          prev.map((msg) =>
-            !msg.is_mine && msg.status !== 'read'
+        console.log('[OptimisticUI] ✅ Marking all MY messages as read in conversation', conversationId);
+        setRealMessages((prev) => {
+          const updated = prev.map((msg) =>
+            msg.is_mine && msg.status !== 'read'
               ? { ...msg, status: 'read' as const, read_at: data.read_at }
               : msg
-          )
-        );
+          );
+          const changedCount = updated.filter((msg, i) => msg.status !== prev[i].status).length;
+          console.log('[OptimisticUI] 💙 Marked', changedCount, 'messages as read');
+          return updated;
+        });
+      } else {
+        console.log('[OptimisticUI] ⏭️ Ignoring read receipt (different conversation)');
       }
     });
 
@@ -287,11 +328,42 @@ export function useOptimisticMessages({
       }
     });
 
+    // Listen for reaction removals (toggle off)
+    const unsubscribeReactionRemoved = messageWS.on('reaction_removed', (data: any) => {
+      console.log('[OptimisticUI] 🔄 Received reaction_removed event:', data);
+      if (data.message_id && data.emoji) {
+        setRealMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === data.message_id) {
+              return {
+                ...msg,
+                reactions: (msg.reactions || []).filter((r) => r.emoji !== data.emoji),
+              };
+            }
+            return msg;
+          })
+        );
+        console.log('[OptimisticUI] ✅ Removed reaction:', data.emoji, 'from message:', data.message_id);
+      }
+    });
+
+    // Listen for message deletions
+    const unsubscribeDeleted = messageWS.on('message_deleted', (data: any) => {
+      console.log('[OptimisticUI] 🗑️ Received message_deleted event:', data);
+      if (data.conversation_id === conversationId) {
+        // Remove message from UI
+        setRealMessages((prev) => prev.filter((msg) => msg.id !== data.message_id));
+        console.log('[OptimisticUI] ✅ Removed deleted message:', data.message_id);
+      }
+    });
+
     return () => {
       unsubscribeNewMessage();
       unsubscribeDelivered();
       unsubscribeRead();
       unsubscribeReaction();
+      unsubscribeReactionRemoved();
+      unsubscribeDeleted();
     };
   }, [conversationId]);
 
@@ -299,19 +371,31 @@ export function useOptimisticMessages({
 
   /**
    * Merge real and optimistic messages, sorted by timestamp
-   * Force new array reference on every update to trigger React re-render
+   * ALWAYS sorted chronologically: oldest first, newest last
    */
   const allMessages = useMemo(() => {
+    // Combine real and optimistic messages
     const combined = [
       ...realMessages,
       ...Array.from(optimisticMessages.values()),
     ];
 
-    const sorted = combined.sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
+    // Remove duplicates (same ID)
+    const uniqueMap = new Map<string, Message>();
+    combined.forEach(msg => {
+      uniqueMap.set(msg.id, msg);
+    });
+
+    // Convert back to array and sort chronologically
+    const uniqueMessages = Array.from(uniqueMap.values());
     
-    console.log('[OptimisticUI] 📊 Total messages:', sorted.length);
+    const sorted = uniqueMessages.sort((a, b) => {
+      const timeA = new Date(a.created_at).getTime();
+      const timeB = new Date(b.created_at).getTime();
+      return timeA - timeB; // Ascending order (oldest first)
+    });
+    
+    console.log('[OptimisticUI] 📊 Total messages:', sorted.length, 'Oldest:', sorted[0]?.created_at, 'Newest:', sorted[sorted.length - 1]?.created_at);
     return sorted;
   }, [realMessages, optimisticMessages]);
 
@@ -348,6 +432,18 @@ export function useOptimisticMessages({
     setOptimisticMessages(new Map()); // Clear optimistic messages
   }, []);
 
+  /**
+   * Remove a message (for delete)
+   */
+  const removeMessage = useCallback((messageId: string) => {
+    setRealMessages((prev) => prev.filter((m) => m.id !== messageId));
+    setOptimisticMessages((prev) => {
+      const next = new Map(prev);
+      next.delete(messageId);
+      return next;
+    });
+  }, []);
+
   return {
     messages: allMessages,
     realMessages,
@@ -358,6 +454,7 @@ export function useOptimisticMessages({
     addMessage,
     updateMessageStatus,
     setMessages,
+    removeMessage,
   };
 }
 

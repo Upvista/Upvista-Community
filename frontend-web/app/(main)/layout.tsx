@@ -11,6 +11,7 @@ import { ReactNode } from 'react';
 import { NotificationProvider } from '@/lib/contexts/NotificationContext';
 import { MessagesProvider } from '@/lib/contexts/MessagesContext';
 import MobileMessagesOverlay from '@/components/messages/MobileMessagesOverlay';
+import { ToastContainer } from '@/components/ui/Toast';
 
 export default function MainAppLayout({ children }: { children: ReactNode }) {
   return (
@@ -18,6 +19,7 @@ export default function MainAppLayout({ children }: { children: ReactNode }) {
       <MessagesProvider>
         {children}
         <MobileMessagesOverlay />
+        <ToastContainer />
       </MessagesProvider>
     </NotificationProvider>
   );

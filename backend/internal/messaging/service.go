@@ -66,12 +66,20 @@ func (s *MessagingService) GetConversations(ctx context.Context, userID uuid.UUI
 		return nil, fmt.Errorf("failed to get conversations: %w", err)
 	}
 
-	// Enrich with presence information from Redis
+	// Enrich with presence information - use WebSocket manager for real-time status
 	for _, conv := range conversations {
 		if conv.OtherUser != nil {
-			isOnline, lastSeen, _ := s.cache.GetUserPresence(ctx, conv.OtherUser.ID)
+			// Check if user is currently connected via WebSocket
+			isOnline := s.wsManager.IsUserConnected(conv.OtherUser.ID)
 			conv.IsOnline = isOnline
-			conv.LastSeen = &lastSeen
+
+			// Get last seen from cache if offline
+			if !isOnline {
+				_, lastSeen, _ := s.cache.GetUserPresence(ctx, conv.OtherUser.ID)
+				if !lastSeen.IsZero() {
+					conv.LastSeen = &lastSeen
+				}
+			}
 		}
 	}
 
@@ -104,11 +112,19 @@ func (s *MessagingService) GetConversation(ctx context.Context, conversationID, 
 		conversation.UnreadCount = conversation.UnreadCountP2
 	}
 
-	// Get presence
+	// Get presence - use WebSocket manager for real-time status
 	if conversation.OtherUser != nil {
-		isOnline, lastSeen, _ := s.cache.GetUserPresence(ctx, conversation.OtherUser.ID)
+		// Check if user is currently connected via WebSocket
+		isOnline := s.wsManager.IsUserConnected(conversation.OtherUser.ID)
 		conversation.IsOnline = isOnline
-		conversation.LastSeen = &lastSeen
+
+		// Get last seen from cache if offline
+		if !isOnline {
+			_, lastSeen, _ := s.cache.GetUserPresence(ctx, conversation.OtherUser.ID)
+			if !lastSeen.IsZero() {
+				conversation.LastSeen = &lastSeen
+			}
+		}
 	}
 
 	return conversation, nil
@@ -194,6 +210,9 @@ func (s *MessagingService) SendMessage(ctx context.Context, conversationID, send
 		return nil, fmt.Errorf("failed to create message: %w", err)
 	}
 
+	// Update sender's last seen (they're active sending messages)
+	s.cache.SetUserOnline(ctx, senderID)
+
 	// Update cache
 	s.cache.PrependMessage(ctx, message)
 	s.cache.IncrementUnread(ctx, conversationID, recipientID)
@@ -202,8 +221,13 @@ func (s *MessagingService) SendMessage(ctx context.Context, conversationID, send
 	s.cache.InvalidateUserConversations(ctx, senderID)
 	s.cache.InvalidateUserConversations(ctx, recipientID)
 
-	// Send via WebSocket to recipient
-	go s.broadcastNewMessage(recipientID, message)
+	// Send via WebSocket to recipient (IsMine = false for recipient)
+	messageCopy := *message
+	messageCopy.IsMine = false
+	go s.broadcastNewMessage(recipientID, &messageCopy)
+
+	// Set IsMine = true for sender (HTTP response)
+	message.IsMine = true
 
 	// Mark as delivered if recipient is online
 	if s.wsManager.IsUserConnected(recipientID) {
@@ -239,6 +263,11 @@ func (s *MessagingService) GetMessages(ctx context.Context, conversationID, user
 		if err == nil && cached != nil && len(cached) > 0 {
 			log.Printf("[Messaging] Returning %d cached messages for conversation %s", len(cached), conversationID)
 
+			// CRITICAL: Set IsMine field for cached messages
+			for _, msg := range cached {
+				msg.IsMine = msg.SenderID == userID
+			}
+
 			// Mark as read in background
 			go s.markConversationAsRead(ctx, conversationID, userID)
 
@@ -252,7 +281,7 @@ func (s *MessagingService) GetMessages(ctx context.Context, conversationID, user
 		return nil, fmt.Errorf("failed to get messages: %w", err)
 	}
 
-	// Set IsMine field
+	// CRITICAL: Set IsMine field for ALL messages
 	for _, msg := range messages {
 		msg.IsMine = msg.SenderID == userID
 	}
@@ -278,6 +307,9 @@ func (s *MessagingService) MarkAsRead(ctx context.Context, conversationID, userI
 	if err := s.repo.MarkMessagesAsRead(ctx, conversationID, userID); err != nil {
 		return err
 	}
+
+	// Update user's last seen (they're active reading messages)
+	s.cache.SetUserOnline(ctx, userID)
 
 	// Update cache
 	s.cache.ResetUnread(ctx, conversationID, userID)
@@ -307,6 +339,19 @@ func (s *MessagingService) DeleteMessage(ctx context.Context, messageID, userID 
 		return err
 	}
 
+	// Verify user is either sender or a participant
+	conversation, err := s.repo.GetConversation(ctx, message.ConversationID)
+	if err != nil {
+		return err
+	}
+
+	isSender := message.SenderID == userID
+	isParticipant := conversation.Participant1ID == userID || conversation.Participant2ID == userID
+
+	if !isParticipant {
+		return fmt.Errorf("user is not a participant in this conversation")
+	}
+
 	// Delete in database
 	if err := s.repo.DeleteMessage(ctx, messageID, userID); err != nil {
 		return err
@@ -315,13 +360,36 @@ func (s *MessagingService) DeleteMessage(ctx context.Context, messageID, userID 
 	// Invalidate cache
 	s.cache.InvalidateConversationCache(ctx, message.ConversationID)
 
-	log.Printf("[Messaging] Message %s deleted for user %s", messageID, userID)
+	// Broadcast deletion via WebSocket
+	var otherUserID uuid.UUID
+	if conversation.Participant1ID == userID {
+		otherUserID = conversation.Participant2ID
+	} else {
+		otherUserID = conversation.Participant1ID
+	}
+
+	// If sender deleted (unsend), notify the other person
+	if isSender {
+		go s.broadcastMessageDeleted(otherUserID, message.ConversationID, messageID, true) // deleted for everyone
+	}
+
+	log.Printf("[Messaging] 🗑️ Message %s deleted for user %s (sender: %v)", messageID, userID, isSender)
 	return nil
 }
 
 // SearchMessages searches messages by content
 func (s *MessagingService) SearchMessages(ctx context.Context, userID uuid.UUID, query string, limit, offset int) ([]*models.Message, error) {
-	return s.repo.SearchMessages(ctx, userID, query, limit, offset)
+	messages, err := s.repo.SearchMessages(ctx, userID, query, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set IsMine field for search results
+	for _, msg := range messages {
+		msg.IsMine = msg.SenderID == userID
+	}
+
+	return messages, nil
 }
 
 // ============================================
@@ -390,7 +458,7 @@ func (s *MessagingService) StopTyping(ctx context.Context, conversationID, userI
 // REACTIONS
 // ============================================
 
-// AddReaction adds an emoji reaction to a message
+// AddReaction adds an emoji reaction to a message (or toggles it off if already exists)
 func (s *MessagingService) AddReaction(ctx context.Context, messageID, userID uuid.UUID, emoji string) (*models.MessageReaction, error) {
 	reaction, err := s.repo.AddReaction(ctx, messageID, userID, emoji)
 	if err != nil {
@@ -413,11 +481,17 @@ func (s *MessagingService) AddReaction(ctx context.Context, messageID, userID uu
 				otherUserID = conversation.Participant1ID
 			}
 
-			go s.broadcastReaction(otherUserID, message.ConversationID, messageID, reaction)
+			// If reaction is nil, it was toggled off (removed)
+			if reaction == nil {
+				log.Printf("[Messaging] Reaction %s toggled off (removed) from message %s by user %s", emoji, messageID, userID)
+				go s.broadcastReactionRemoved(otherUserID, message.ConversationID, messageID, emoji)
+			} else {
+				log.Printf("[Messaging] Reaction %s added to message %s by user %s", emoji, messageID, userID)
+				go s.broadcastReaction(otherUserID, message.ConversationID, messageID, reaction)
+			}
 		}
 	}
 
-	log.Printf("[Messaging] Reaction %s added to message %s by user %s", emoji, messageID, userID)
 	return reaction, nil
 }
 
@@ -457,7 +531,17 @@ func (s *MessagingService) UnstarMessage(ctx context.Context, messageID, userID 
 
 // GetStarredMessages retrieves starred messages
 func (s *MessagingService) GetStarredMessages(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Message, error) {
-	return s.repo.GetStarredMessages(ctx, userID, limit, offset)
+	messages, err := s.repo.GetStarredMessages(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set IsMine field for starred messages
+	for _, msg := range messages {
+		msg.IsMine = msg.SenderID == userID
+	}
+
+	return messages, nil
 }
 
 // ============================================
@@ -579,19 +663,22 @@ func (s *MessagingService) broadcastTyping(recipientID, conversationID, typerID 
 }
 
 func (s *MessagingService) broadcastReadReceipt(recipientID, conversationID uuid.UUID) {
+	readAt := time.Now().Format(time.RFC3339)
+
 	envelope := models.WSMessageEnvelope{
 		ID:             uuid.New().String(),
 		Type:           models.WSMessageTypeMessageRead,
 		Channel:        "messaging",
 		ConversationID: &conversationID,
 		Data: map[string]interface{}{
-			"conversation_id": conversationID,
-			"read_at":         time.Now(),
+			"conversation_id": conversationID.String(),
+			"read_at":         readAt,
 		},
 		Timestamp: time.Now().Unix(),
 	}
 
 	s.wsManager.BroadcastToUserWithData(recipientID, envelope)
+	log.Printf("[Messaging] 💙 Broadcasted read receipt for conversation %s to sender %s", conversationID, recipientID)
 }
 
 func (s *MessagingService) broadcastReaction(recipientID, conversationID, messageID uuid.UUID, reaction *models.MessageReaction) {
@@ -608,11 +695,78 @@ func (s *MessagingService) broadcastReaction(recipientID, conversationID, messag
 	}
 
 	s.wsManager.BroadcastToUserWithData(recipientID, envelope)
+	log.Printf("[Messaging] Broadcasted reaction to user %s for message %s", recipientID, messageID)
+}
+
+func (s *MessagingService) broadcastReactionRemoved(recipientID, conversationID, messageID uuid.UUID, emoji string) {
+	envelope := models.WSMessageEnvelope{
+		ID:             uuid.New().String(),
+		Type:           "reaction_removed",
+		Channel:        "messaging",
+		ConversationID: &conversationID,
+		Data: map[string]interface{}{
+			"message_id": messageID,
+			"emoji":      emoji,
+		},
+		Timestamp: time.Now().Unix(),
+	}
+
+	s.wsManager.BroadcastToUserWithData(recipientID, envelope)
+	log.Printf("[Messaging] Broadcasted reaction removal to user %s for message %s", recipientID, messageID)
+}
+
+func (s *MessagingService) broadcastMessageDeleted(recipientID, conversationID, messageID uuid.UUID, deletedForEveryone bool) {
+	envelope := models.WSMessageEnvelope{
+		ID:             uuid.New().String(),
+		Type:           models.WSMessageTypeMessageDeleted,
+		Channel:        "messaging",
+		ConversationID: &conversationID,
+		Data: map[string]interface{}{
+			"conversation_id":      conversationID.String(),
+			"message_id":           messageID.String(),
+			"deleted_for_everyone": deletedForEveryone,
+		},
+		Timestamp: time.Now().Unix(),
+	}
+
+	s.wsManager.BroadcastToUserWithData(recipientID, envelope)
+	log.Printf("[Messaging] 🗑️ Broadcasted message_deleted for message %s to user %s", messageID, recipientID)
 }
 
 func (s *MessagingService) markAsDelivered(ctx context.Context, messageID uuid.UUID) {
 	time.Sleep(100 * time.Millisecond) // Small delay to ensure message is received
-	s.repo.UpdateMessageStatus(ctx, messageID, models.MessageStatusDelivered)
+
+	// Update status in database
+	if err := s.repo.UpdateMessageStatus(ctx, messageID, models.MessageStatusDelivered); err != nil {
+		log.Printf("[Messaging] Failed to mark message as delivered: %v", err)
+		return
+	}
+
+	// Get message to find conversation and sender
+	message, err := s.repo.GetMessage(ctx, messageID)
+	if err != nil {
+		log.Printf("[Messaging] Failed to get message for delivery broadcast: %v", err)
+		return
+	}
+
+	deliveredAt := time.Now().Format(time.RFC3339)
+
+	// Broadcast to sender (delivered status update)
+	envelope := models.WSMessageEnvelope{
+		ID:             messageID.String(),
+		Type:           "message_delivered",
+		Channel:        "messaging",
+		ConversationID: &message.ConversationID,
+		Data: map[string]interface{}{
+			"message_id":      messageID.String(),
+			"conversation_id": message.ConversationID.String(),
+			"delivered_at":    deliveredAt,
+		},
+		Timestamp: time.Now().Unix(),
+	}
+
+	s.wsManager.BroadcastToUserWithData(message.SenderID, envelope)
+	log.Printf("[Messaging] 📬 Broadcasted delivered status for message %s to sender %s", messageID, message.SenderID)
 }
 
 func (s *MessagingService) markConversationAsRead(ctx context.Context, conversationID, userID uuid.UUID) {

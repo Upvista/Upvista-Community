@@ -11,6 +11,8 @@ import ChatFooter from './ChatFooter';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 import { messageWS } from '@/lib/websocket/MessageWebSocket';
+import { toast } from '@/components/ui/Toast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface ChatWindowProps {
   conversationId: string;
@@ -22,6 +24,7 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
   const [isTyping, setIsTyping] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isChatVisible, setIsChatVisible] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ messageId: string; isMine: boolean; type: 'unsend' | 'delete_for_me' } | null>(null);
 
   // Hooks
   const {
@@ -29,6 +32,7 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
     sendMessage,
     sendMessageWithAttachment,
     setMessages,
+    removeMessage,
   } = useOptimisticMessages({ conversationId });
 
   const {
@@ -39,6 +43,7 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
     scrollRef,
     handleScroll,
     scrollToBottom,
+    loadMore,
   } = useInfiniteMessages({ conversationId });
 
   const { isRecording, duration, startRecording, stopRecording, cancelRecording } =
@@ -88,25 +93,39 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
   // Instant mark as read (no delays)
   const markAsReadImmediately = async () => {
     try {
-      // Trigger UI update FIRST (optimistic)
+      // Update server FIRST
+      await messagesAPI.markAsRead(conversationId);
+      console.log('[ChatWindow] ✅ Marked as read on server');
+      
+      // Then trigger badge update (AFTER server confirms)
       window.dispatchEvent(new CustomEvent('messages_marked_read', { 
         detail: { conversationId } 
       }));
-      
-      // Then update server in background
-      await messagesAPI.markAsRead(conversationId);
-      console.log('[ChatWindow]  Marked as read');
+      console.log('[ChatWindow] 📤 Dispatched messages_marked_read event');
     } catch (err) {
-      console.error('Failed to mark as read:', err);
+      console.error('[ChatWindow] Failed to mark as read:', err);
     }
   };
 
-  // Sync loaded messages with optimistic messages
+  // Sync loaded messages with optimistic messages (ONLY on initial load to prevent overwriting)
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
+  
   useEffect(() => {
-    if (_loadedMessages.length > 0) {
+    if (_loadedMessages.length > 0 && !hasInitialLoad) {
+      console.log('[ChatWindow] 📥 Initial load:', _loadedMessages.length, 'messages');
       setMessages(_loadedMessages);
+      setHasInitialLoad(true);
+    } else if (_loadedMessages.length > 0 && hasInitialLoad) {
+      // For infinite scroll: merge new loaded messages without replacing existing
+      console.log('[ChatWindow] 📥 Infinite scroll loaded more messages');
     }
-  }, [_loadedMessages, setMessages]);
+  }, [_loadedMessages, setMessages, hasInitialLoad]);
+
+  // Reset initial load flag when conversation changes
+  useEffect(() => {
+    setHasInitialLoad(false);
+    console.log('[ChatWindow] 🔄 Conversation changed to:', conversationId);
+  }, [conversationId]);
 
   // Mark as read ONLY when user scrolls (proves they're viewing)
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -127,6 +146,20 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
       }, 200);
     }
   };
+
+  // Auto-mark as read when new messages arrive in active chat
+  useEffect(() => {
+    if (messages.length > 0 && isChatVisible && !document.hidden && hasScrolled) {
+      // User is actively viewing, mark new messages as read
+      const hasUnreadMessages = messages.some(m => !m.is_mine && m.status !== 'read');
+      if (hasUnreadMessages) {
+        console.log('[ChatWindow] 📖 New messages arrived in active chat, marking as read');
+        setTimeout(() => {
+          markAsReadImmediately();
+        }, 500);
+      }
+    }
+  }, [messages.length, isChatVisible, hasScrolled]);
 
   // ==================== WEBSOCKET LISTENERS ====================
   // Note: useOptimisticMessages already handles new_message, message_delivered, message_read
@@ -155,16 +188,26 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
   // ==================== SEND MESSAGE ====================
 
   const handleSendMessage = async (text: string) => {
-    if (!text.trim() && !isRecording) return;
+    console.log('[ChatWindow] handleSendMessage called - text:', text, 'isRecording:', isRecording);
+    
+    if (!text.trim() && !isRecording) {
+      console.log('[ChatWindow] ⚠️ No text and not recording, skipping send');
+      return;
+    }
 
     if (isRecording) {
       // Stop recording and send voice message
+      console.log('[ChatWindow] 🎤 Stopping recording and sending voice message...');
       const audioBlob = await stopRecording();
       if (audioBlob) {
+        console.log('[ChatWindow] ✅ Audio blob received, size:', audioBlob.size);
         await handleSendVoice(audioBlob);
+      } else {
+        console.log('[ChatWindow] ❌ No audio blob received');
       }
     } else {
       // Send text message
+      console.log('[ChatWindow] 📝 Sending text message');
       await sendMessage(text, replyingTo?.id);
       setReplyingTo(null);
       scrollToBottom(true);
@@ -193,7 +236,7 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
       }
     } catch (error) {
       console.error('Failed to send voice message:', error);
-      alert('Failed to send voice message');
+      toast.error('Failed to send voice message');
     }
   };
 
@@ -222,7 +265,7 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
       }
     } catch (error) {
       console.error('Failed to send image:', error);
-      alert('Failed to send image');
+      toast.error('Failed to send image');
     }
   };
 
@@ -230,9 +273,42 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
 
   const handleReact = async (messageId: string, emoji: string) => {
     try {
-      await messagesAPI.addReaction(messageId, emoji);
+      console.log('[ChatWindow] Adding reaction:', emoji, 'to message:', messageId);
+      const response = await messagesAPI.addReaction(messageId, emoji);
+      
+      if (response.removed) {
+        console.log('[ChatWindow] ✅ Reaction removed (toggled off)');
+        toast.info(`Removed ${emoji} reaction`);
+        
+        // Remove reaction from local state
+        const updatedMessages = messages.map((msg: Message) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                reactions: msg.reactions?.filter((r: any) => r.emoji !== emoji) || [],
+              }
+            : msg
+        );
+        setMessages(updatedMessages);
+      } else {
+        console.log('[ChatWindow] ✅ Reaction added successfully');
+        toast.success(`Reacted with ${emoji}`);
+        
+        // Add reaction to local state (optimistic UI)
+        const newReaction = response.reaction;
+        const updatedMessages = messages.map((msg: Message) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                reactions: [...(msg.reactions || []), newReaction],
+              }
+            : msg
+        );
+        setMessages(updatedMessages);
+      }
     } catch (error) {
-      console.error('Failed to add reaction:', error);
+      console.error('[ChatWindow] ❌ Failed to add reaction:', error);
+      toast.error('Failed to add reaction');
     }
   };
 
@@ -253,13 +329,82 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
   };
 
   const handleDelete = async (messageId: string) => {
-    if (confirm('Delete this message?')) {
-      try {
-        await messagesAPI.deleteMessage(messageId);
-      } catch (error) {
-        console.error('Failed to delete message:', error);
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    // Show confirmation dialog
+    setDeleteConfirm({
+      messageId,
+      isMine: message.is_mine || false,
+      type: message.is_mine ? 'unsend' : 'delete_for_me',
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+
+    try {
+      // Optimistic UI - remove message immediately
+      removeMessage(deleteConfirm.messageId);
+      console.log('[ChatWindow] 🗑️ Optimistically removed message:', deleteConfirm.messageId);
+
+      // Delete on server
+      await messagesAPI.deleteMessage(deleteConfirm.messageId);
+      console.log('[ChatWindow] ✅ Message deleted on server:', deleteConfirm.messageId);
+
+      // Show success toast
+      if (deleteConfirm.type === 'unsend') {
+        toast.success('Message deleted for everyone');
+      } else {
+        toast.success('Message deleted');
       }
+    } catch (error) {
+      console.error('[ChatWindow] ❌ Failed to delete message:', error);
+      toast.error('Failed to delete message');
+      // Reload messages to restore the message
+      window.location.reload();
+    } finally {
+      setDeleteConfirm(null);
     }
+  };
+
+  const handleForward = (message: Message) => {
+    // TODO: Implement forward dialog
+    console.log('Forward message:', message.id);
+    toast.info('Forward feature coming soon!');
+  };
+
+  const handleCopy = (message: Message) => {
+    if (message.message_type === 'text') {
+      navigator.clipboard.writeText(message.content);
+      toast.success('Message copied to clipboard');
+      console.log('Message copied to clipboard');
+    } else {
+      toast.info('Cannot copy this message type');
+    }
+  };
+
+  const handlePin = async (messageId: string, isPinned: boolean) => {
+    // TODO: Implement pin/unpin API
+    console.log(isPinned ? 'Unpin' : 'Pin', 'message:', messageId);
+    toast.info('Pin feature coming soon!');
+  };
+
+  const handleShare = (message: Message) => {
+    // TODO: Implement share dialog
+    console.log('Share message:', message.id);
+    toast.info('Share feature coming soon!');
+  };
+
+  const handleInfo = (message: Message) => {
+    // Build formatted info message
+    const sentTime = new Date(message.created_at).toLocaleString();
+    const deliveredTime = message.delivered_at ? new Date(message.delivered_at).toLocaleString() : 'Not yet';
+    const readTime = message.read_at ? new Date(message.read_at).toLocaleString() : 'Not yet';
+    
+    const info = `Sent: ${sentTime}\nDelivered: ${deliveredTime}\nRead: ${readTime}`;
+    
+    toast.info(info, 5000);
   };
 
   // ==================== RENDER ====================
@@ -294,10 +439,10 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
               <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
             ) : (
               <button
-                onClick={() => {}}
-                className="text-sm text-purple-600 hover:text-purple-700"
+                onClick={loadMore}
+                className="text-sm text-purple-600 hover:text-purple-700 font-medium px-4 py-2 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
               >
-                Scroll up to load more
+                Load older messages
               </button>
             )}
           </div>
@@ -312,6 +457,11 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
             onReply={handleReply}
             onStar={handleStar}
             onDelete={handleDelete}
+            onForward={handleForward}
+            onCopy={handleCopy}
+            onPin={handlePin}
+            onShare={handleShare}
+            onInfo={handleInfo}
           />
         ))}
 
@@ -330,6 +480,24 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
       />
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          isOpen={true}
+          title={deleteConfirm.type === 'unsend' ? 'Delete for everyone?' : 'Delete for you?'}
+          message={
+            deleteConfirm.type === 'unsend'
+              ? 'This message will be deleted for everyone in the chat. This cannot be undone.'
+              : 'This message will be deleted for you. The sender will still see it.'
+          }
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="danger"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
     </div>
   );
 }

@@ -31,13 +31,13 @@ export default function ConversationItem({
       {/* Avatar with online indicator */}
       <div className="relative flex-shrink-0">
         <Avatar
-          src={otherUser.avatar_url}
+          src={otherUser.profile_picture || otherUser.avatar_url}
           alt={otherUser.display_name || otherUser.username}
+          fallback={otherUser.display_name || otherUser.username}
           size="md"
+          showOnline={true}
+          isOnline={conversation.is_online}
         />
-        {conversation.is_online && (
-          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
-        )}
       </div>
 
       {/* Conversation Info */}

@@ -103,7 +103,7 @@ export function useInfiniteMessages({
 
   // ==================== INITIAL LOAD ====================
 
-  const loadInitialMessages = useCallback(async () => {
+  const loadInitialMessages = async () => {
     setIsLoading(true);
 
     try {
@@ -111,7 +111,7 @@ export function useInfiniteMessages({
       if (enableCache && !cacheLoaded) {
         const cached = await getCachedMessages(conversationId);
         if (cached && cached.length > 0) {
-          console.log(`[InfiniteScroll] Loaded ${cached.length} messages from cache`);
+          console.log(`[InfiniteScroll] 📦 Loaded ${cached.length} messages from cache`);
           setMessages(cached);
           setCacheLoaded(true);
           shouldScrollToBottom.current = true;
@@ -122,13 +122,24 @@ export function useInfiniteMessages({
       const response = await messagesAPI.getMessages(conversationId, pageSize, 0);
 
       if (response.success) {
-        setMessages(response.messages || []);
+        const loadedMessages = response.messages || [];
+        
+        // Ensure messages are in chronological order (oldest first)
+        const sorted = [...loadedMessages].sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        
+        console.log(`[InfiniteScroll] 📥 Loaded ${sorted.length} messages from server`);
+        console.log(`[InfiniteScroll] Oldest: ${sorted[0]?.created_at}, Newest: ${sorted[sorted.length - 1]?.created_at}`);
+        console.log(`[InfiniteScroll] hasMore: ${response.has_more}`);
+        
+        setMessages(sorted);
         setHasMore(response.has_more || false);
-        setOffset(response.messages?.length || 0);
+        setOffset(sorted.length);
 
         // Update cache
         if (enableCache) {
-          await saveCachedMessages(conversationId, response.messages || []);
+          await saveCachedMessages(conversationId, sorted);
         }
 
         // Scroll to bottom only if cache wasn't loaded
@@ -137,19 +148,21 @@ export function useInfiniteMessages({
         }
       }
     } catch (error) {
-      console.error('[InfiniteScroll] Error loading initial messages:', error);
+      console.error('[InfiniteScroll] ❌ Error loading initial messages:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [conversationId, pageSize, enableCache, cacheLoaded]);
+  };
 
   // ==================== LOAD MORE ====================
 
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore || isLoading) {
+      console.log('[InfiniteScroll] Skip loadMore - isLoadingMore:', isLoadingMore, 'hasMore:', hasMore, 'isLoading:', isLoading);
       return;
     }
 
+    console.log('[InfiniteScroll] 🔄 Loading more messages from offset:', offset);
     setIsLoadingMore(true);
 
     // Save current scroll height to maintain position
@@ -159,20 +172,34 @@ export function useInfiniteMessages({
 
     try {
       const response = await messagesAPI.getMessages(conversationId, pageSize, offset);
+      console.log('[InfiniteScroll] API response:', response);
 
       if (response.success) {
-        // Prepend older messages
-        setMessages((prev) => [...(response.messages || []), ...prev]);
+        // Prepend older messages (they come in ascending order, so prepend to beginning)
+        setMessages((prev) => {
+          const newMessages = response.messages || [];
+          
+          // Deduplicate: remove any messages that already exist
+          const existingIds = new Set(prev.map(m => m.id));
+          const uniqueNew = newMessages.filter(m => !existingIds.has(m.id));
+          
+          console.log(`[InfiniteScroll] ✅ Loaded ${newMessages.length} messages, ${uniqueNew.length} unique, total now: ${prev.length + uniqueNew.length}`);
+          
+          // Prepend to beginning (older messages go on top)
+          return [...uniqueNew, ...prev];
+        });
+        
+        const loadedCount = response.messages?.length || 0;
         setHasMore(response.has_more || false);
-        setOffset((prev) => prev + (response.messages?.length || 0));
+        setOffset((prev) => prev + loadedCount);
 
-        console.log(`[InfiniteScroll] Loaded ${response.messages?.length || 0} more messages`);
+        console.log('[InfiniteScroll] New offset:', offset + loadedCount, 'hasMore:', response.has_more);
 
         // Maintain scroll position
         shouldScrollToBottom.current = false;
       }
     } catch (error) {
-      console.error('[InfiniteScroll] Error loading more messages:', error);
+      console.error('[InfiniteScroll] ❌ Error loading more messages:', error);
     } finally {
       setIsLoadingMore(false);
     }
@@ -189,10 +216,11 @@ export function useInfiniteMessages({
     const { scrollTop } = scrollRef.current;
 
     // If scrolled to top (within 100px), load more
-    if (scrollTop < 100 && hasMore && !isLoadingMore) {
+    if (scrollTop < 100 && hasMore && !isLoadingMore && !isLoading) {
+      console.log('[InfiniteScroll] Scroll near top, loading more messages...');
       loadMore();
     }
-  }, [hasMore, isLoadingMore, loadMore]);
+  }, [hasMore, isLoadingMore, isLoading, loadMore]);
 
   /**
    * Scroll to bottom of messages
@@ -231,9 +259,16 @@ export function useInfiniteMessages({
 
   useEffect(() => {
     if (conversationId) {
+      // Reset state for new conversation
+      setMessages([]);
+      setOffset(0);
+      setHasMore(true);
+      setCacheLoaded(false);
+      
+      // Load messages
       loadInitialMessages();
     }
-  }, [conversationId, loadInitialMessages]);
+  }, [conversationId]);
 
   // ==================== RETURN ====================
 
