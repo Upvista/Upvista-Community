@@ -79,3 +79,101 @@ export const api = {
     }),
 };
 
+// Relationship API Functions
+export const relationshipAPI = {
+  // Follow a user
+  followUser: async (userId: string) => {
+    const response = await api.post(`/api/proxy/v1/relationships/follow/${userId}`);
+    return response.json();
+  },
+
+  // Connect with a user
+  connectWithUser: async (userId: string, message?: string) => {
+    const response = await api.post(`/api/proxy/v1/relationships/connect/${userId}`, {
+      message,
+    });
+    return response.json();
+  },
+
+  // Collaborate with a user
+  collaborateWithUser: async (userId: string, message?: string) => {
+    const response = await api.post(`/api/proxy/v1/relationships/collaborate/${userId}`, {
+      message,
+    });
+    return response.json();
+  },
+
+  // Accept a relationship request
+  acceptRequest: async (requestId: string) => {
+    const response = await api.post(`/api/proxy/v1/relationships/requests/${requestId}/accept`);
+    return response.json();
+  },
+
+  // Reject a relationship request
+  rejectRequest: async (requestId: string) => {
+    const response = await api.post(`/api/proxy/v1/relationships/requests/${requestId}/reject`);
+    return response.json();
+  },
+
+  // Remove a relationship
+  removeRelationship: async (userId: string, type: 'following' | 'connected' | 'collaborating') => {
+    const response = await api.delete(`/api/proxy/v1/relationships/${userId}/${type}`);
+    return response.json();
+  },
+
+  // Get relationship status with a user
+  getRelationshipStatus: async (userId: string) => {
+    const response = await api.get(`/api/proxy/v1/relationships/status/${userId}`);
+    return response.json();
+  },
+
+  // Get relationship stats for current user
+  getRelationshipStats: async () => {
+    const response = await api.get('/api/proxy/v1/relationships/stats');
+    return response.json();
+  },
+
+  // Get rate limit status
+  getRateLimitStatus: async (action?: 'follow' | 'connect' | 'collaborate') => {
+    const url = action
+      ? `/api/proxy/v1/relationships/rate-limit-status?action=${action}`
+      : '/api/proxy/v1/relationships/rate-limit-status';
+    const response = await api.get(url);
+    return response.json();
+  },
+
+  // Get followers list
+  getFollowers: async (userId?: string, page: number = 1, limit: number = 20) => {
+    const params = userId ? `?user_id=${userId}&page=${page}&limit=${limit}` : `?page=${page}&limit=${limit}`;
+    const response = await api.get(`/api/proxy/v1/relationships/followers${params}`);
+    return response.json();
+  },
+
+  // Get following list
+  getFollowing: async (userId?: string, page: number = 1, limit: number = 20) => {
+    const params = userId ? `?user_id=${userId}&page=${page}&limit=${limit}` : `?page=${page}&limit=${limit}`;
+    const response = await api.get(`/api/proxy/v1/relationships/following${params}`);
+    return response.json();
+  },
+
+  // Get connections list
+  getConnections: async (userId?: string, page: number = 1, limit: number = 20) => {
+    const params = userId ? `?user_id=${userId}&page=${page}&limit=${limit}` : `?page=${page}&limit=${limit}`;
+    const response = await api.get(`/api/proxy/v1/relationships/connections${params}`);
+    return response.json();
+  },
+
+  // Get collaborators list
+  getCollaborators: async (userId?: string, page: number = 1, limit: number = 20) => {
+    const params = userId ? `?user_id=${userId}&page=${page}&limit=${limit}` : `?page=${page}&limit=${limit}`;
+    const response = await api.get(`/api/proxy/v1/relationships/collaborators${params}`);
+    return response.json();
+  },
+
+  // Get pending requests
+  getPendingRequests: async (page: number = 1, limit: number = 20) => {
+    const response = await api.get(`/api/proxy/v1/relationships/pending?page=${page}&limit=${limit}`);
+    return response.json();
+  },
+};
+

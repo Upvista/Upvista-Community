@@ -277,6 +277,26 @@ func (e *EmailService) sendEmail(to, subject, body string) error {
 	return nil
 }
 
+// SendEmail is a public method to send emails with HTML and text bodies
+func (e *EmailService) SendEmail(to, subject, htmlBody, textBody string) error {
+	mail := email.NewEmail()
+	mail.From = fmt.Sprintf("%s <%s>", e.config.FromName, e.config.FromEmail)
+	mail.To = []string{to}
+	mail.Subject = subject
+	mail.HTML = []byte(htmlBody)
+	mail.Text = []byte(textBody)
+
+	// Send email using SMTP
+	err := mail.Send(fmt.Sprintf("%s:%d", e.config.Host, e.config.Port),
+		smtp.PlainAuth("", e.config.Username, e.config.Password, e.config.Host))
+
+	if err != nil {
+		return fmt.Errorf("failed to send email: %w", err)
+	}
+
+	return nil
+}
+
 // ValidateEmailFormat validates email format (basic validation)
 func ValidateEmailFormat(email string) bool {
 	// Basic email validation - in production, use a more robust validator

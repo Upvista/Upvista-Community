@@ -337,3 +337,86 @@ html {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* ========================================
+   INSTAGRAM-STYLE SLIDE ANIMATIONS
+   ======================================== */
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent white flash during page transitions */
+html {
+  background-color: #FAFAFA;
+}
+
+html.dark {
+  background-color: #0A0A0A;
+}
+
+/* View Transitions API for smooth page changes (Instagram-style) */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+}
+
+::view-transition-old(root) {
+  animation-name: slide-out-left;
+}
+
+::view-transition-new(root) {
+  animation-name: slide-in-right;
+}
+
+@keyframes slide-out-left {
+  to {
+    transform: translateX(-30%);
+    opacity: 0.5;
+  }
+}
+
+/* Ensure smooth page transitions without white flash */
+body {
+  min-height: 100vh;
+  background-color: inherit;
+}

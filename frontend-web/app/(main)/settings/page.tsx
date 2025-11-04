@@ -28,17 +28,21 @@ import {
   Download,
   Smartphone,
   Eye,
-  EyeOff
+  EyeOff,
+  Bell
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useUser } from '@/lib/hooks/useUser';
 import GenderSelect from '@/components/ui/GenderSelect';
 import ProfilePictureEditor from '@/components/profile/ProfilePictureEditor';
+import StatVisibilitySettings from '@/components/settings/StatVisibilitySettings';
+import NotificationSettings from '@/components/settings/NotificationSettings';
 
 const settingsSections = [
   { id: 'account', name: 'Account', icon: User },
   { id: 'security', name: 'Security', icon: Lock },
   { id: 'privacy', name: 'Privacy', icon: Shield },
+  { id: 'notifications', name: 'Notifications', icon: Bell },
   { id: 'sessions', name: 'Active Sessions', icon: Smartphone },
   { id: 'data', name: 'Data & Privacy', icon: Download },
   { id: 'appearance', name: 'Appearance', icon: Palette },
@@ -94,6 +98,7 @@ export default function SettingsPage() {
             {activeSection === 'account' && <AccountSection />}
             {activeSection === 'security' && <SecuritySection />}
             {activeSection === 'privacy' && <PrivacySection />}
+            {activeSection === 'notifications' && <NotificationSettings />}
             {activeSection === 'sessions' && <SessionsSection />}
             {activeSection === 'data' && <DataSection />}
             {activeSection === 'appearance' && <AppearanceSection />}
@@ -1069,6 +1074,17 @@ function PrivacySection() {
             Save Privacy Settings
           </Button>
         </div>
+      </Card>
+
+      {/* Stats Visibility Settings */}
+      <Card variant="solid" hoverable={false}>
+        <StatVisibilitySettings
+          initialVisibility={user?.stat_visibility}
+          onSave={async (visibility) => {
+            // Refresh user data after save
+            await refetch();
+          }}
+        />
       </Card>
     </div>
   );

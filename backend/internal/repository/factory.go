@@ -37,3 +37,48 @@ func NewSessionRepository(cfg *config.Config) (SessionRepository, error) {
 
 	return nil, fmt.Errorf("unsupported data provider: %s", provider)
 }
+
+// NewRelationshipRepository creates a concrete RelationshipRepository based on config
+func NewRelationshipRepository(cfg *config.Config) (RelationshipRepository, error) {
+	provider := strings.ToLower(strings.TrimSpace(cfg.Server.DataProvider))
+	if provider == "" {
+		provider = "supabase" // default
+	}
+
+	// Supabase via PostgREST
+	if provider == "supabase" {
+		return NewSupabaseRelationshipRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey), nil
+	}
+
+	return nil, fmt.Errorf("unsupported data provider: %s", provider)
+}
+
+// NewNotificationRepository creates a concrete NotificationRepository based on config
+func NewNotificationRepository(cfg *config.Config) (NotificationRepository, error) {
+	provider := strings.ToLower(strings.TrimSpace(cfg.Server.DataProvider))
+	if provider == "" {
+		provider = "supabase" // default
+	}
+
+	// Supabase via PostgREST
+	if provider == "supabase" {
+		return NewSupabaseNotificationRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey), nil
+	}
+
+	return nil, fmt.Errorf("unsupported data provider: %s", provider)
+}
+
+// NewMessageRepository creates a concrete MessageRepository based on config
+func NewMessageRepository(cfg *config.Config) (MessageRepository, error) {
+	provider := strings.ToLower(strings.TrimSpace(cfg.Server.DataProvider))
+	if provider == "" {
+		provider = "supabase" // default
+	}
+
+	// Supabase via GORM
+	if provider == "supabase" {
+		return NewSupabaseMessageRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	}
+
+	return nil, fmt.Errorf("unsupported data provider: %s", provider)
+}

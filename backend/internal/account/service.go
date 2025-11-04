@@ -478,6 +478,11 @@ func (s *AccountService) UploadProfilePicture(ctx context.Context, userID uuid.U
 }
 
 // ExportUserData exports all user data for GDPR compliance
+// UpdateStatVisibility updates which stats are visible on user's profile
+func (s *AccountService) UpdateStatVisibility(ctx context.Context, userID uuid.UUID, statVisibility map[string]bool) error {
+	return s.userRepo.UpdateStatVisibility(ctx, userID, statVisibility)
+}
+
 func (s *AccountService) ExportUserData(ctx context.Context, userID uuid.UUID) (map[string]interface{}, error) {
 	// Get user data
 	user, err := s.userRepo.GetUserByID(ctx, userID)

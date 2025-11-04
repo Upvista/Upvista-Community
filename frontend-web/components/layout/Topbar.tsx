@@ -31,7 +31,10 @@ import {
 } from 'lucide-react';
 import { IconButton } from '@/components/ui/IconButton';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+import { useMessages } from '@/lib/contexts/MessagesContext';
+import { useUnreadMessages } from '@/lib/hooks/useUnreadMessages';
 import { motion, AnimatePresence } from 'framer-motion';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 const moreMenu = [
   { name: 'Search', href: '/search', icon: Search },
@@ -49,6 +52,8 @@ const moreMenu = [
 export function Topbar() {
   const [showMenu, setShowMenu] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { openMessages } = useMessages();
+  const { unreadCount } = useUnreadMessages();
 
   return (
     <>
@@ -72,13 +77,15 @@ export function Topbar() {
             <IconButton onClick={() => setShowMenu(true)} className="w-10 h-10">
               <Menu className="w-5 h-5" />
             </IconButton>
-            <IconButton badge={12} className="w-10 h-10">
-              <Bell className="w-5 h-5" />
-            </IconButton>
+            <NotificationBell />
             <IconButton className="w-10 h-10">
               <Briefcase className="w-5 h-5" />
             </IconButton>
-            <IconButton badge={3} className="w-10 h-10">
+            <IconButton 
+              badge={unreadCount > 0 ? unreadCount : undefined} 
+              className="w-10 h-10" 
+              onClick={() => openMessages()}
+            >
               <MessageCircle className="w-5 h-5" />
             </IconButton>
           </div>

@@ -87,6 +87,7 @@ func filterProfileFields(user *models.User, isOwner bool) *models.PublicProfileR
 		profile.Ambition = user.Ambition
 		profile.SocialLinks = user.SocialLinks
 		profile.ProfilePrivacy = &user.ProfilePrivacy // Only send to owner
+		profile.StatVisibility = user.StatVisibility  // Only send to owner
 		return profile
 	}
 

@@ -300,6 +300,15 @@ func (r *SupabaseUserRepository) fetchOne(ctx context.Context, q url.Values) (*m
 		}
 		user.FieldVisibility = fieldVisibility
 	}
+	if statVisibilityRaw, ok := rawUser["stat_visibility"].(map[string]interface{}); ok {
+		statVisibility := make(map[string]bool)
+		for k, v := range statVisibilityRaw {
+			if boolVal, ok := v.(bool); ok {
+				statVisibility[k] = boolVal
+			}
+		}
+		user.StatVisibility = statVisibility
+	}
 	if socialLinksRaw, ok := rawUser["social_links"].(map[string]interface{}); ok {
 		socialLinks := make(map[string]*string)
 		for k, v := range socialLinksRaw {
@@ -1148,6 +1157,290 @@ func (r *SupabaseUserRepository) UpdateSocialLinks(ctx context.Context, userID u
 	if resp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		log.Printf("[Supabase] UpdateSocialLinks failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// UpdateStatVisibility updates which stats are visible on user's profile
+func (r *SupabaseUserRepository) UpdateStatVisibility(ctx context.Context, userID uuid.UUID, statVisibility map[string]bool) error {
+	// Supabase PostgREST expects JSONB as a JSON object, not a string
+	update := map[string]interface{}{
+		"stat_visibility": statVisibility, // Pass directly, not as string
+		"updated_at":      time.Now().Format("2006-01-02T15:04:05.999999999Z07:00"),
+	}
+
+	body, err := json.Marshal(update)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(httpReq, "return=minimal")
+
+	resp, err := r.http.Do(httpReq)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] UpdateStatVisibility failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return apperr.ErrDatabaseError
+	}
+
+	return nil
+}
+
+// SearchUsers searches for users by query string
+func (r *SupabaseUserRepository) SearchUsers(ctx context.Context, query string, limit int, offset int) ([]*models.User, int, error) {
+	// Build search query - search in username, display_name, bio, location
+	// Exclude private profiles from search results
+
+	q := url.Values{}
+	q.Set("select", "*")
+	// Simple username or display_name search - use * for wildcard in PostgREST
+	q.Set("or", fmt.Sprintf("(username.ilike.*%s*,display_name.ilike.*%s*)", query, query))
+	// Removed is_active filter - show all users
+	q.Set("limit", fmt.Sprintf("%d", limit))
+	q.Set("offset", fmt.Sprintf("%d", offset))
+	q.Set("order", "is_verified.desc,followers_count.desc") // Sort by verified first, then popularity
+
+	url := r.usersURL(q)
+	log.Printf("[Supabase] SearchUsers URL: %s", url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, 0, apperr.ErrInternalServer
+	}
+
+	r.setHeaders(req, "count=exact")
+
+	resp, err := r.http.Do(req)
+	if err != nil {
+		return nil, 0, apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	// Read response body first
+	bodyBytes, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode >= 300 {
+		log.Printf("[Supabase] SearchUsers failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
+		return nil, 0, apperr.ErrDatabaseError
+	}
+
+	// Get total count from Content-Range header
+	totalCount := 0
+	if contentRange := resp.Header.Get("Content-Range"); contentRange != "" {
+		// Format: "0-1/2" or "*/2"
+		var start, end int
+		if n, _ := fmt.Sscanf(contentRange, "%d-%d/%d", &start, &end, &totalCount); n == 3 {
+			// Successfully parsed range format
+			log.Printf("[Supabase] SearchUsers Content-Range: %s, parsed total: %d", contentRange, totalCount)
+		} else if n, _ := fmt.Sscanf(contentRange, "*/%d", &totalCount); n == 1 {
+			// Successfully parsed unknown range format
+			log.Printf("[Supabase] SearchUsers Content-Range: %s, parsed total: %d", contentRange, totalCount)
+		} else {
+			log.Printf("[Supabase] SearchUsers failed to parse Content-Range: %s", contentRange)
+		}
+	} else {
+		log.Printf("[Supabase] SearchUsers no Content-Range header found")
+	}
+
+	// Parse as array of raw users
+	var rawUsers []map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &rawUsers); err != nil {
+		log.Printf("[Supabase] SearchUsers decode error: %v", err)
+		return nil, 0, apperr.ErrDatabaseError
+	}
+
+	log.Printf("[Supabase] SearchUsers found %d users in response", len(rawUsers))
+
+	// Convert each raw user to User model (simplified)
+	users := make([]*models.User, 0, len(rawUsers))
+	for _, rawUser := range rawUsers {
+		user := &models.User{}
+
+		// Parse basic fields
+		if idStr, ok := rawUser["id"].(string); ok {
+			if id, err := uuid.Parse(idStr); err == nil {
+				user.ID = id
+			}
+		}
+		if email, ok := rawUser["email"].(string); ok {
+			user.Email = email
+		}
+		if username, ok := rawUser["username"].(string); ok {
+			user.Username = username
+		}
+		if displayName, ok := rawUser["display_name"].(string); ok {
+			user.DisplayName = displayName
+		}
+		if profilePicture, ok := rawUser["profile_picture"].(string); ok && profilePicture != "" {
+			user.ProfilePicture = &profilePicture
+		}
+		if bio, ok := rawUser["bio"].(string); ok && bio != "" {
+			user.Bio = &bio
+		}
+		if location, ok := rawUser["location"].(string); ok && location != "" {
+			user.Location = &location
+		}
+		if isVerified, ok := rawUser["is_verified"].(bool); ok {
+			user.IsVerified = isVerified
+		}
+		if profilePrivacy, ok := rawUser["profile_privacy"].(string); ok {
+			user.ProfilePrivacy = profilePrivacy
+		}
+		if followersCount, ok := rawUser["followers_count"].(float64); ok {
+			user.FollowersCount = int(followersCount)
+		}
+		if followingCount, ok := rawUser["following_count"].(float64); ok {
+			user.FollowingCount = int(followingCount)
+		}
+
+		users = append(users, user)
+	}
+
+	return users, totalCount, nil
+}
+
+// IncrementFollowerCount increments the followers_count for a user
+func (r *SupabaseUserRepository) IncrementFollowerCount(ctx context.Context, userID uuid.UUID) error {
+	log.Printf("[IncrementFollowerCount] Starting for user %s", userID)
+
+	// Get current user
+	user, err := r.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("[IncrementFollowerCount] GetUserByID FAILED: %v", err)
+		return err
+	}
+	log.Printf("[IncrementFollowerCount] Current followers_count: %d", user.FollowersCount)
+
+	// Increment count
+	update := map[string]interface{}{
+		"followers_count": user.FollowersCount + 1,
+		"updated_at":      time.Now().Format("2006-01-02T15:04:05.999999999Z07:00"),
+	}
+	log.Printf("[IncrementFollowerCount] Updating to: %d", user.FollowersCount+1)
+
+	err = r.updateUserFields(ctx, userID, update)
+	if err != nil {
+		log.Printf("[IncrementFollowerCount] updateUserFields FAILED: %v", err)
+		return err
+	}
+
+	log.Printf("[IncrementFollowerCount] Successfully updated followers_count")
+	return nil
+}
+
+// DecrementFollowerCount decrements the followers_count for a user
+func (r *SupabaseUserRepository) DecrementFollowerCount(ctx context.Context, userID uuid.UUID) error {
+	// Get current user
+	user, err := r.GetUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// Decrement count (don't go below 0)
+	newCount := user.FollowersCount - 1
+	if newCount < 0 {
+		newCount = 0
+	}
+
+	update := map[string]interface{}{
+		"followers_count": newCount,
+		"updated_at":      time.Now().Format("2006-01-02T15:04:05.999999999Z07:00"),
+	}
+
+	return r.updateUserFields(ctx, userID, update)
+}
+
+// IncrementFollowingCount increments the following_count for a user
+func (r *SupabaseUserRepository) IncrementFollowingCount(ctx context.Context, userID uuid.UUID) error {
+	log.Printf("[IncrementFollowingCount] Starting for user %s", userID)
+
+	// Get current user
+	user, err := r.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Printf("[IncrementFollowingCount] GetUserByID FAILED: %v", err)
+		return err
+	}
+	log.Printf("[IncrementFollowingCount] Current following_count: %d", user.FollowingCount)
+
+	// Increment count
+	update := map[string]interface{}{
+		"following_count": user.FollowingCount + 1,
+		"updated_at":      time.Now().Format("2006-01-02T15:04:05.999999999Z07:00"),
+	}
+	log.Printf("[IncrementFollowingCount] Updating to: %d", user.FollowingCount+1)
+
+	err = r.updateUserFields(ctx, userID, update)
+	if err != nil {
+		log.Printf("[IncrementFollowingCount] updateUserFields FAILED: %v", err)
+		return err
+	}
+
+	log.Printf("[IncrementFollowingCount] Successfully updated following_count")
+	return nil
+}
+
+// DecrementFollowingCount decrements the following_count for a user
+func (r *SupabaseUserRepository) DecrementFollowingCount(ctx context.Context, userID uuid.UUID) error {
+	// Get current user
+	user, err := r.GetUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// Decrement count (don't go below 0)
+	newCount := user.FollowingCount - 1
+	if newCount < 0 {
+		newCount = 0
+	}
+
+	update := map[string]interface{}{
+		"following_count": newCount,
+		"updated_at":      time.Now().Format("2006-01-02T15:04:05.999999999Z07:00"),
+	}
+
+	return r.updateUserFields(ctx, userID, update)
+}
+
+// Helper function to update user fields
+func (r *SupabaseUserRepository) updateUserFields(ctx context.Context, userID uuid.UUID, fields map[string]interface{}) error {
+	body, err := json.Marshal(fields)
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	q := url.Values{}
+	q.Set("id", "eq."+userID.String())
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPatch, r.usersURL(q), bytes.NewReader(body))
+	if err != nil {
+		return apperr.ErrInternalServer
+	}
+
+	r.setHeaders(httpReq, "return=minimal")
+
+	resp, err := r.http.Do(httpReq)
+	if err != nil {
+		return apperr.ErrDatabaseError
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[Supabase] updateUserFields failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
 		return apperr.ErrDatabaseError
 	}
 

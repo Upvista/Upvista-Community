@@ -20,6 +20,7 @@ type Config struct {
 	GitHub    GitHubConfig    `mapstructure:"github"`
 	LinkedIn  LinkedInConfig  `mapstructure:"linkedin"`
 	Storage   StorageConfig   `mapstructure:"storage"`
+	Redis     RedisConfig     `mapstructure:"redis"`
 }
 
 type DatabaseConfig struct {
@@ -83,6 +84,13 @@ type LinkedInConfig struct {
 	RedirectURL  string `mapstructure:"redirect_url"`
 }
 
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+}
+
 // LoadConfig loads configuration from environment variables and .env file
 func LoadConfig() (*Config, error) {
 	// Load .env file if it exists
@@ -106,6 +114,10 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("storage.bucket_name", "profile-pictures")
 	viper.SetDefault("storage.max_file_size", 5242880) // 5MB
 	viper.SetDefault("storage.allowed_file_types", "image/jpeg,image/png,image/gif,image/webp")
+	viper.SetDefault("redis.host", "localhost")
+	viper.SetDefault("redis.port", "6379")
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
 
 	// Set environment variable prefix
 	viper.SetEnvPrefix("")
@@ -145,6 +157,10 @@ func LoadConfig() (*Config, error) {
 	viper.BindEnv("storage.bucket_name", "STORAGE_BUCKET_NAME")
 	viper.BindEnv("storage.max_file_size", "STORAGE_MAX_FILE_SIZE")
 	viper.BindEnv("storage.allowed_file_types", "STORAGE_ALLOWED_FILE_TYPES")
+	viper.BindEnv("redis.host", "REDIS_HOST")
+	viper.BindEnv("redis.port", "REDIS_PORT")
+	viper.BindEnv("redis.password", "REDIS_PASSWORD")
+	viper.BindEnv("redis.db", "REDIS_DB")
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {

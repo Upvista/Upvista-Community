@@ -45,4 +45,14 @@ type UserRepository interface {
 	UpdateStory(ctx context.Context, userID uuid.UUID, story *string) error
 	UpdateAmbition(ctx context.Context, userID uuid.UUID, ambition *string) error
 	UpdateSocialLinks(ctx context.Context, userID uuid.UUID, socialLinks map[string]*string) error
+	UpdateStatVisibility(ctx context.Context, userID uuid.UUID, statVisibility map[string]bool) error
+
+	// Search
+	SearchUsers(ctx context.Context, query string, limit int, offset int) ([]*models.User, int, error)
+
+	// Stats updates
+	IncrementFollowerCount(ctx context.Context, userID uuid.UUID) error
+	DecrementFollowerCount(ctx context.Context, userID uuid.UUID) error
+	IncrementFollowingCount(ctx context.Context, userID uuid.UUID) error
+	DecrementFollowingCount(ctx context.Context, userID uuid.UUID) error
 }

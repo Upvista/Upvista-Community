@@ -88,6 +88,43 @@ func (s *StorageService) UploadProfilePicture(ctx context.Context, userID uuid.U
 	return publicURL, nil
 }
 
+// UploadFile uploads a file to Supabase Storage with custom bucket and path
+func (s *StorageService) UploadFile(ctx context.Context, bucketName, filePath string, file io.Reader, contentType string) (string, error) {
+	// Read file content
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Upload to Supabase Storage
+	uploadURL := fmt.Sprintf("%s/storage/v1/object/%s/%s", s.supabaseURL, bucketName, filePath)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uploadURL, bytes.NewReader(fileBytes))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("apikey", s.apiKey)
+	req.Header.Set("Authorization", "Bearer "+s.apiKey)
+	req.Header.Set("Content-Type", contentType)
+
+	resp, err := s.http.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to upload file: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("upload failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// Get public URL
+	publicURL := fmt.Sprintf("%s/storage/v1/object/public/%s/%s", s.supabaseURL, bucketName, filePath)
+
+	return publicURL, nil
+}
+
 // DeleteProfilePicture deletes a profile picture from Supabase Storage
 func (s *StorageService) DeleteProfilePicture(ctx context.Context, pictureURL string) error {
 	// Extract filename from URL

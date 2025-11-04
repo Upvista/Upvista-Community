@@ -20,7 +20,10 @@ import ExperienceCard from '@/components/profile/ExperienceCard';
 import EducationCard from '@/components/profile/EducationCard';
 import ExperienceModal from '@/components/profile/ExperienceModal';
 import EducationModal from '@/components/profile/EducationModal';
+import RelationshipButton from '@/components/social/RelationshipButton';
+import ProfileStats from '@/components/social/ProfileStats';
 import { useUser } from '@/lib/hooks/useUser';
+import { useMessages } from '@/lib/contexts/MessagesContext';
 import { 
   MapPin, 
   Link as LinkIcon, 
@@ -40,7 +43,8 @@ import {
   FileText,
   Lock,
   Globe,
-  Eye
+  Eye,
+  MessageCircle
 } from 'lucide-react';
 import { 
   FaXTwitter, 
@@ -94,6 +98,7 @@ export default function ProfilePage() {
   const searchParams = useSearchParams();
   const viewUsername = searchParams.get('u'); // View other user's profile
   const { user: currentUser, loading: currentUserLoading } = useUser();
+  const { openMessages } = useMessages();
   
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,12 +119,15 @@ export default function ProfilePage() {
   const [educationModalOpen, setEducationModalOpen] = useState(false);
   const [editingExperience, setEditingExperience] = useState<any | null>(null);
   const [editingEducation, setEditingEducation] = useState<any | null>(null);
+  
+  // Relationship status state
+  const [relationshipStatus, setRelationshipStatus] = useState<any>(null);
 
   useEffect(() => {
     if (!currentUserLoading) {
       fetchProfile();
     }
-  }, [currentUserLoading, viewUsername]);
+  }, [currentUserLoading, viewUsername, currentUser?.stat_visibility]);
 
   useEffect(() => {
     // Fetch experiences and education after profile is loaded
@@ -144,14 +152,17 @@ export default function ProfilePage() {
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/proxy/v1/profile/${username}`, {
+      // Add cache buster to force fresh data
+      const cacheBuster = `?t=${Date.now()}`;
+      const response = await fetch(`/api/proxy/v1/profile/${username}${cacheBuster}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        cache: 'no-store', // Disable caching
       });
 
       if (response.ok) {
         const data = await response.json();
         console.log('Profile data fetched:', data.profile);
-        console.log('Social links:', data.profile?.social_links);
+        console.log('Stat visibility from profile:', data.profile?.stat_visibility);
         setProfile(data.profile);
       } else {
         const data = await response.json();
@@ -275,6 +286,19 @@ export default function ProfilePage() {
     }
     // In preview mode, respect the field_visibility settings from user's own data
     return currentUser?.field_visibility?.[fieldName] !== false;
+  };
+
+  // Handle message button click
+  const handleMessageClick = () => {
+    if (!profile) return;
+    
+    // On mobile: use overlay (via MessagesContext)
+    if (window.innerWidth < 768) {
+      openMessages(profile.id);
+    } else {
+      // On desktop: navigate to messages page with userId param
+      router.push(`/messages?userId=${profile.id}`);
+    }
   };
 
   const handleShareProfile = async () => {
@@ -465,39 +489,19 @@ export default function ProfilePage() {
                 )}
 
                 {/* Stats */}
-                <div className="flex justify-around py-3 mb-3 border-y border-neutral-200 dark:border-neutral-800">
-                  <button className="text-center flex-1">
-                    <div className="text-base font-bold text-neutral-900 dark:text-neutral-50">
-                      {profile.posts_count}
-                    </div>
-                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400">
-                      Posts
-                    </div>
-                  </button>
-                  <button className="text-center flex-1">
-                    <div className="text-base font-bold text-neutral-900 dark:text-neutral-50">
-                      {profile.projects_count || 0}
-                    </div>
-                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400">
-                      Projects
-                    </div>
-                  </button>
-                  <button className="text-center flex-1">
-                    <div className="text-base font-bold text-neutral-900 dark:text-neutral-50">
-                      {profile.followers_count}
-                    </div>
-                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400">
-                      Followers
-                    </div>
-                  </button>
-                  <button className="text-center flex-1">
-                    <div className="text-base font-bold text-neutral-900 dark:text-neutral-50">
-                      {profile.following_count}
-                    </div>
-                    <div className="text-[10px] text-neutral-600 dark:text-neutral-400">
-                      Following
-                    </div>
-                  </button>
+                <div className="mb-3">
+                  <ProfileStats
+                    userId={profile.id}
+                    isOwnProfile={profile.is_own_profile}
+                    profileData={profile}
+                    statVisibility={(profile as any).stat_visibility || currentUser?.stat_visibility}
+                    onStatClick={(type) => {
+                      // Navigate to relationships list page
+                      if (type === 'followers' || type === 'following' || type === 'connections' || type === 'collaborators') {
+                        router.push(`/profile/${profile.username}/${type}?userId=${profile.id}`);
+                      }
+                    }}
+                  />
                 </div>
 
                 {/* Meta Info */}
@@ -577,15 +581,16 @@ export default function ProfilePage() {
                 )}
 
                 {/* Action Buttons at Bottom - Mobile Only */}
-                {profile.is_own_profile ? (
+                {profile.is_own_profile && !previewMode ? (
                   <div className="flex gap-2 mt-4">
                     <Button 
-                      variant={previewMode ? "primary" : "secondary"}
+                      variant="secondary"
                       size="sm"
-                      onClick={() => setPreviewMode(!previewMode)}
+                      onClick={() => setPreviewMode(true)}
                       className="flex-1"
                     >
-                      {previewMode ? 'Exit Preview' : 'Preview as Public'}
+                      <Eye className="w-4 h-4" />
+                      Preview as Public
                     </Button>
                     <Button 
                       variant="secondary" 
@@ -593,17 +598,41 @@ export default function ProfilePage() {
                       onClick={() => router.push('/settings')}
                       className="flex-1"
                     >
+                      <Edit3 className="w-4 h-4" />
                       Edit Profile
                     </Button>
                   </div>
                 ) : (
                   <div className="flex gap-2 mt-4">
-                    <Button variant="primary" size="sm" className="flex-1">
-                      Follow
-                    </Button>
-                    <Button variant="secondary" size="sm" className="flex-1">
-                      Message
-                    </Button>
+                    {previewMode && (
+                      <Button 
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setPreviewMode(false)}
+                        className="flex-1"
+                      >
+                        Exit Preview
+                      </Button>
+                    )}
+                    {(!profile.is_own_profile || previewMode) && (
+                      <>
+                        <div className="flex-1">
+                          <RelationshipButton
+                            targetUserId={profile.id}
+                            onStatusChange={setRelationshipStatus}
+                          />
+                        </div>
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          className="flex-1"
+                          onClick={handleMessageClick}
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          Message
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -629,20 +658,22 @@ export default function ProfilePage() {
                       {profile.username}
                     </h1>
                     
-                    {profile.is_own_profile ? (
+                    {profile.is_own_profile && !previewMode ? (
                       <>
                         <Button 
-                          variant={previewMode ? "primary" : "secondary"}
+                          variant="secondary"
                           size="sm"
-                          onClick={() => setPreviewMode(!previewMode)}
+                          onClick={() => setPreviewMode(true)}
                         >
-                          {previewMode ? 'Exit Preview' : 'Preview as Public'}
+                          <Eye className="w-4 h-4" />
+                          Preview
                         </Button>
                         <Button 
                           variant="secondary" 
                           size="sm"
                           onClick={() => router.push('/settings')}
                         >
+                          <Edit3 className="w-4 h-4" />
                           Edit Profile
                         </Button>
                         <Button 
@@ -655,19 +686,38 @@ export default function ProfilePage() {
                       </>
                     ) : (
                       <>
-                        <Button variant="primary" size="sm">
-                          Follow
-                        </Button>
-                        <Button variant="secondary" size="sm">
-                          Message
-                        </Button>
-                        <Button 
-                          variant="secondary" 
-                          size="sm"
-                          onClick={handleShareProfile}
-                        >
-                          <Share2 className="w-4 h-4" />
-                        </Button>
+                        {previewMode && (
+                          <Button 
+                            variant="primary"
+                            size="sm"
+                            onClick={() => setPreviewMode(false)}
+                          >
+                            Exit Preview
+                          </Button>
+                        )}
+                        {(!profile.is_own_profile || previewMode) && (
+                          <>
+                            <RelationshipButton
+                              targetUserId={profile.id}
+                              onStatusChange={setRelationshipStatus}
+                            />
+                            <Button 
+                              variant="secondary" 
+                              size="sm"
+                              onClick={handleMessageClick}
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                              Message
+                            </Button>
+                            <Button 
+                              variant="secondary" 
+                              size="sm"
+                              onClick={handleShareProfile}
+                            >
+                              <Share2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
@@ -716,39 +766,19 @@ export default function ProfilePage() {
                   )}
 
                   {/* Stats - Below Bio */}
-                  <div className="flex gap-6 mb-5">
-                    <button>
-                      <span className="font-semibold text-neutral-900 dark:text-neutral-50 mr-1">
-                        {profile.posts_count}
-                      </span>
-                      <span className="text-neutral-600 dark:text-neutral-400">
-                        posts
-                      </span>
-                    </button>
-                    <button>
-                      <span className="font-semibold text-neutral-900 dark:text-neutral-50 mr-1">
-                        {profile.projects_count || 0}
-                      </span>
-                      <span className="text-neutral-600 dark:text-neutral-400">
-                        projects
-                      </span>
-                    </button>
-                    <button>
-                      <span className="font-semibold text-neutral-900 dark:text-neutral-50 mr-1">
-                        {profile.followers_count}
-                      </span>
-                      <span className="text-neutral-600 dark:text-neutral-400">
-                        followers
-                      </span>
-                    </button>
-                    <button>
-                      <span className="font-semibold text-neutral-900 dark:text-neutral-50 mr-1">
-                        {profile.following_count}
-                      </span>
-                      <span className="text-neutral-600 dark:text-neutral-400">
-                        following
-                      </span>
-                    </button>
+                  <div className="mb-3">
+                    <ProfileStats
+                      userId={profile.id}
+                      isOwnProfile={profile.is_own_profile}
+                      profileData={profile}
+                      statVisibility={(profile as any).stat_visibility || currentUser?.stat_visibility}
+                      onStatClick={(type) => {
+                        // Navigate to relationships list page
+                        if (type === 'followers' || type === 'following' || type === 'connections' || type === 'collaborators') {
+                          router.push(`/profile/${profile.username}/${type}?userId=${profile.id}`);
+                        }
+                      }}
+                    />
                   </div>
 
                   {/* Meta Info */}
@@ -928,9 +958,9 @@ export default function ProfilePage() {
                 <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
                   <div className="flex items-start justify-between mb-4">
                     <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-                      My Story
+                      {(profile.is_own_profile && !previewMode) ? (profile.story ? 'My Story' : 'Add Your Story') : 'My Story'}
                     </h3>
-                    {profile.is_own_profile && (
+                    {profile.is_own_profile && !previewMode && (
                       <button
                         onClick={() => setStoryEditorOpen(true)}
                         className="text-brand-purple-600 hover:text-brand-purple-700 transition-colors"
@@ -982,10 +1012,10 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-2">
                       <Target className="w-5 h-5 text-brand-purple-600" />
                       <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-                        Ambition
+                        {(profile.is_own_profile && !previewMode && !profile.ambition) ? 'Add Your Ambition' : 'Ambition'}
                       </h3>
                     </div>
-                    {profile.is_own_profile && (
+                    {profile.is_own_profile && !previewMode && (
                       <button
                         onClick={() => setAmbitionEditorOpen(true)}
                         className="text-brand-purple-600 hover:text-brand-purple-700 transition-colors"
@@ -1027,7 +1057,7 @@ export default function ProfilePage() {
                         Experience
                       </h3>
                     </div>
-                    {profile.is_own_profile && (
+                    {profile.is_own_profile && !previewMode && (
                       <button
                         onClick={() => {
                           setEditingExperience(null);
@@ -1046,7 +1076,7 @@ export default function ProfilePage() {
                         <ExperienceCard
                           key={exp.id}
                           experience={exp}
-                          isOwnProfile={profile.is_own_profile}
+                          isOwnProfile={profile.is_own_profile && !previewMode}
                           onEdit={() => {
                             setEditingExperience(exp);
                             setExperienceModalOpen(true);
@@ -1055,7 +1085,7 @@ export default function ProfilePage() {
                         />
                       ))}
                     </div>
-                  ) : profile.is_own_profile ? (
+                  ) : (profile.is_own_profile && !previewMode) ? (
                     <button
                       onClick={() => {
                         setEditingExperience(null);
@@ -1082,7 +1112,7 @@ export default function ProfilePage() {
                         Education
                       </h3>
                     </div>
-                    {profile.is_own_profile && (
+                    {profile.is_own_profile && !previewMode && (
                       <button
                         onClick={() => {
                           setEditingEducation(null);
@@ -1101,7 +1131,7 @@ export default function ProfilePage() {
                         <EducationCard
                           key={edu.id}
                           education={edu}
-                          isOwnProfile={profile.is_own_profile}
+                          isOwnProfile={profile.is_own_profile && !previewMode}
                           onEdit={() => {
                             setEditingEducation(edu);
                             setEducationModalOpen(true);
@@ -1110,7 +1140,7 @@ export default function ProfilePage() {
                         />
                       ))}
                     </div>
-                  ) : profile.is_own_profile ? (
+                  ) : (profile.is_own_profile && !previewMode) ? (
                     <button
                       onClick={() => {
                         setEditingEducation(null);
@@ -1146,48 +1176,52 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Inline Editors */}
-            <InlineEditor
-              title="Tell Your Story"
-              value={profile.story}
-              maxLength={2000}
-              placeholder="Share your journey, experiences, and what makes you unique..."
-              isOpen={storyEditorOpen}
-              onClose={() => setStoryEditorOpen(false)}
-              onSave={handleSaveStory}
-            />
+            {/* Inline Editors - Only in edit mode */}
+            {!previewMode && (
+              <>
+                <InlineEditor
+                  title="Tell Your Story"
+                  value={profile.story}
+                  maxLength={2000}
+                  placeholder="Share your journey, experiences, and what makes you unique..."
+                  isOpen={storyEditorOpen}
+                  onClose={() => setStoryEditorOpen(false)}
+                  onSave={handleSaveStory}
+                />
 
-            <InlineEditor
-              title="Your Ambition"
-              value={profile.ambition}
-              maxLength={500}
-              placeholder="What drives you? What are your goals and aspirations?"
-              isOpen={ambitionEditorOpen}
-              onClose={() => setAmbitionEditorOpen(false)}
-              onSave={handleSaveAmbition}
-            />
+                <InlineEditor
+                  title="Your Ambition"
+                  value={profile.ambition}
+                  maxLength={500}
+                  placeholder="What drives you? What are your goals and aspirations?"
+                  isOpen={ambitionEditorOpen}
+                  onClose={() => setAmbitionEditorOpen(false)}
+                  onSave={handleSaveAmbition}
+                />
 
-            {/* Experience Modal */}
-            <ExperienceModal
-              isOpen={experienceModalOpen}
-              experience={editingExperience}
-              onClose={() => {
-                setExperienceModalOpen(false);
-                setEditingExperience(null);
-              }}
-              onSave={handleSaveExperience}
-            />
+                {/* Experience Modal */}
+                <ExperienceModal
+                  isOpen={experienceModalOpen}
+                  experience={editingExperience}
+                  onClose={() => {
+                    setExperienceModalOpen(false);
+                    setEditingExperience(null);
+                  }}
+                  onSave={handleSaveExperience}
+                />
 
-            {/* Education Modal */}
-            <EducationModal
-              isOpen={educationModalOpen}
-              education={editingEducation}
-              onClose={() => {
-                setEducationModalOpen(false);
-                setEditingEducation(null);
-              }}
-              onSave={handleSaveEducation}
-            />
+                {/* Education Modal */}
+                <EducationModal
+                  isOpen={educationModalOpen}
+                  education={editingEducation}
+                  onClose={() => {
+                    setEducationModalOpen(false);
+                    setEditingEducation(null);
+                  }}
+                  onSave={handleSaveEducation}
+                />
+              </>
+            )}
           </div>
         )}
       </MainLayout>

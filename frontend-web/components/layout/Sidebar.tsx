@@ -36,16 +36,18 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useUser } from '@/lib/hooks/useUser';
+import { useNotifications } from '@/lib/contexts/NotificationContext';
+import { useUnreadMessages } from '@/lib/hooks/useUnreadMessages';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 
-const navigation = [
+const navigationBase = [
   { name: 'Home', href: '/home', icon: Home },
   { name: 'Search', href: '/search', icon: Search },
   { name: 'Communities', href: '/communities', icon: Users },
   { name: 'Explore', href: '/explore', icon: Compass },
   { name: 'Messages', href: '/messages', icon: MessageCircle, badge: 3 },
-  { name: 'Notifications', href: '/notifications', icon: Bell, badge: 12 },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Create', href: '/create', icon: PlusSquare },
   { name: 'Collaborate', href: '/collaborate', icon: Users },
   { name: 'Jobs', href: '/jobs', icon: Briefcase },
@@ -67,9 +69,22 @@ export function Sidebar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { user } = useUser();
+  const { unreadCount } = useNotifications();
+  const { unreadCount: unreadMessages } = useUnreadMessages();
   const [showMore, setShowMore] = useState(false);
 
   const isActive = (href: string) => pathname === href;
+
+  // Add dynamic badges
+  const navigation = navigationBase.map(item => {
+    if (item.name === 'Notifications') {
+      return { ...item, badge: unreadCount > 0 ? unreadCount : undefined };
+    }
+    if (item.name === 'Messages') {
+      return { ...item, badge: unreadMessages > 0 ? unreadMessages : undefined };
+    }
+    return item;
+  });
 
   return (
     <aside className="hidden lg:flex w-60 h-screen fixed top-0 left-0 z-40">

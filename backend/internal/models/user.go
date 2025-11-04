@@ -43,6 +43,7 @@ type User struct {
 	IsVerified      bool               `json:"is_verified" db:"is_verified"`
 	ProfilePrivacy  string             `json:"profile_privacy" db:"profile_privacy"`
 	FieldVisibility map[string]bool    `json:"field_visibility" db:"field_visibility"`
+	StatVisibility  map[string]bool    `json:"stat_visibility" db:"stat_visibility"`
 	Story           *string            `json:"story,omitempty" db:"story"`
 	Ambition        *string            `json:"ambition,omitempty" db:"ambition"`
 	PostsCount      int                `json:"posts_count" db:"posts_count"`
@@ -247,6 +248,7 @@ type PublicProfileResponse struct {
 	FollowingCount int                `json:"following_count"`
 	IsOwnProfile   bool               `json:"is_own_profile"`
 	ProfilePrivacy *string            `json:"profile_privacy,omitempty"` // Only sent for own profile
+	StatVisibility map[string]bool    `json:"stat_visibility,omitempty"` // Only sent for own profile
 	SocialLinks    map[string]*string `json:"social_links,omitempty"`
 }
 
@@ -352,6 +354,7 @@ func (u *User) ToSafeUser() *User {
 		IsVerified:      u.IsVerified,
 		ProfilePrivacy:  u.ProfilePrivacy,
 		FieldVisibility: u.FieldVisibility,
+		StatVisibility:  u.StatVisibility,
 		Story:           u.Story,
 		Ambition:        u.Ambition,
 		PostsCount:      u.PostsCount,

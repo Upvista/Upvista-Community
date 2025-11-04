@@ -918,6 +918,73 @@ func (h *AccountHandlers) GetPublicProfile(c *gin.Context) {
 	})
 }
 
+// UpdateStatVisibility handles PATCH /api/v1/account/stat-visibility
+func (h *AccountHandlers) UpdateStatVisibility(c *gin.Context) {
+	// Get user ID from JWT
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "Unauthorized",
+		})
+		return
+	}
+
+	// Parse user ID
+	id, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	// Bind request
+	var req struct {
+		StatVisibility map[string]bool `json:"stat_visibility"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request body",
+		})
+		return
+	}
+
+	// Validate: at least 3 stats must be visible
+	visibleCount := 0
+	for _, visible := range req.StatVisibility {
+		if visible {
+			visibleCount++
+		}
+	}
+
+	if visibleCount < 3 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "At least 3 stats must be visible on your profile",
+		})
+		return
+	}
+
+	// Update stat visibility
+	err = h.accountSvc.UpdateStatVisibility(c.Request.Context(), id, req.StatVisibility)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Stat visibility updated successfully",
+	})
+}
+
 // SetupRoutes registers account management routes
 func (h *AccountHandlers) SetupRoutes(router *gin.RouterGroup) {
 	account := router.Group("/account")
@@ -946,6 +1013,7 @@ func (h *AccountHandlers) SetupRoutes(router *gin.RouterGroup) {
 		account.PATCH("/profile/story", h.UpdateStory)
 		account.PATCH("/profile/ambition", h.UpdateAmbition)
 		account.PATCH("/profile/social-links", h.UpdateSocialLinks)
+		account.PATCH("/stat-visibility", h.UpdateStatVisibility)
 	}
 
 	// Public profile endpoint (no auth required, but optional auth for privacy checks)
