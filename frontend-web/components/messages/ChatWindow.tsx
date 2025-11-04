@@ -281,8 +281,8 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
       <div
         ref={scrollRef}
         data-message-scroll
-        onScroll={(e) => {
-          handleScroll(e);
+        onScroll={() => {
+          handleScroll();
           handleChatInteraction(); // Only mark as read when user SCROLLS
         }}
         className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 dark:bg-gray-900"
