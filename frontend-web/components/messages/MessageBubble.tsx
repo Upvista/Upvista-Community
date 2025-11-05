@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { Message, formatMessageTimestamp } from '@/lib/api/messages';
-import { Star, Reply, Forward, Trash2, Info, Smile, Copy, Pin, Share2, Image as ImageIcon, Mic, Paperclip, Plus } from 'lucide-react';
+import { Star, Reply, Forward, Trash2, Info, Smile, Copy, Pin, Share2, Edit, Image as ImageIcon, Mic, Paperclip, Plus, Loader2, AlertCircle, Clock, RotateCw } from 'lucide-react';
 import ImageMessage from './ImageMessage';
 import AudioPlayer from './AudioPlayer';
+import VideoPlayer from './VideoPlayer';
 import EmojiPicker from './EmojiPicker';
 import { ReactionManageDialog } from './ReactionManageDialog';
+import { LinkPreview } from './LinkPreview';
+import { extractUrls, containsUrl } from '@/lib/utils/linkPreview';
 
 interface MessageBubbleProps {
   message: Message;
@@ -19,6 +22,9 @@ interface MessageBubbleProps {
   onPin?: (messageId: string, isPinned: boolean) => void;
   onShare?: (message: Message) => void;
   onInfo?: (message: Message) => void;
+  onEdit?: (message: Message) => void;
+  onViewMedia?: (message: Message) => void;
+  onRetry?: (tempId: string) => void;
 }
 
 export default function MessageBubble({
@@ -32,6 +38,9 @@ export default function MessageBubble({
   onPin,
   onShare,
   onInfo,
+  onEdit,
+  onViewMedia,
+  onRetry,
 }: MessageBubbleProps) {
   const [showActions, setShowActions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
@@ -39,9 +48,9 @@ export default function MessageBubble({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [manageReaction, setManageReaction] = useState<{ emoji: string; reactionId: string } | null>(null);
 
-  const isMine = message.is_mine;
-  const isForwarded = (message as any).is_forwarded || false;
-  const isPinned = (message as any).is_pinned || false;
+  const isMine = message.is_mine || false;
+  const isForwarded = message.is_forwarded || false;
+  const isPinned = message.is_pinned || false;
 
   // Get current user ID from localStorage
   const getCurrentUserId = () => {
@@ -78,11 +87,55 @@ export default function MessageBubble({
     setShowDeleteMenu(false);
   };
 
-  // ==================== STATUS DOTS ====================
+  // ==================== STATUS INDICATORS ====================
 
-  const StatusDot = () => {
+  const StatusIndicator = () => {
     if (!isMine) return null;
 
+    // Priority: send_state > status
+    // send_state is for client-side states (sending, failed, queued)
+    // status is for server-confirmed states (sent, delivered, read)
+
+    // 1. Sending state (loading spinner)
+    if (message.send_state === 'sending') {
+      return (
+        <div title="Sending...">
+          <Loader2 className="w-3 h-3 text-gray-400 animate-spin" />
+        </div>
+      );
+    }
+
+    // 2. Failed state (alert icon + retry button)
+    if (message.send_state === 'failed' || message.send_error) {
+      return (
+        <div className="flex items-center gap-1" title={message.send_error || 'Failed to send'}>
+          <AlertCircle className="w-3 h-3 text-red-500" />
+          {onRetry && message.temp_id && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRetry(message.temp_id!);
+              }}
+              className="p-0.5 hover:bg-white/20 rounded transition-colors"
+              title="Retry sending"
+            >
+              <RotateCw className="w-3 h-3 text-red-500 hover:text-red-400" />
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    // 3. Queued state (clock icon)
+    if (message.send_state === 'queued') {
+      return (
+        <div title="Queued - will send when online">
+          <Clock className="w-3 h-3 text-orange-400" />
+        </div>
+      );
+    }
+
+    // 4. Normal status dots (sent, delivered, read)
     switch (message.status) {
       case 'sent':
         return (
@@ -100,6 +153,9 @@ export default function MessageBubble({
         return null;
     }
   };
+
+  // Alias for backward compatibility
+  const StatusDot = StatusIndicator;
 
   // ==================== QUICK REACTIONS ====================
 
@@ -156,7 +212,7 @@ export default function MessageBubble({
         setShowEmojiPicker(false);
       }}
     >
-      <div className="relative max-w-[70%] md:max-w-[500px]">
+      <div className={`relative max-w-[80%]`}>
         {/* Action Menu (on hover) - WhatsApp Style */}
         {showActions && !showReactions && (
           <div
@@ -178,6 +234,15 @@ export default function MessageBubble({
             >
               <Reply className="w-4 h-4" />
             </button>
+            {onEdit && isMine && message.message_type === 'text' && (
+              <button
+                onClick={() => onEdit(message)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                title="Edit"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+            )}
             {onForward && (
               <button
                 onClick={() => onForward(message)}
@@ -322,7 +387,11 @@ export default function MessageBubble({
 
         {/* Message Bubble - WhatsApp Style with Tail */}
         <div
-          className={`px-3 py-2 break-words ${
+          className={`break-words ${
+            message.message_type === 'image' || message.message_type === 'file' || message.message_type === 'video'
+              ? 'p-0.5 overflow-hidden' // Minimal 2px padding for images, videos and files
+              : 'px-3 py-2' // Normal padding for text/audio
+          } ${
             isMine
               ? 'bg-purple-600 text-white rounded-[18px] rounded-br-[4px]'
               : 'bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded-[18px] rounded-bl-[4px]'
@@ -332,6 +401,8 @@ export default function MessageBubble({
           {/* Forwarded Label */}
           {isForwarded && (
             <div className={`flex items-center gap-1.5 text-xs mb-1.5 ${
+              (message.message_type === 'image' || message.message_type === 'file' || message.message_type === 'video') ? 'px-3 pt-2' : ''
+            } ${
               isMine ? 'text-purple-200' : 'text-gray-500 dark:text-gray-400'
             }`}>
               <Forward className="w-3 h-3" />
@@ -343,6 +414,8 @@ export default function MessageBubble({
           {message.reply_to && (
             <div
               className={`mb-2 pb-1.5 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
+                (message.message_type === 'image' || message.message_type === 'file' || message.message_type === 'video') ? 'mx-2 mt-2' : ''
+              } ${
                 isMine 
                   ? 'bg-purple-700/30 border-l-4 border-purple-300' 
                   : 'bg-gray-300/50 dark:bg-gray-700/50 border-l-4 border-gray-500'
@@ -393,22 +466,174 @@ export default function MessageBubble({
 
           {/* Content */}
           {message.message_type === 'text' && (
-            <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+            <>
+              {/* Text with clickable links */}
+              <div className="text-sm whitespace-pre-wrap break-words">
+                {message.content.split(/(https?:\/\/[^\s]+)/gi).map((part, index) => {
+                  // Check if this part is a URL
+                  if (part.match(/^https?:\/\//i)) {
+                    return (
+                      <a
+                        key={index}
+                        href={part}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`underline ${
+                          isMine 
+                            ? 'text-purple-100 hover:text-white' 
+                            : 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300'
+                        }`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {part}
+                      </a>
+                    );
+                  }
+                  return <span key={index}>{part}</span>;
+                })}
+              </div>
+
+              {/* Link Preview Card */}
+              {containsUrl(message.content) && extractUrls(message.content).map((url, index) => (
+                <LinkPreview key={index} url={url} isMine={isMine} />
+              ))}
+            </>
           )}
 
           {message.message_type === 'image' && (
-            <ImageMessage url={message.attachment_url || ''} alt="Image" />
+            <div 
+              onClick={() => onViewMedia?.(message)}
+              className="cursor-pointer hover:opacity-95 transition-opacity"
+            >
+              <ImageMessage url={message.attachment_url || ''} alt="Image" />
+            </div>
+          )}
+
+          {message.message_type === 'video' && (
+            <VideoPlayer 
+              url={message.attachment_url || ''} 
+              thumbnailUrl={message.thumbnail_url}
+              duration={message.video_duration}
+              width={message.video_width}
+              height={message.video_height}
+              onExpand={() => onViewMedia?.(message)}
+            />
           )}
 
           {message.message_type === 'audio' && (
             <AudioPlayer url={message.attachment_url || ''} duration={0} />
           )}
 
+          {message.message_type === 'file' && (
+            <div 
+              onClick={() => onViewMedia?.(message)}
+              className="cursor-pointer hover:opacity-95 transition-opacity rounded-lg overflow-hidden max-w-xs"
+            >
+              {/* Document Preview Container - 2px bezels from bubble padding */}
+              <div className="relative bg-white rounded-lg overflow-hidden">
+                {/* PDF/Document Preview */}
+                {message.attachment_type?.includes('pdf') ? (
+                  <div className="w-full h-[220px] bg-white relative overflow-hidden">
+                    {/* PDF Embed with proper permissions */}
+                    <embed
+                      src={`${message.attachment_url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                      type="application/pdf"
+                      className="w-full h-full border-0"
+                      style={{ 
+                        filter: 'contrast(1.05) brightness(0.98)',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                    {/* Overlay to prevent interaction */}
+                    <div className="absolute inset-0 bg-transparent cursor-pointer" />
+                    
+                    {/* Subtle shadow at bottom for depth */}
+                    <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
+                  </div>
+                ) : message.attachment_type?.includes('image') ? (
+                  <img 
+                    src={message.attachment_url} 
+                    alt="Document preview"
+                    className="w-full h-[220px] object-cover"
+                  />
+                ) : (
+                  // Generic document preview for other file types
+                  <div className="w-full h-[220px] bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-4">
+                        <Paperclip className="w-10 h-10 text-blue-600" />
+                      </div>
+                      <p className="text-base text-blue-700 font-semibold">
+                        {message.attachment_type?.split('/')[1]?.toUpperCase() || 'DOCUMENT'}
+                      </p>
+                      <p className="text-sm text-blue-600 mt-1">
+                        {message.attachment_size 
+                          ? `${(message.attachment_size / 1024).toFixed(0)} KB` 
+                          : 'File'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Document Info Bar - WhatsApp Style */}
+                <div className={`${
+                  isMine 
+                    ? 'bg-purple-700/30 dark:bg-purple-600/30' 
+                    : 'bg-gray-100 dark:bg-gray-700'
+                } px-3 py-2.5 border-t border-gray-200 dark:border-gray-600`}>
+                  <div className="flex items-center gap-2.5">
+                    {/* File Icon */}
+                    <div className={`w-9 h-9 ${
+                      isMine ? 'bg-purple-500/40' : 'bg-blue-500/30'
+                    } rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      <Paperclip className={`w-4 h-4 ${
+                        isMine ? 'text-purple-200' : 'text-blue-600'
+                      }`} />
+                    </div>
+                    
+                    {/* File Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[13px] font-semibold truncate ${
+                        isMine ? 'text-white' : 'text-gray-900 dark:text-gray-100'
+                      }`}>
+                        {message.attachment_name || 'Document'}
+                      </p>
+                      <p className={`text-[11px] mt-0.5 font-medium ${
+                        isMine ? 'text-purple-100' : 'text-gray-700 dark:text-gray-400'
+                      }`}>
+                        {message.attachment_size 
+                          ? `${(message.attachment_size / 1024).toFixed(0)} KB` 
+                          : 'File'}
+                        {' • '}
+                        {message.attachment_type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Timestamp + Status Dot + Star (Inside Bubble) */}
-          <div className="flex items-center justify-end gap-1.5 mt-1.5">
-            <span className={`text-[10px] ${isMine ? 'text-purple-200' : 'text-gray-500 dark:text-gray-400'}`}>
+          <div className={`flex items-center justify-end gap-1.5 mt-1.5 ${
+            (message.message_type === 'image' || message.message_type === 'file' || message.message_type === 'video') ? 'px-2 pb-1' : ''
+          }`}>
+            <span className={`text-[10px] ${
+              (message.message_type === 'image' || message.message_type === 'file' || message.message_type === 'video')
+                ? 'text-white drop-shadow-lg'
+                : isMine ? 'text-purple-200' : 'text-gray-500 dark:text-gray-400'
+            }`}>
               {formatMessageTimestamp(message.created_at)}
             </span>
+            {message.edited_at && (
+              <span className={`text-[9px] italic ${
+                (message.message_type === 'image' || message.message_type === 'file' || message.message_type === 'video')
+                  ? 'text-white/90 drop-shadow-lg'
+                  : isMine ? 'text-purple-300' : 'text-gray-400 dark:text-gray-500'
+              }`}>
+                (edited)
+              </span>
+            )}
             <StatusDot />
             {message.is_starred && (
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />

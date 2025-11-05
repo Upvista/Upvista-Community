@@ -6,7 +6,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"upvista-community-backend/internal/models"
@@ -15,6 +18,43 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+// sanitizeFilename removes non-ASCII characters, spaces, and special characters from filename
+// Keeps only alphanumeric, dots, hyphens, and underscores
+func sanitizeFilename(filename string) string {
+	// Get file extension first
+	ext := filepath.Ext(filename)
+	nameWithoutExt := strings.TrimSuffix(filename, ext)
+
+	// Remove or replace invalid characters
+	// Replace spaces with underscores
+	nameWithoutExt = strings.ReplaceAll(nameWithoutExt, " ", "_")
+
+	// Remove non-ASCII and special characters (keep only alphanumeric, dash, underscore)
+	reg := regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
+	nameWithoutExt = reg.ReplaceAllString(nameWithoutExt, "")
+
+	// If filename becomes empty after sanitization, use a default name
+	if nameWithoutExt == "" {
+		nameWithoutExt = "file"
+	}
+
+	// Limit length to avoid overly long filenames (max 100 chars)
+	if len(nameWithoutExt) > 100 {
+		nameWithoutExt = nameWithoutExt[:100]
+	}
+
+	// Sanitize extension too (remove non-alphanumeric except dot)
+	ext = strings.ToLower(ext)
+	ext = regexp.MustCompile(`[^a-zA-Z0-9.]+`).ReplaceAllString(ext, "")
+
+	// If no extension, default to .bin
+	if ext == "" {
+		ext = ".bin"
+	}
+
+	return nameWithoutExt + ext
+}
 
 // MessageHandlers handles HTTP requests for messaging
 type MessageHandlers struct {
@@ -370,16 +410,22 @@ func (h *MessageHandlers) UploadAudio(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	uid, _ := uuid.Parse(userID.(string))
 
+	log.Printf("[UploadAudio] Request from user: %s", uid.String())
+
 	// Get file from form
 	file, header, err := c.Request.FormFile("audio")
 	if err != nil {
+		log.Printf("[UploadAudio] Failed to get file from form: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No audio file provided"})
 		return
 	}
 	defer file.Close()
 
+	log.Printf("[UploadAudio] File received: %s, Size: %d, Type: %s", header.Filename, header.Size, header.Header.Get("Content-Type"))
+
 	// Validate file size
 	if err := ValidateFileSize(header.Size, "audio"); err != nil {
+		log.Printf("[UploadAudio] File size validation failed: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -387,29 +433,38 @@ func (h *MessageHandlers) UploadAudio(c *gin.Context) {
 	// Read file
 	fileData, err := io.ReadAll(file)
 	if err != nil {
+		log.Printf("[UploadAudio] Failed to read file: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
 		return
 	}
 
+	log.Printf("[UploadAudio] File data read successfully: %d bytes", len(fileData))
+
 	// Validate audio
 	isValid, err := h.mediaOptimizer.ValidateAudio(fileData, header.Header.Get("Content-Type"))
 	if !isValid {
-		log.Printf("[MessageHandlers] Audio validation failed: %v", err)
+		log.Printf("[UploadAudio] Audio validation failed: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid audio format: " + err.Error()})
 		return
 	}
+
+	log.Printf("[UploadAudio] Audio validation passed")
 
 	// For Phase 1, we accept WebM directly without conversion
 	// Audio conversion to MP3 can be added in Phase 2 with ffmpeg
 
 	// Upload to Supabase Storage
 	fileName := fmt.Sprintf("messages/%s/audio_%s_%d.webm", uid.String(), uuid.New().String(), time.Now().Unix())
+	log.Printf("[UploadAudio] Uploading to Supabase: bucket=chat-attachments, fileName=%s", fileName)
+
 	uploadedURL, err := h.storageService.UploadFile(c.Request.Context(), "chat-attachments", fileName, bytes.NewReader(fileData), "audio/webm")
 	if err != nil {
-		log.Printf("[MessageHandlers] Failed to upload audio to Supabase: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload audio"})
+		log.Printf("[UploadAudio] Supabase upload failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to upload audio: %v", err)})
 		return
 	}
+
+	log.Printf("[UploadAudio] Upload successful: %s", uploadedURL)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -425,16 +480,22 @@ func (h *MessageHandlers) UploadFile(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	uid, _ := uuid.Parse(userID.(string))
 
+	log.Printf("[UploadFile] Request from user: %s", uid.String())
+
 	// Get file from form
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
+		log.Printf("[UploadFile] Failed to get file from form: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
 		return
 	}
 	defer file.Close()
 
+	log.Printf("[UploadFile] File received: %s, Size: %d, Type: %s", header.Filename, header.Size, header.Header.Get("Content-Type"))
+
 	// Validate file size
 	if err := ValidateFileSize(header.Size, "file"); err != nil {
+		log.Printf("[UploadFile] File size validation failed: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -442,24 +503,114 @@ func (h *MessageHandlers) UploadFile(c *gin.Context) {
 	// Read file
 	fileData, err := io.ReadAll(file)
 	if err != nil {
+		log.Printf("[UploadFile] Failed to read file: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
 		return
 	}
 
+	log.Printf("[UploadFile] File data read successfully: %d bytes", len(fileData))
+
+	// Sanitize filename - remove non-ASCII characters and spaces
+	sanitizedFilename := sanitizeFilename(header.Filename)
+
 	// Upload to Supabase Storage
-	fileName := fmt.Sprintf("messages/%s/file_%s_%s", uid.String(), uuid.New().String(), header.Filename)
+	fileName := fmt.Sprintf("messages/%s/file_%s_%s", uid.String(), uuid.New().String(), sanitizedFilename)
+	log.Printf("[UploadFile] Original filename: %s, Sanitized: %s", header.Filename, sanitizedFilename)
+	log.Printf("[UploadFile] Uploading to Supabase: bucket=chat-attachments, fileName=%s", fileName)
+
 	uploadedURL, err := h.storageService.UploadFile(c.Request.Context(), "chat-attachments", fileName, bytes.NewReader(fileData), header.Header.Get("Content-Type"))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
+		log.Printf("[UploadFile] Supabase upload failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to upload file: %v", err)})
 		return
 	}
+
+	log.Printf("[UploadFile] Upload successful: %s", uploadedURL)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"url":     uploadedURL,
-		"name":    header.Filename,
+		"name":    header.Filename, // Return original filename for display
 		"size":    header.Size,
 		"type":    header.Header.Get("Content-Type"),
+	})
+}
+
+// UploadVideo handles POST /api/v1/messages/upload-video
+func (h *MessageHandlers) UploadVideo(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, _ := uuid.Parse(userID.(string))
+
+	log.Printf("[UploadVideo] Request from user: %s", uid.String())
+
+	// Get video file from form
+	file, header, err := c.Request.FormFile("video")
+	if err != nil {
+		log.Printf("[UploadVideo] Failed to get file from form: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No video file provided"})
+		return
+	}
+	defer file.Close()
+
+	log.Printf("[UploadVideo] File received: %s, Size: %d, Type: %s", header.Filename, header.Size, header.Header.Get("Content-Type"))
+
+	// Validate file size (max 100MB for videos)
+	maxSize := int64(100 * 1024 * 1024)
+	if header.Size > maxSize {
+		log.Printf("[UploadVideo] File too large: %d bytes (max %d)", header.Size, maxSize)
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Video too large (max 100MB). Your file: %.1fMB", float64(header.Size)/(1024*1024))})
+		return
+	}
+
+	// Read video file
+	fileData, err := io.ReadAll(file)
+	if err != nil {
+		log.Printf("[UploadVideo] Failed to read file: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+
+	log.Printf("[UploadVideo] File data read successfully: %d bytes", len(fileData))
+
+	// Sanitize filename
+	sanitizedFilename := sanitizeFilename(header.Filename)
+
+	// Upload video to Supabase Storage
+	videoFileName := fmt.Sprintf("messages/%s/video_%s_%s", uid.String(), uuid.New().String(), sanitizedFilename)
+	log.Printf("[UploadVideo] Uploading to Supabase: bucket=chat-attachments, fileName=%s", videoFileName)
+
+	uploadedURL, err := h.storageService.UploadFile(c.Request.Context(), "chat-attachments", videoFileName, bytes.NewReader(fileData), header.Header.Get("Content-Type"))
+	if err != nil {
+		log.Printf("[UploadVideo] Supabase upload failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to upload video: %v", err)})
+		return
+	}
+
+	log.Printf("[UploadVideo] Video upload successful: %s", uploadedURL)
+
+	// Get optional thumbnail from form (base64 or file)
+	var thumbnailURL string
+	thumbnailFile, thumbnailHeader, err := c.Request.FormFile("thumbnail")
+	if err == nil {
+		defer thumbnailFile.Close()
+
+		// Read thumbnail
+		thumbnailData, err := io.ReadAll(thumbnailFile)
+		if err == nil {
+			// Upload thumbnail
+			thumbnailFileName := fmt.Sprintf("messages/%s/thumb_%s.jpg", uid.String(), uuid.New().String())
+			thumbnailURL, _ = h.storageService.UploadFile(c.Request.Context(), "chat-attachments", thumbnailFileName, bytes.NewReader(thumbnailData), thumbnailHeader.Header.Get("Content-Type"))
+			log.Printf("[UploadVideo] Thumbnail uploaded: %s", thumbnailURL)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":       true,
+		"url":           uploadedURL,
+		"thumbnail_url": thumbnailURL,
+		"name":          header.Filename,
+		"size":          header.Size,
+		"type":          header.Header.Get("Content-Type"),
 	})
 }
 
@@ -611,7 +762,13 @@ func (h *MessageHandlers) StartTyping(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.StartTyping(c.Request.Context(), conversationID, uid); err != nil {
+	// Parse request body for is_recording flag
+	var req struct {
+		IsRecording bool `json:"is_recording"`
+	}
+	c.ShouldBindJSON(&req)
+
+	if err := h.service.StartTyping(c.Request.Context(), conversationID, uid, req.IsRecording); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -726,4 +883,199 @@ func splitByComma(s string) []string {
 	}
 
 	return result
+}
+
+// ============================================
+// PIN MESSAGE HANDLERS
+// ============================================
+
+// PinMessage handles POST /api/v1/messages/:id/pin
+func (h *MessageHandlers) PinMessage(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, _ := uuid.Parse(userID.(string))
+
+	messageID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid message ID"})
+		return
+	}
+
+	if err := h.service.PinMessage(c.Request.Context(), messageID, uid); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Message pinned"})
+}
+
+// UnpinMessage handles DELETE /api/v1/messages/:id/pin
+func (h *MessageHandlers) UnpinMessage(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, _ := uuid.Parse(userID.(string))
+
+	messageID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid message ID"})
+		return
+	}
+
+	if err := h.service.UnpinMessage(c.Request.Context(), messageID, uid); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Message unpinned"})
+}
+
+// GetPinnedMessages handles GET /api/v1/conversations/:id/pinned
+func (h *MessageHandlers) GetPinnedMessages(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, _ := uuid.Parse(userID.(string))
+
+	conversationID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid conversation ID"})
+		return
+	}
+
+	messages, err := h.service.GetPinnedMessages(c.Request.Context(), conversationID, uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":  true,
+		"messages": messages,
+	})
+}
+
+// ============================================
+// EDIT MESSAGE HANDLERS
+// ============================================
+
+// EditMessage handles PATCH /api/v1/messages/:id
+func (h *MessageHandlers) EditMessage(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, _ := uuid.Parse(userID.(string))
+
+	messageID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid message ID"})
+		return
+	}
+
+	var req models.EditMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.EditMessage(c.Request.Context(), messageID, uid, req.Content); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Message edited"})
+}
+
+// GetMessageEditHistory handles GET /api/v1/messages/:id/edit-history
+func (h *MessageHandlers) GetMessageEditHistory(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, _ := uuid.Parse(userID.(string))
+
+	messageID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid message ID"})
+		return
+	}
+
+	history, err := h.service.GetMessageEditHistory(c.Request.Context(), messageID, uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"history": history,
+	})
+}
+
+// ============================================
+// FORWARD MESSAGE HANDLERS
+// ============================================
+
+// ForwardMessage handles POST /api/v1/messages/:id/forward
+func (h *MessageHandlers) ForwardMessage(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, _ := uuid.Parse(userID.(string))
+
+	messageID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid message ID"})
+		return
+	}
+
+	var req models.ForwardMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	forwardedMsg, err := h.service.ForwardMessage(c.Request.Context(), messageID, req.ToConversationID, uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": forwardedMsg,
+	})
+}
+
+// ============================================
+// SEARCH MESSAGES HANDLER
+// ============================================
+
+// SearchConversationMessages handles GET /api/v1/conversations/:id/search
+func (h *MessageHandlers) SearchConversationMessages(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	uid, _ := uuid.Parse(userID.(string))
+
+	conversationID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid conversation ID"})
+		return
+	}
+
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Search query required"})
+		return
+	}
+
+	limit := 50
+	offset := 0
+
+	if limitStr := c.Query("limit"); limitStr != "" {
+		fmt.Sscanf(limitStr, "%d", &limit)
+	}
+
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		fmt.Sscanf(offsetStr, "%d", &offset)
+	}
+
+	messages, err := h.service.SearchConversationMessages(c.Request.Context(), conversationID, uid, query, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":  true,
+		"messages": messages,
+		"total":    len(messages),
+	})
 }

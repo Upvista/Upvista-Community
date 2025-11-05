@@ -74,24 +74,41 @@ func (su *supabaseUser) toUser() (*models.User, error) {
 
 // supabaseMessage is a helper for unmarshaling Message with string timestamps
 type supabaseMessage struct {
-	ID             uuid.UUID            `json:"id"`
-	ConversationID uuid.UUID            `json:"conversation_id"`
-	SenderID       uuid.UUID            `json:"sender_id"`
-	Content        string               `json:"content"`
-	MessageType    models.MessageType   `json:"message_type"`
-	AttachmentURL  *string              `json:"attachment_url"`
-	AttachmentName *string              `json:"attachment_name"`
-	AttachmentSize *int                 `json:"attachment_size"`
-	AttachmentType *string              `json:"attachment_type"`
-	Status         models.MessageStatus `json:"status"`
-	DeliveredAt    *string              `json:"delivered_at"`
-	ReadAt         *string              `json:"read_at"`
-	DeletedBy      []string             `json:"deleted_by"`
-	ReplyToID      *uuid.UUID           `json:"reply_to_id"`
-	CreatedAt      string               `json:"created_at"`
-	UpdatedAt      string               `json:"updated_at"`
-	Sender         *supabaseUser        `json:"sender"`
-	ReplyTo        *supabaseMessage     `json:"reply_to"`
+	ID             uuid.UUID          `json:"id"`
+	ConversationID uuid.UUID          `json:"conversation_id"`
+	SenderID       uuid.UUID          `json:"sender_id"`
+	Content        string             `json:"content"`
+	MessageType    models.MessageType `json:"message_type"`
+	AttachmentURL  *string            `json:"attachment_url"`
+	AttachmentName *string            `json:"attachment_name"`
+	AttachmentSize *int               `json:"attachment_size"`
+	AttachmentType *string            `json:"attachment_type"`
+	// Video-specific fields
+	ThumbnailURL  *string              `json:"thumbnail_url"`
+	VideoDuration *int                 `json:"video_duration"`
+	VideoWidth    *int                 `json:"video_width"`
+	VideoHeight   *int                 `json:"video_height"`
+	Status        models.MessageStatus `json:"status"`
+	DeliveredAt   *string              `json:"delivered_at"`
+	ReadAt        *string              `json:"read_at"`
+	DeletedBy     []string             `json:"deleted_by"`
+	ReplyToID     *uuid.UUID           `json:"reply_to_id"`
+	CreatedAt     string               `json:"created_at"`
+	UpdatedAt     string               `json:"updated_at"`
+	// Pin feature
+	PinnedAt *string    `json:"pinned_at"`
+	PinnedBy *uuid.UUID `json:"pinned_by"`
+	// Edit feature
+	EditedAt        *string `json:"edited_at"`
+	EditCount       int     `json:"edit_count"`
+	OriginalContent *string `json:"original_content"`
+	// Forward feature
+	ForwardedFromID *uuid.UUID `json:"forwarded_from_id"`
+	IsForwarded     bool       `json:"is_forwarded"`
+	// Relations
+	Sender    *supabaseUser            `json:"sender"`
+	ReplyTo   *supabaseMessage         `json:"reply_to"`
+	Reactions []map[string]interface{} `json:"reactions"`
 }
 
 func (sm *supabaseMessage) toMessage() (*models.Message, error) {
@@ -109,8 +126,13 @@ func (sm *supabaseMessage) toMessage() (*models.Message, error) {
 		AttachmentName: sm.AttachmentName,
 		AttachmentSize: sm.AttachmentSize,
 		AttachmentType: sm.AttachmentType,
-		Status:         sm.Status,
-		ReplyToID:      sm.ReplyToID,
+		// Video-specific fields
+		ThumbnailURL:  sm.ThumbnailURL,
+		VideoDuration: sm.VideoDuration,
+		VideoWidth:    sm.VideoWidth,
+		VideoHeight:   sm.VideoHeight,
+		Status:        sm.Status,
+		ReplyToID:     sm.ReplyToID,
 	}
 
 	// Convert sender
@@ -163,6 +185,36 @@ func (sm *supabaseMessage) toMessage() (*models.Message, error) {
 		}
 		msg.UpdatedAt = t
 	}
+
+	// Parse pin timestamp
+	if sm.PinnedAt != nil && *sm.PinnedAt != "" {
+		t, err := parseSupabaseTime(*sm.PinnedAt)
+		if err != nil {
+			log.Printf("Warning: failed to parse pinned_at: %v", err)
+		} else {
+			msg.PinnedAt = &t
+		}
+	}
+
+	// Parse edit timestamp
+	if sm.EditedAt != nil && *sm.EditedAt != "" {
+		t, err := parseSupabaseTime(*sm.EditedAt)
+		if err != nil {
+			log.Printf("Warning: failed to parse edited_at: %v", err)
+		} else {
+			msg.EditedAt = &t
+		}
+	}
+
+	// Set other new fields
+	msg.PinnedBy = sm.PinnedBy
+	msg.EditCount = sm.EditCount
+	msg.OriginalContent = sm.OriginalContent
+	msg.ForwardedFromID = sm.ForwardedFromID
+	msg.IsForwarded = sm.IsForwarded
+
+	// Set IsPinned based on whether pinned_at is not null
+	msg.IsPinned = msg.PinnedAt != nil
 
 	return msg, nil
 }
@@ -476,11 +528,36 @@ func (r *supabaseMessageRepository) GetUserConversations(ctx context.Context, us
 		if conv.Participant1ID == userID {
 			conv.OtherUser = conv.Participant2
 			conv.UnreadCount = conv.UnreadCountP1
-			conv.IsTyping = conv.P2Typing
+
+			// CRITICAL FIX: Check if typing state is stale (older than 3 seconds)
+			// Don't use database typing - it persists forever!
+			if conv.P2Typing && conv.P2TypingAt != nil {
+				elapsed := time.Since(*conv.P2TypingAt).Seconds()
+				if elapsed < 3 {
+					conv.IsTyping = true // Only show if recent (< 3 seconds)
+				} else {
+					conv.IsTyping = false // Stale typing state - ignore!
+					log.Printf("[GetUserConversations] Ignoring stale typing state (%.1fs old)", elapsed)
+				}
+			} else {
+				conv.IsTyping = false
+			}
 		} else {
 			conv.OtherUser = conv.Participant1
 			conv.UnreadCount = conv.UnreadCountP2
-			conv.IsTyping = conv.P1Typing
+
+			// CRITICAL FIX: Check if typing state is stale (older than 3 seconds)
+			if conv.P1Typing && conv.P1TypingAt != nil {
+				elapsed := time.Since(*conv.P1TypingAt).Seconds()
+				if elapsed < 3 {
+					conv.IsTyping = true // Only show if recent (< 3 seconds)
+				} else {
+					conv.IsTyping = false // Stale typing state - ignore!
+					log.Printf("[GetUserConversations] Ignoring stale typing state (%.1fs old)", elapsed)
+				}
+			} else {
+				conv.IsTyping = false
+			}
 		}
 		conversations = append(conversations, conv)
 	}
@@ -620,6 +697,15 @@ func (r *supabaseMessageRepository) CreateMessage(ctx context.Context, message *
 	}
 	if message.ReplyToID != nil {
 		payload["reply_to_id"] = message.ReplyToID.String()
+	}
+
+	// Forward feature
+	if message.ForwardedFromID != nil {
+		payload["forwarded_from_id"] = message.ForwardedFromID.String()
+		payload["is_forwarded"] = true
+	}
+	if message.IsForwarded {
+		payload["is_forwarded"] = true
 	}
 
 	body, _ := json.Marshal(payload)
@@ -1061,4 +1147,279 @@ func (r *supabaseMessageRepository) IsMessageStarred(ctx context.Context, messag
 	}
 
 	return len(results) > 0, nil
+}
+
+// ============================================
+// PIN MESSAGES
+// ============================================
+
+// PinMessage pins a message in a conversation
+func (r *supabaseMessageRepository) PinMessage(ctx context.Context, messageID, userID uuid.UUID) error {
+	now := time.Now().Format(time.RFC3339)
+	updates := map[string]interface{}{
+		"pinned_at": now,
+		"pinned_by": userID.String(),
+	}
+
+	payload, _ := json.Marshal(updates)
+	query := url.Values{}
+	query.Set("id", "eq."+messageID.String())
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPatch, r.messagesURL(query), bytes.NewReader(payload))
+	r.setHeaders(req, "")
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("failed to pin message, status: %d", resp.StatusCode)
+	}
+
+	log.Printf("[MessageRepo] ✅ Message %s pinned", messageID)
+	return nil
+}
+
+// UnpinMessage unpins a message
+func (r *supabaseMessageRepository) UnpinMessage(ctx context.Context, messageID, userID uuid.UUID) error {
+	updates := map[string]interface{}{
+		"pinned_at": nil,
+		"pinned_by": nil,
+	}
+
+	payload, _ := json.Marshal(updates)
+	query := url.Values{}
+	query.Set("id", "eq."+messageID.String())
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPatch, r.messagesURL(query), bytes.NewReader(payload))
+	r.setHeaders(req, "")
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("failed to unpin message, status: %d", resp.StatusCode)
+	}
+
+	log.Printf("[MessageRepo] ✅ Message %s unpinned", messageID)
+	return nil
+}
+
+// GetPinnedMessages retrieves all pinned messages in a conversation
+func (r *supabaseMessageRepository) GetPinnedMessages(ctx context.Context, conversationID uuid.UUID) ([]*models.Message, error) {
+	query := url.Values{}
+	query.Set("conversation_id", "eq."+conversationID.String())
+	query.Set("pinned_at", "not.is.null")
+	query.Set("select", "*,sender:sender_id(id,username,display_name,profile_picture),reply_to:reply_to_id(id,content,message_type,sender_id,sender:sender_id(id,username,display_name,profile_picture)),reactions:message_reactions(*,user:user_id(id,username,display_name,profile_picture))")
+	query.Set("order", "pinned_at.desc")
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, r.messagesURL(query), nil)
+	r.setHeaders(req, "")
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var sbMessages []*supabaseMessage
+	if err := json.NewDecoder(resp.Body).Decode(&sbMessages); err != nil {
+		return nil, err
+	}
+
+	messages := make([]*models.Message, 0, len(sbMessages))
+	for _, sbMsg := range sbMessages {
+		msg, err := sbMsg.toMessage()
+		if err != nil {
+			log.Printf("Failed to convert message: %v", err)
+			continue
+		}
+		// IsPinned is already set in toMessage() based on pinned_at != nil
+		messages = append(messages, msg)
+	}
+
+	return messages, nil
+}
+
+// ============================================
+// EDIT MESSAGES
+// ============================================
+
+// EditMessage updates the content of a message
+func (r *supabaseMessageRepository) EditMessage(ctx context.Context, messageID uuid.UUID, newContent string, editorID uuid.UUID) error {
+	// First, get the original message to save its content to history
+	originalMsg, err := r.GetMessage(ctx, messageID)
+	if err != nil {
+		return fmt.Errorf("failed to get original message: %w", err)
+	}
+
+	// Save edit history
+	historyPayload := map[string]interface{}{
+		"message_id":       messageID.String(),
+		"previous_content": originalMsg.Content,
+		"edited_by":        editorID.String(),
+		"edited_at":        time.Now().Format(time.RFC3339),
+	}
+
+	historyBody, _ := json.Marshal(historyPayload)
+	historyReq, _ := http.NewRequestWithContext(ctx, http.MethodPost, r.editHistoryURL(nil), bytes.NewReader(historyBody))
+	r.setHeaders(historyReq, "")
+
+	historyResp, err := r.httpClient.Do(historyReq)
+	if err != nil {
+		log.Printf("[MessageRepo] Warning: Failed to save edit history: %v", err)
+	} else {
+		historyResp.Body.Close()
+	}
+
+	// Update the message
+	now := time.Now().Format(time.RFC3339)
+	updates := map[string]interface{}{
+		"content":    newContent,
+		"edited_at":  now,
+		"edit_count": originalMsg.EditCount + 1,
+	}
+
+	// Store original content if this is the first edit
+	if originalMsg.EditCount == 0 {
+		updates["original_content"] = originalMsg.Content
+	}
+
+	payload, _ := json.Marshal(updates)
+	query := url.Values{}
+	query.Set("id", "eq."+messageID.String())
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodPatch, r.messagesURL(query), bytes.NewReader(payload))
+	r.setHeaders(req, "")
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("failed to edit message, status: %d", resp.StatusCode)
+	}
+
+	log.Printf("[MessageRepo] ✅ Message %s edited (edit count: %d)", messageID, originalMsg.EditCount+1)
+	return nil
+}
+
+// GetMessageEditHistory retrieves the edit history for a message
+func (r *supabaseMessageRepository) GetMessageEditHistory(ctx context.Context, messageID uuid.UUID) ([]map[string]interface{}, error) {
+	query := url.Values{}
+	query.Set("message_id", "eq."+messageID.String())
+	query.Set("order", "edited_at.desc")
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, r.editHistoryURL(query), nil)
+	r.setHeaders(req, "")
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var history []map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&history); err != nil {
+		return nil, err
+	}
+
+	return history, nil
+}
+
+// ============================================
+// FORWARD MESSAGES
+// ============================================
+
+// ForwardMessage creates a forwarded copy of a message in another conversation
+func (r *supabaseMessageRepository) ForwardMessage(ctx context.Context, messageID uuid.UUID, toConversationID uuid.UUID, forwarderID uuid.UUID) (*models.Message, error) {
+	// Get the original message
+	originalMsg, err := r.GetMessage(ctx, messageID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get original message: %w", err)
+	}
+
+	// Create new message with forwarded flag
+	newMsg := &models.Message{
+		ConversationID:  toConversationID,
+		SenderID:        forwarderID,
+		Content:         originalMsg.Content,
+		MessageType:     originalMsg.MessageType,
+		AttachmentURL:   originalMsg.AttachmentURL,
+		AttachmentName:  originalMsg.AttachmentName,
+		AttachmentSize:  originalMsg.AttachmentSize,
+		AttachmentType:  originalMsg.AttachmentType,
+		ForwardedFromID: &messageID,
+		IsForwarded:     true,
+		Status:          models.MessageStatusSent,
+	}
+
+	// Create the forwarded message
+	if err := r.CreateMessage(ctx, newMsg); err != nil {
+		return nil, fmt.Errorf("failed to create forwarded message: %w", err)
+	}
+
+	log.Printf("[MessageRepo] ✅ Message %s forwarded to conversation %s", messageID, toConversationID)
+	return newMsg, nil
+}
+
+// ============================================
+// SEARCH MESSAGES IN CONVERSATION
+// ============================================
+
+// SearchConversationMessages searches messages within a specific conversation
+func (r *supabaseMessageRepository) SearchConversationMessages(ctx context.Context, conversationID uuid.UUID, searchQuery string, limit, offset int) ([]*models.Message, error) {
+	query := url.Values{}
+	query.Set("conversation_id", "eq."+conversationID.String())
+	query.Set("content", "ilike.*"+searchQuery+"*")
+	query.Set("select", "*,sender:sender_id(id,username,display_name,profile_picture),reply_to:reply_to_id(id,content,message_type,sender_id,sender:sender_id(id,username,display_name,profile_picture)),reactions:message_reactions(*,user:user_id(id,username,display_name,profile_picture))")
+	query.Set("order", "created_at.desc")
+	query.Set("limit", fmt.Sprintf("%d", limit))
+	query.Set("offset", fmt.Sprintf("%d", offset))
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, r.messagesURL(query), nil)
+	r.setHeaders(req, "")
+
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var sbMessages []*supabaseMessage
+	if err := json.NewDecoder(resp.Body).Decode(&sbMessages); err != nil {
+		return nil, err
+	}
+
+	messages := make([]*models.Message, 0, len(sbMessages))
+	for _, sbMsg := range sbMessages {
+		msg, err := sbMsg.toMessage()
+		if err != nil {
+			log.Printf("Failed to convert message: %v", err)
+			continue
+		}
+		messages = append(messages, msg)
+	}
+
+	log.Printf("[MessageRepo] Found %d messages matching '%s' in conversation %s", len(messages), searchQuery, conversationID)
+	return messages, nil
+}
+
+// ============================================
+// HELPER METHODS FOR NEW TABLES
+// ============================================
+
+func (r *supabaseMessageRepository) editHistoryURL(query url.Values) string {
+	baseURL := fmt.Sprintf("%s/rest/v1/message_edit_history", r.supabaseURL)
+	if query != nil && len(query) > 0 {
+		return fmt.Sprintf("%s?%s", baseURL, query.Encode())
+	}
+	return baseURL
 }

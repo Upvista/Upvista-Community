@@ -7,6 +7,8 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { messagesAPI, Message } from '../api/messages';
 import { messageWS } from '../websocket/MessageWebSocket';
+import { offlineQueue, QueuedMessage } from '../utils/offlineQueue';
+import { messageCache } from '../utils/messageCache';
 
 interface OptimisticMessage extends Message {
   tempId?: string;
@@ -34,11 +36,12 @@ export function useOptimisticMessages({
   // ==================== SEND MESSAGE ====================
 
   /**
-   * Send a text message with optimistic UI
+   * Send a text message with optimistic UI + offline queue
    */
   const sendMessage = useCallback(
     async (content: string, replyToId?: string) => {
       const tempId = uuidv4();
+      const isOnline = navigator.onLine;
 
       // Create optimistic message
       const optimisticMsg: OptimisticMessage = {
@@ -53,14 +56,48 @@ export function useOptimisticMessages({
         is_mine: true,
         isSending: true,
         tempId,
+        temp_id: tempId,
+        send_state: isOnline ? 'sending' : 'queued',
+        retry_count: 0,
         reply_to_id: replyToId,
       };
 
       // 1. Add to UI immediately (INSTANT FEEDBACK)
       setOptimisticMessages((prev) => new Map(prev).set(tempId, optimisticMsg));
 
+      // 2. If offline, add to queue and return
+      if (!isOnline) {
+        console.log('[OptimisticUI] 📴 Offline - queuing message:', tempId);
+        try {
+          await offlineQueue.addToQueue({
+            id: tempId,
+            conversationId,
+            content,
+            messageType: 'text',
+            replyToId,
+            timestamp: Date.now(),
+            retryCount: 0,
+          });
+
+          // Update to queued state
+          setOptimisticMessages((prev) => {
+            const next = new Map(prev);
+            const msg = next.get(tempId);
+            if (msg) {
+              msg.send_state = 'queued';
+              msg.isSending = false;
+              next.set(tempId, msg);
+            }
+            return next;
+          });
+        } catch (error) {
+          console.error('[OptimisticUI] Failed to queue message:', error);
+        }
+        return;
+      }
+
       try {
-        // 2. Send to server in background
+        // 3. Send to server in background
         const response = await messagesAPI.sendMessage(
           conversationId,
           content,
@@ -68,7 +105,7 @@ export function useOptimisticMessages({
           replyToId
         );
 
-        // 3. Replace optimistic with real message from server
+        // 4. Replace optimistic with real message from server
         setOptimisticMessages((prev) => {
           const next = new Map(prev);
           next.delete(tempId);
@@ -77,22 +114,40 @@ export function useOptimisticMessages({
 
         setRealMessages((prev) => [...prev, response.message]);
 
-        console.log('[OptimisticUI] Message confirmed by server:', response.message.id);
+        console.log('[OptimisticUI] ✅ Message confirmed by server:', response.message.id);
       } catch (error) {
-        // 4. Mark as failed
-        console.error('[OptimisticUI] Failed to send message:', error);
+        // 5. Mark as failed - can be retried
+        console.error('[OptimisticUI] ❌ Failed to send message:', error);
 
         setOptimisticMessages((prev) => {
           const next = new Map(prev);
           const msg = next.get(tempId);
           if (msg) {
             msg.isSending = false;
-            msg.sendError = 'Failed to send';
-            msg.status = 'sent'; // Keep as sent, show error icon
+            msg.send_state = 'failed';
+            msg.sendError = error instanceof Error ? error.message : 'Failed to send';
+            msg.send_error = msg.sendError;
+            msg.retry_count = (msg.retry_count || 0);
             next.set(tempId, msg);
           }
           return next;
         });
+
+        // Add to offline queue for retry
+        try {
+          await offlineQueue.addToQueue({
+            id: tempId,
+            conversationId,
+            content,
+            messageType: 'text',
+            replyToId,
+            timestamp: Date.now(),
+            retryCount: 0,
+            lastError: msg.sendError,
+          });
+        } catch (queueError) {
+          console.error('[OptimisticUI] Failed to queue failed message:', queueError);
+        }
       }
     },
     [conversationId]
@@ -108,7 +163,7 @@ export function useOptimisticMessages({
       attachmentName: string,
       attachmentSize: number,
       attachmentType: string,
-      messageType: 'image' | 'audio' | 'file',
+      messageType: 'image' | 'audio' | 'file' | 'video',
       replyToId?: string
     ) => {
       const tempId = uuidv4();
@@ -182,15 +237,23 @@ export function useOptimisticMessages({
   const retryMessage = useCallback(
     async (tempId: string) => {
       const msg = optimisticMessages.get(tempId);
-      if (!msg) return;
+      if (!msg) {
+        console.warn('[OptimisticUI] Message not found for retry:', tempId);
+        return;
+      }
 
-      // Reset error state
+      console.log('[OptimisticUI] 🔄 Retrying message:', tempId);
+
+      // Reset error state and mark as sending
       setOptimisticMessages((prev) => {
         const next = new Map(prev);
         const message = next.get(tempId);
         if (message) {
           message.isSending = true;
+          message.send_state = 'sending';
           message.sendError = undefined;
+          message.send_error = undefined;
+          message.retry_count = (message.retry_count || 0) + 1;
           next.set(tempId, message);
         }
         return next;
@@ -205,6 +268,7 @@ export function useOptimisticMessages({
           msg.reply_to_id
         );
 
+        // Success - remove from optimistic and add to real
         setOptimisticMessages((prev) => {
           const next = new Map(prev);
           next.delete(tempId);
@@ -212,13 +276,25 @@ export function useOptimisticMessages({
         });
 
         setRealMessages((prev) => [...prev, response.message]);
+
+        // Remove from offline queue on success
+        try {
+          await offlineQueue.removeFromQueue(tempId);
+          console.log('[OptimisticUI] ✅ Removed message from offline queue:', tempId);
+        } catch (error) {
+          console.warn('[OptimisticUI] Failed to remove from queue:', error);
+        }
       } catch (error) {
+        console.error('[OptimisticUI] ❌ Retry failed:', error);
+        
         setOptimisticMessages((prev) => {
           const next = new Map(prev);
           const message = next.get(tempId);
           if (message) {
             message.isSending = false;
-            message.sendError = 'Failed to send';
+            message.send_state = 'failed';
+            message.sendError = error instanceof Error ? error.message : 'Failed to send';
+            message.send_error = message.sendError;
             next.set(tempId, message);
           }
           return next;
@@ -248,6 +324,11 @@ export function useOptimisticMessages({
           // Add to the END (newest messages at bottom)
           const updated = [...prev, message];
           console.log('[OptimisticUI] New messages array length:', updated.length);
+          
+          // Update cache in background
+          messageCache.addMessage(conversationId, message).catch(err => 
+            console.error('[OptimisticUI] Failed to cache new message:', err)
+          );
           
           // Trigger scroll after React updates DOM
           requestAnimationFrame(() => {
@@ -353,7 +434,74 @@ export function useOptimisticMessages({
       if (data.conversation_id === conversationId) {
         // Remove message from UI
         setRealMessages((prev) => prev.filter((msg) => msg.id !== data.message_id));
+        
+        // Remove from cache
+        messageCache.removeMessage(conversationId, data.message_id).catch(err =>
+          console.error('[OptimisticUI] Failed to remove from cache:', err)
+        );
+        
         console.log('[OptimisticUI] ✅ Removed deleted message:', data.message_id);
+      }
+    });
+
+    // Listen for message edits
+    const unsubscribeEdited = messageWS.on('message_edited', (data: any) => {
+      console.log('[OptimisticUI] ✏️ Received message_edited event:', data);
+      if (data.message && data.message.conversation_id === conversationId) {
+        const editedMessage = data.message;
+        setRealMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === editedMessage.id) {
+              return {
+                ...msg,
+                content: editedMessage.content,
+                edited_at: editedMessage.edited_at,
+                edit_count: editedMessage.edit_count,
+                original_content: editedMessage.original_content,
+              };
+            }
+            return msg;
+          })
+        );
+        console.log('[OptimisticUI] ✅ Updated edited message:', editedMessage.id);
+      }
+    });
+
+    // Listen for message pins
+    const unsubscribePinned = messageWS.on('message_pinned', (data: any) => {
+      console.log('[OptimisticUI] 📌 Received message_pinned event:', data);
+      if (data.message_id) {
+        setRealMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === data.message_id) {
+              return {
+                ...msg,
+                is_pinned: true,
+                pinned_at: new Date().toISOString(),
+              };
+            }
+            return msg;
+          })
+        );
+      }
+    });
+
+    // Listen for message unpins
+    const unsubscribeUnpinned = messageWS.on('message_unpinned', (data: any) => {
+      console.log('[OptimisticUI] 📌 Received message_unpinned event:', data);
+      if (data.message_id) {
+        setRealMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === data.message_id) {
+              return {
+                ...msg,
+                is_pinned: false,
+                pinned_at: undefined,
+              };
+            }
+            return msg;
+          })
+        );
       }
     });
 
@@ -364,6 +512,9 @@ export function useOptimisticMessages({
       unsubscribeReaction();
       unsubscribeReactionRemoved();
       unsubscribeDeleted();
+      unsubscribeEdited();
+      unsubscribePinned();
+      unsubscribeUnpinned();
     };
   }, [conversationId]);
 
@@ -444,6 +595,104 @@ export function useOptimisticMessages({
     });
   }, []);
 
+  // ==================== OFFLINE QUEUE SYNC ====================
+
+  /**
+   * Process offline queue - send all queued messages
+   */
+  const processOfflineQueue = useCallback(async () => {
+    try {
+      const queuedMessages = await offlineQueue.getQueuedMessages(conversationId);
+      
+      if (queuedMessages.length === 0) {
+        console.log('[OptimisticUI] No queued messages to process');
+        return;
+      }
+
+      console.log('[OptimisticUI] 📤 Processing', queuedMessages.length, 'queued messages');
+
+      for (const queued of queuedMessages) {
+        // Update optimistic message to "sending"
+        setOptimisticMessages((prev) => {
+          const next = new Map(prev);
+          const msg = next.get(queued.id);
+          if (msg) {
+            msg.send_state = 'sending';
+            msg.isSending = true;
+            next.set(queued.id, msg);
+          }
+          return next;
+        });
+
+        // Try to send
+        try {
+          const response = await messagesAPI.sendMessage(
+            conversationId,
+            queued.content,
+            queued.id,
+            queued.replyToId
+          );
+
+          // Success - remove from queue and optimistic, add to real
+          await offlineQueue.removeFromQueue(queued.id);
+          
+          setOptimisticMessages((prev) => {
+            const next = new Map(prev);
+            next.delete(queued.id);
+            return next;
+          });
+
+          setRealMessages((prev) => [...prev, response.message]);
+          console.log('[OptimisticUI] ✅ Queued message sent:', queued.id);
+        } catch (error) {
+          console.error('[OptimisticUI] ❌ Failed to send queued message:', error);
+          
+          // Mark as failed
+          setOptimisticMessages((prev) => {
+            const next = new Map(prev);
+            const msg = next.get(queued.id);
+            if (msg) {
+              msg.isSending = false;
+              msg.send_state = 'failed';
+              msg.sendError = error instanceof Error ? error.message : 'Failed to send';
+              msg.send_error = msg.sendError;
+              next.set(queued.id, msg);
+            }
+            return next;
+          });
+
+          // Update retry count in queue
+          await offlineQueue.updateMessage({
+            ...queued,
+            retryCount: queued.retryCount + 1,
+            lastError: error instanceof Error ? error.message : 'Failed to send',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('[OptimisticUI] Error processing offline queue:', error);
+    }
+  }, [conversationId]);
+
+  // Listen for network coming back online
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[OptimisticUI] 🌐 Network restored - processing queue');
+      processOfflineQueue();
+    };
+
+    window.addEventListener('network_online', handleOnline);
+    
+    // Also check on mount if there are queued messages
+    if (navigator.onLine) {
+      processOfflineQueue();
+    }
+
+    return () => {
+      window.removeEventListener('network_online', handleOnline);
+    };
+  }, [processOfflineQueue]);
+
   return {
     messages: allMessages,
     realMessages,
@@ -451,6 +700,7 @@ export function useOptimisticMessages({
     sendMessage,
     sendMessageWithAttachment,
     retryMessage,
+    processOfflineQueue,
     addMessage,
     updateMessageStatus,
     setMessages,

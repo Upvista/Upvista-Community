@@ -5,72 +5,32 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { messagesAPI, Message } from '../api/messages';
+import { messageCache } from '../utils/messageCache';
 
 // ============================================
-// INDEXEDDB CACHE
+// ENHANCED MESSAGE CACHING
 // ============================================
 
-const DB_NAME = 'upvista-messages';
-const DB_VERSION = 1;
-const STORE_NAME = 'messages';
-
 /**
- * Open IndexedDB database
- */
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-
-      // Create object store if it doesn't exist
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-  });
-}
-
-/**
- * Get cached messages from IndexedDB
+ * Get cached messages from new robust cache
  */
 async function getCachedMessages(conversationId: string): Promise<Message[] | null> {
   try {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.get(`conv_${conversationId}`);
-
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
-    });
+    return await messageCache.getMessages(conversationId);
   } catch (error) {
-    console.error('[IndexedDB] Error getting cached messages:', error);
+    console.error('[MessageCache] Error getting cached messages:', error);
     return null;
   }
 }
 
 /**
- * Save messages to IndexedDB cache
+ * Save messages to new robust cache
  */
 async function saveCachedMessages(conversationId: string, messages: Message[]): Promise<void> {
   try {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.put(messages, `conv_${conversationId}`);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    await messageCache.saveMessages(conversationId, messages);
   } catch (error) {
-    console.error('[IndexedDB] Error saving cached messages:', error);
+    console.error('[MessageCache] Error saving cached messages:', error);
   }
 }
 
@@ -270,6 +230,89 @@ export function useInfiniteMessages({
     }
   }, [conversationId]);
 
+  // ==================== BACKGROUND SYNC ====================
+
+  /**
+   * Refresh messages from server (for cache invalidation)
+   */
+  const refreshMessages = useCallback(async () => {
+    if (!conversationId) return;
+
+    console.log('[InfiniteScroll] 🔄 Background sync - refreshing messages');
+
+    try {
+      const response = await messagesAPI.getMessages(conversationId, pageSize, 0);
+
+      if (response.success) {
+        const loadedMessages = response.messages || [];
+        
+        // Sort chronologically
+        const sorted = [...loadedMessages].sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        
+        // Update messages - merge with existing to avoid losing optimistic messages
+        setMessages((prev) => {
+          // Keep any optimistic messages (have temp_id)
+          const optimistic = prev.filter(m => m.temp_id);
+          
+          // Deduplicate server messages
+          const serverMessages = sorted.filter(
+            sm => !prev.some(pm => pm.id === sm.id)
+          );
+
+          // Merge: existing + new server messages
+          const merged = [...prev, ...serverMessages].sort((a, b) => 
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+
+          console.log('[InfiniteScroll] ✅ Merged messages:', merged.length, '(added', serverMessages.length, 'new)');
+          return merged;
+        });
+
+        // Update cache
+        await messageCache.saveMessages(conversationId, sorted);
+        console.log('[InfiniteScroll] ✅ Background sync complete');
+      }
+    } catch (error) {
+      console.error('[InfiniteScroll] ❌ Background sync failed:', error);
+    }
+  }, [conversationId, pageSize]);
+
+  /**
+   * Auto-sync when app becomes visible (user returns to tab)
+   */
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && conversationId) {
+        console.log('[InfiniteScroll] 👁️ App visible - triggering background sync');
+        refreshMessages();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [conversationId, refreshMessages]);
+
+  /**
+   * Auto-sync when network is restored
+   */
+  useEffect(() => {
+    const handleNetworkOnline = () => {
+      console.log('[InfiniteScroll] 🌐 Network restored - triggering background sync');
+      refreshMessages();
+    };
+
+    window.addEventListener('network_online', handleNetworkOnline);
+
+    return () => {
+      window.removeEventListener('network_online', handleNetworkOnline);
+    };
+  }, [refreshMessages]);
+
   // ==================== RETURN ====================
 
   return {
@@ -282,6 +325,8 @@ export function useInfiniteMessages({
     scrollToBottom,
     loadMore,
     setMessages,
+    refreshMessages,
+    invalidateCache: () => messageCache.invalidateConversation(conversationId),
   };
 }
 

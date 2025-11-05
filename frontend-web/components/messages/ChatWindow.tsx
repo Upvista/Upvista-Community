@@ -6,13 +6,34 @@ import { useOptimisticMessages } from '@/lib/hooks/useOptimisticMessages';
 import { useInfiniteMessages } from '@/lib/hooks/useInfiniteMessages';
 import { useVoiceRecorder } from '@/lib/hooks/useVoiceRecorder';
 import { compressImage } from '@/lib/utils/imageCompression';
+import { compressAudio } from '@/lib/utils/audioCompression';
+import { compressVideo } from '@/lib/utils/videoCompression';
 import ChatHeader from './ChatHeader';
 import ChatFooter from './ChatFooter';
 import MessageBubble from './MessageBubble';
+import VirtualMessageList from './VirtualMessageList';
 import TypingIndicator from './TypingIndicator';
 import { messageWS } from '@/lib/websocket/MessageWebSocket';
 import { toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { EditMessageDialog } from './EditMessageDialog';
+import { ForwardMessageDialog } from './ForwardMessageDialog';
+import { MessageInfoDialog } from './MessageInfoDialog';
+import { ChatProfileDialog } from './ChatProfileDialog';
+import { MediaViewer } from './MediaViewer';
+import { VideoQualityDialog } from './VideoQualityDialog';
+import { ChevronDown } from 'lucide-react';
+import { NetworkStatusBar } from './NetworkStatusBar';
+import { UploadProgressBar } from './UploadProgressBar';
+import { ImagePreviewEditor } from './ImagePreviewEditor';
+import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
+import { useUploadProgress } from '@/lib/hooks/useUploadProgress';
+
+interface TypingUser {
+  user_id: string;
+  display_name: string;
+  is_recording?: boolean;
+}
 
 interface ChatWindowProps {
   conversationId: string;
@@ -21,10 +42,28 @@ interface ChatWindowProps {
 
 export default function ChatWindow({ conversationId, onClose }: ChatWindowProps) {
   const [conversation, setConversation] = useState<Conversation | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isChatVisible, setIsChatVisible] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ messageId: string; isMine: boolean; type: 'unsend' | 'delete_for_me' } | null>(null);
+  const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<Message | null>(null);
+  const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showPinnedOnly, setShowPinnedOnly] = useState(false);
+  const [pinnedCount, setPinnedCount] = useState(0);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [viewingMedia, setViewingMedia] = useState<Message | null>(null);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number | undefined>(undefined);
+  const [useVirtualScroll] = useState(true); // Enable virtual scrolling for performance
+  
+  // Scroll to bottom button state
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [unreadWhileScrolledUp, setUnreadWhileScrolledUp] = useState(0);
+  const [isUserAtBottom, setIsUserAtBottom] = useState(true);
 
   // Hooks
   const {
@@ -33,6 +72,8 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
     sendMessageWithAttachment,
     setMessages,
     removeMessage,
+    retryMessage,
+    processOfflineQueue,
   } = useOptimisticMessages({ conversationId });
 
   const {
@@ -46,8 +87,36 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
     loadMore,
   } = useInfiniteMessages({ conversationId });
 
-  const { isRecording, duration, startRecording, stopRecording, cancelRecording } =
-    useVoiceRecorder();
+  const { 
+    isRecording, 
+    duration, 
+    startRecording, 
+    stopRecording, 
+    cancelRecording,
+    isPaused,
+    pauseRecording,
+    resumeRecording 
+  } = useVoiceRecorder();
+
+  const networkStatus = useNetworkStatus();
+  
+  const {
+    startUpload,
+    updateProgress,
+    completeUpload,
+    failUpload,
+    cancelUpload,
+    uploads,
+  } = useUploadProgress();
+
+  // ==================== COUNT PINNED MESSAGES ====================
+
+  useEffect(() => {
+    // Count pinned messages in real-time
+    const count = messages.filter(msg => msg.is_pinned || msg.pinned_at).length;
+    setPinnedCount(count);
+    console.log('[ChatWindow] Pinned message count:', count);
+  }, [messages]);
 
   // ==================== LOAD CONVERSATION ====================
 
@@ -166,24 +235,131 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
   // We only need to handle typing indicators here
 
   useEffect(() => {
-    // Listen for typing indicators (instant)
+    // Listen for typing indicators with user info (instant)
     const unsubscribeTyping = messageWS.on('typing', (data: any) => {
+      console.log('[ChatWindow] Typing event received:', data);
+      
       if (data.conversation_id === conversationId) {
-        setIsTyping(true);
+        setTypingUsers((prev) => {
+          // Check if user already in list
+          const existing = prev.find((u) => u.user_id === data.user_id);
+          if (existing) {
+            // Update existing user
+            return prev.map((u) =>
+              u.user_id === data.user_id
+                ? { ...u, is_recording: data.is_recording || false }
+                : u
+            );
+          }
+          // Add new typing user
+          return [
+            ...prev,
+            {
+              user_id: data.user_id,
+              display_name: data.display_name || 'User',
+              is_recording: data.is_recording || false,
+            },
+          ];
+        });
       }
     });
 
     const unsubscribeStopTyping = messageWS.on('stop_typing', (data: any) => {
+      console.log('[ChatWindow] Stop typing event received:', data);
+      
       if (data.conversation_id === conversationId) {
-        setIsTyping(false);
+        // Remove user from typing list
+        setTypingUsers((prev) => prev.filter((u) => u.user_id !== data.user_id));
       }
     });
+
+    // Listen for forwarded messages (custom event from other ChatWindow)
+    const handleMessageForwarded = (event: any) => {
+      const { conversationId: targetConvId, message } = event.detail;
+      console.log('[ChatWindow] Received message_forwarded event for:', targetConvId);
+      
+      if (targetConvId === conversationId) {
+        console.log('[ChatWindow] Adding forwarded message to this conversation');
+        const updatedMessages = [...messages, message];
+        setMessages(updatedMessages);
+        
+        requestAnimationFrame(() => {
+          scrollToBottom(true);
+        });
+      }
+    };
+
+    window.addEventListener('message_forwarded', handleMessageForwarded as EventListener);
 
     return () => {
       unsubscribeTyping();
       unsubscribeStopTyping();
+      window.removeEventListener('message_forwarded', handleMessageForwarded as EventListener);
     };
+  }, [conversationId, messages, setMessages]);
+
+  // ==================== SCROLL TO BOTTOM BUTTON ====================
+
+  // Detect scroll position in real-time
+  const checkScrollPosition = () => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    
+    // Show button if scrolled up more than 100px (even one message)
+    const shouldShow = distanceFromBottom > 100;
+    setShowScrollButton(shouldShow);
+    setIsUserAtBottom(!shouldShow);
+
+    // If user scrolls to bottom, reset unread count
+    if (!shouldShow) {
+      setUnreadWhileScrolledUp(0);
+    }
+  };
+
+  // Enhanced handleScroll to include scroll button logic
+  const handleScrollWithButton = () => {
+    handleScroll(); // Original infinite scroll logic
+    checkScrollPosition(); // Check if button should show
+    handleChatInteraction(); // Mark as read when scrolling
+  };
+
+  // Detect new messages while scrolled up - track previous length
+  const [prevMessageCount, setPrevMessageCount] = useState(0);
+  
+  useEffect(() => {
+    if (!isUserAtBottom && messages.length > prevMessageCount) {
+      // New message(s) arrived while user is scrolled up
+      const newMessages = messages.slice(prevMessageCount);
+      const newUnreadCount = newMessages.filter(msg => !msg.is_mine).length;
+      
+      if (newUnreadCount > 0) {
+        // Increment unread count by number of new messages from others
+        setUnreadWhileScrolledUp(prev => prev + newUnreadCount);
+      }
+    }
+    
+    // Update previous count
+    setPrevMessageCount(messages.length);
+  }, [messages, isUserAtBottom, prevMessageCount]);
+
+  // Reset unread count when conversation changes
+  useEffect(() => {
+    setUnreadWhileScrolledUp(0);
+    setShowScrollButton(false);
+    setIsUserAtBottom(true);
+    setPrevMessageCount(0);
   }, [conversationId]);
+
+  // Handle scroll to bottom button click
+  const handleScrollToBottomClick = () => {
+    scrollToBottom(true);
+    setUnreadWhileScrolledUp(0);
+    setShowScrollButton(false);
+    setIsUserAtBottom(true);
+  };
 
   // ==================== SEND MESSAGE ====================
 
@@ -214,14 +390,48 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
     }
   };
 
-  // ==================== SEND VOICE MESSAGE ====================
+  // ==================== VOICE RECORDING HANDLERS ====================
 
   const handleSendVoice = async (audioBlob: Blob) => {
+    const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
-      // Upload audio
-      const uploadResponse = await messagesAPI.uploadAudio(audioBlob);
+      // Start progress tracking
+      const abortSignal = startUpload(uploadId, 'voice-message.webm');
+      updateProgress(uploadId, 5);
+
+      // Compress audio with FFmpeg (64kbps mono for voice)
+      console.log('[ChatWindow] Compressing voice message with FFmpeg...');
+      const compressionResult = await compressAudio(audioBlob, {
+        bitrate: 64,
+        mono: true,
+        onProgress: (p) => updateProgress(uploadId, 5 + (p * 0.30)), // 5% to 35%
+      });
+
+      const compressedBlob = compressionResult.compressedBlob;
+      const savingsPercent = Math.round((1 - compressionResult.compressionRatio) * 100);
+      
+      if (savingsPercent > 10) {
+        console.log(`[ChatWindow] Audio compressed: ${(audioBlob.size / 1024).toFixed(1)}KB → ${(compressedBlob.size / 1024).toFixed(1)}KB (${savingsPercent}% smaller)`);
+        toast.success(`Compressed ${savingsPercent}% smaller`);
+      }
+
+      updateProgress(uploadId, 40);
+
+      // Upload compressed audio with progress tracking
+      const uploadResponse: any = await messagesAPI.uploadAudio(
+        compressedBlob,
+        'voice-message.webm',
+        abortSignal,
+        (progress) => updateProgress(uploadId, 40 + (progress * 0.55)) // 40% to 95%
+      );
+      
+      updateProgress(uploadId, 98);
 
       if (uploadResponse.success) {
+        // Complete upload
+        completeUpload(uploadId);
+
         // Send as audio message
         await sendMessageWithAttachment(
           'Voice message',
@@ -236,21 +446,69 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
       }
     } catch (error) {
       console.error('Failed to send voice message:', error);
-      toast.error('Failed to send voice message');
+      
+      if (error instanceof Error && error.message === 'Upload cancelled') {
+        toast.info('Upload cancelled');
+      } else {
+        failUpload(uploadId, error instanceof Error ? error.message : 'Upload failed');
+        toast.error('Failed to send voice message');
+      }
+    }
+  };
+
+  // ==================== IMAGE PREVIEW EDITOR ====================
+
+  const handleImageSelected = (file: File) => {
+    // Show preview editor (WhatsApp-style)
+    setPendingImageFile(file);
+  };
+
+  const handleSendFromEditor = async (editedFile: File, caption: string, isHD: boolean) => {
+    // Close editor
+    setPendingImageFile(null);
+    
+    // Send with selected quality and caption
+    const quality = isHD ? 'hd' : 'standard';
+    
+    // If there's a caption, we'll add it to the message
+    // For now, send the image (caption feature can be enhanced in Phase 2)
+    await handleSendImage(editedFile, quality);
+    
+    // TODO: If caption is provided, could send as separate text message
+    if (caption.trim()) {
+      await sendMessage(caption);
     }
   };
 
   // ==================== SEND IMAGE ====================
 
   const handleSendImage = async (file: File, quality: 'standard' | 'hd' = 'standard') => {
+    const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
-      // Compress image on client side
-      const compressed = await compressImage(file, quality);
+      // Start progress tracking with cancellation support
+      const abortSignal = startUpload(uploadId, file.name);
 
-      // Upload image
-      const uploadResponse = await messagesAPI.uploadImage(compressed, quality);
+      // Compress image on client side
+      updateProgress(uploadId, 20);
+      const compressed = await compressImage(file, quality);
+      
+      updateProgress(uploadId, 40);
+
+      // Upload image with real progress tracking and cancellation
+      const uploadResponse: any = await messagesAPI.uploadImage(
+        compressed, 
+        quality,
+        abortSignal,
+        (progress) => updateProgress(uploadId, 40 + (progress * 0.5)) // 40% to 90%
+      );
+      
+      updateProgress(uploadId, 95);
 
       if (uploadResponse.success) {
+        // Complete upload
+        completeUpload(uploadId);
+
         // Send as image message
         await sendMessageWithAttachment(
           'Photo',
@@ -265,7 +523,172 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
       }
     } catch (error) {
       console.error('Failed to send image:', error);
-      toast.error('Failed to send image');
+      
+      if (error instanceof Error && error.message === 'Upload cancelled') {
+        toast.info('Upload cancelled');
+      } else {
+        failUpload(uploadId, error instanceof Error ? error.message : 'Upload failed');
+        toast.error('Failed to send image');
+      }
+    }
+  };
+
+  const handleSendFile = async (file: File) => {
+    const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      // Determine if it's audio or document
+      const isAudio = file.type.startsWith('audio/');
+      const messageType = isAudio ? 'audio' : 'file';
+      
+      // Start progress tracking with cancellation
+      const abortSignal = startUpload(uploadId, file.name);
+      updateProgress(uploadId, 10);
+      
+      // Upload file with real progress tracking
+      let uploadResponse: any;
+      
+      if (isAudio) {
+        uploadResponse = await messagesAPI.uploadAudio(
+          file,
+          file.name,
+          abortSignal,
+          (progress) => updateProgress(uploadId, 10 + (progress * 0.85)) // 10% to 95%
+        );
+      } else {
+        uploadResponse = await messagesAPI.uploadFile(
+          file,
+          abortSignal,
+          (progress) => updateProgress(uploadId, 10 + (progress * 0.85)) // 10% to 95%
+        );
+      }
+      
+      updateProgress(uploadId, 98);
+
+      if (uploadResponse.success) {
+        // Complete upload
+        completeUpload(uploadId);
+
+        // Send as file/audio message
+        await sendMessageWithAttachment(
+          isAudio ? 'Audio file' : file.name,
+          uploadResponse.url,
+          uploadResponse.name,
+          uploadResponse.size,
+          uploadResponse.type,
+          messageType
+        );
+
+        scrollToBottom(true);
+      }
+    } catch (error) {
+      console.error('Failed to send file:', error);
+      
+      if (error instanceof Error && error.message === 'Upload cancelled') {
+        toast.info('Upload cancelled');
+      } else {
+        failUpload(uploadId, error instanceof Error ? error.message : 'Upload failed');
+        toast.error('Failed to send file');
+      }
+    }
+  };
+
+  // ==================== VIDEO UPLOAD ====================
+
+  const handleVideoSelected = async (file: File) => {
+    try {
+      // Get video metadata
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+
+      video.onloadedmetadata = () => {
+        setVideoDuration(Math.round(video.duration));
+        setPendingVideoFile(file);
+        URL.revokeObjectURL(video.src);
+      };
+
+      video.onerror = () => {
+        toast.error('Invalid video file');
+      };
+
+      video.src = URL.createObjectURL(file);
+    } catch (error) {
+      console.error('Failed to load video:', error);
+      toast.error('Failed to load video');
+    }
+  };
+
+  const handleSendVideo = async (file: File, quality: 'standard' | 'hd') => {
+    const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      setPendingVideoFile(null);
+
+      // Start progress tracking
+      const abortSignal = startUpload(uploadId, file.name);
+      updateProgress(uploadId, 5);
+
+      toast.info('Compressing video with FFmpeg... This may take a moment.');
+
+      // Compress video with FFmpeg
+      console.log(`[ChatWindow] Compressing video to ${quality} quality...`);
+      const compressionResult = await compressVideo(file, {
+        quality,
+        onProgress: (p) => updateProgress(uploadId, 5 + (p * 0.60)), // 5% to 65%
+      });
+
+      const compressedVideo = compressionResult.compressedBlob;
+      const thumbnail = compressionResult.thumbnail;
+      const savingsPercent = Math.round((1 - compressionResult.compressionRatio) * 100);
+
+      if (savingsPercent > 10) {
+        console.log(`[ChatWindow] Video compressed: ${(file.size / (1024 * 1024)).toFixed(1)}MB → ${(compressedVideo.size / (1024 * 1024)).toFixed(1)}MB (${savingsPercent}% smaller)`);
+        toast.success(`Video compressed ${savingsPercent}% smaller!`);
+      }
+
+      updateProgress(uploadId, 70);
+
+      // Convert base64 thumbnail to blob
+      const thumbnailBlob = await fetch(thumbnail).then(r => r.blob());
+
+      // Upload compressed video with thumbnail
+      const uploadResponse: any = await messagesAPI.uploadVideo(
+        new File([compressedVideo], file.name, { type: 'video/mp4' }),
+        thumbnailBlob,
+        abortSignal,
+        (progress) => updateProgress(uploadId, 70 + (progress * 0.25)) // 70% to 95%
+      );
+
+      updateProgress(uploadId, 98);
+
+      if (uploadResponse.success) {
+        // Complete upload
+        completeUpload(uploadId);
+
+        // Send as video message with metadata
+        await sendMessageWithAttachment(
+          'Video',
+          uploadResponse.url,
+          uploadResponse.name || file.name,
+          uploadResponse.size || compressedVideo.size,
+          uploadResponse.type || 'video/mp4',
+          'video',
+          replyingTo?.id
+        );
+
+        toast.success('Video sent successfully!');
+        setReplyingTo(null);
+        scrollToBottom(true);
+      }
+    } catch (error) {
+      console.error('Failed to send video:', error);
+      
+      if (error instanceof Error && error.message === 'Upload cancelled') {
+        toast.info('Upload cancelled');
+      } else {
+        failUpload(uploadId, error instanceof Error ? error.message : 'Upload failed');
+        toast.error('Failed to send video');
+      }
     }
   };
 
@@ -369,9 +792,7 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
   };
 
   const handleForward = (message: Message) => {
-    // TODO: Implement forward dialog
-    console.log('Forward message:', message.id);
-    toast.info('Forward feature coming soon!');
+    setForwardingMessage(message.id);
   };
 
   const handleCopy = (message: Message) => {
@@ -385,26 +806,126 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
   };
 
   const handlePin = async (messageId: string, isPinned: boolean) => {
-    // TODO: Implement pin/unpin API
-    console.log(isPinned ? 'Unpin' : 'Pin', 'message:', messageId);
-    toast.info('Pin feature coming soon!');
+    try {
+      // Optimistic UI update first (instant feedback)
+      const updatedMessages = messages.map((msg: Message) =>
+        msg.id === messageId 
+          ? { ...msg, is_pinned: !isPinned, pinned_at: isPinned ? undefined : new Date().toISOString() } 
+          : msg
+      );
+      setMessages(updatedMessages);
+
+      // Then call API
+      if (isPinned) {
+        await messagesAPI.unpinMessage(messageId);
+        toast.success('Message unpinned');
+      } else {
+        await messagesAPI.pinMessage(messageId);
+        toast.success('Message pinned');
+      }
+    } catch (error) {
+      console.error('Failed to pin/unpin message:', error);
+      toast.error('Failed to pin/unpin message');
+      
+      // Revert on error
+      const revertedMessages = messages.map((msg: Message) =>
+        msg.id === messageId 
+          ? { ...msg, is_pinned: isPinned, pinned_at: isPinned ? new Date().toISOString() : undefined } 
+          : msg
+      );
+      setMessages(revertedMessages);
+    }
   };
 
-  const handleShare = (message: Message) => {
-    // TODO: Implement share dialog
-    console.log('Share message:', message.id);
-    toast.info('Share feature coming soon!');
+  const handleShare = async (message: Message) => {
+    if (navigator.share && message.message_type === 'text') {
+      try {
+        await navigator.share({
+          title: 'Shared Message',
+          text: message.content,
+        });
+        toast.success('Message shared');
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          handleCopy(message); // Fallback to copy
+        }
+      }
+    } else {
+      handleCopy(message); // Fallback to copy
+    }
+  };
+
+  const handleEdit = (message: Message) => {
+    if (message.message_type === 'text' && message.is_mine) {
+      setEditingMessage({ id: message.id, content: message.content });
+    }
+  };
+
+  const handleEditComplete = (newContent: string) => {
+    // Update message locally (optimistic UI)
+    if (editingMessage) {
+      const updatedMessages = messages.map((msg: Message) =>
+        msg.id === editingMessage.id
+          ? {
+              ...msg,
+              content: newContent,
+              edited_at: new Date().toISOString(),
+              edit_count: (msg.edit_count || 0) + 1,
+            }
+          : msg
+      );
+      setMessages(updatedMessages);
+    }
+    setEditingMessage(null);
   };
 
   const handleInfo = (message: Message) => {
-    // Build formatted info message
-    const sentTime = new Date(message.created_at).toLocaleString();
-    const deliveredTime = message.delivered_at ? new Date(message.delivered_at).toLocaleString() : 'Not yet';
-    const readTime = message.read_at ? new Date(message.read_at).toLocaleString() : 'Not yet';
-    
-    const info = `Sent: ${sentTime}\nDelivered: ${deliveredTime}\nRead: ${readTime}`;
-    
-    toast.info(info, 5000);
+    setInfoMessage(message);
+  };
+
+  const handleViewMedia = (message: Message) => {
+    setViewingMedia(message);
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      try {
+        const response = await messagesAPI.searchConversationMessages(conversationId, query);
+        if (response.success) {
+          setSearchResults(response.messages);
+          toast.success(`Found ${response.messages.length} message(s)`);
+        }
+      } catch (error) {
+        console.error('Search failed:', error);
+        toast.error('Search failed');
+        setSearchResults([]);
+      }
+    } else {
+      setSearchResults([]);
+      setShowPinnedOnly(false);
+    }
+  };
+
+  const handleShowPinned = async () => {
+    if (showPinnedOnly) {
+      // Close pinned view
+      setShowPinnedOnly(false);
+      setSearchResults([]);
+    } else {
+      // Show pinned messages
+      try {
+        const response = await messagesAPI.getPinnedMessages(conversationId);
+        if (response.success) {
+          setSearchResults(response.messages);
+          setShowPinnedOnly(true);
+          toast.success(`${response.messages.length} pinned message(s)`);
+        }
+      } catch (error) {
+        console.error('Failed to load pinned messages:', error);
+        toast.error('Failed to load pinned messages');
+      }
+    }
   };
 
   // ==================== RENDER ====================
@@ -418,19 +939,26 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
   }
 
   return (
-    <div className="flex flex-col h-full min-h-screen md:min-h-0">
+    <div className="flex flex-col h-full min-h-screen md:min-h-0 relative">
+      {/* Network Status Bar */}
+      <NetworkStatusBar />
+
       {/* Header */}
-      <ChatHeader conversation={conversation} onClose={onClose} />
+      <ChatHeader 
+        conversation={conversation} 
+        onClose={onClose}
+        onSearch={handleSearch}
+        onShowPinned={handleShowPinned}
+        pinnedCount={pinnedCount}
+        onShowProfile={() => setShowProfileDialog(true)}
+      />
 
       {/* Messages Body */}
       <div
         ref={scrollRef}
         data-message-scroll
-        onScroll={() => {
-          handleScroll();
-          handleChatInteraction(); // Only mark as read when user SCROLLS
-        }}
-        className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 dark:bg-gray-900"
+        onScroll={handleScrollWithButton}
+        className="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 dark:bg-gray-900 relative"
       >
         {/* Load more indicator */}
         {hasMore && (
@@ -448,11 +976,23 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
           </div>
         )}
 
-        {/* Messages */}
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
+        {/* Search/Pinned Banner */}
+        {(searchQuery || showPinnedOnly) && (
+          <div className="sticky top-0 bg-purple-50 dark:bg-purple-900/30 border-b border-purple-200 dark:border-purple-800 px-4 py-2 z-10">
+            <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
+              {showPinnedOnly ? `📌 Showing ${searchResults.length} pinned message(s)` : `🔍 Search results: ${searchResults.length} message(s)`}
+            </p>
+          </div>
+        )}
+
+        {/* Messages - Virtual Scrolling or Standard */}
+        {useVirtualScroll && !searchQuery && !showPinnedOnly ? (
+          <VirtualMessageList
+            messages={messages}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            onScroll={handleScroll}
             onReact={handleReact}
             onReply={handleReply}
             onStar={handleStar}
@@ -461,21 +1001,84 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
             onCopy={handleCopy}
             onPin={handlePin}
             onShare={handleShare}
+            onEdit={handleEdit}
             onInfo={handleInfo}
+            onViewMedia={handleViewMedia}
+            onRetry={retryMessage}
           />
-        ))}
+        ) : (
+          // Fallback: Standard rendering for search/pinned results
+          (searchQuery || showPinnedOnly ? searchResults : messages).map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onReact={handleReact}
+              onReply={handleReply}
+              onStar={handleStar}
+              onDelete={handleDelete}
+              onForward={handleForward}
+              onCopy={handleCopy}
+              onPin={handlePin}
+              onShare={handleShare}
+              onEdit={handleEdit}
+              onInfo={handleInfo}
+              onViewMedia={handleViewMedia}
+              onRetry={retryMessage}
+            />
+          ))
+        )}
+
+        {/* Upload Progress Indicators */}
+        {uploads.length > 0 && (
+          <div className="space-y-2">
+            {uploads.map((upload) => (
+              <UploadProgressBar
+                key={upload.uploadId}
+                upload={upload}
+                onCancel={cancelUpload}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Typing Indicator */}
-        {isTyping && <TypingIndicator />}
+        <TypingIndicator typingUsers={typingUsers} />
+
+        {/* Scroll to Bottom Button - WhatsApp Style */}
+        {showScrollButton && (
+          <div className="sticky bottom-4 left-0 right-0 flex justify-end pr-2 pointer-events-none z-10 animate-fade-in-up">
+            <button
+              onClick={handleScrollToBottomClick}
+              className="pointer-events-auto bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-full p-2 shadow-lg border border-gray-300 dark:border-gray-600 transition-all duration-150 hover:scale-105 active:scale-95 relative group"
+              aria-label="Scroll to bottom"
+            >
+              {/* Unread Badge */}
+              {unreadWhileScrolledUp > 0 && (
+                <div className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1.5 shadow-lg border-2 border-white dark:border-gray-800 animate-scale-bounce">
+                  {unreadWhileScrolledUp > 99 ? '99+' : unreadWhileScrolledUp}
+                </div>
+              )}
+              
+              {/* Chevron Icon */}
+              <ChevronDown className="w-4 h-4 text-gray-700 dark:text-gray-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
       <ChatFooter
+        conversationId={conversationId}
         onSendMessage={handleSendMessage}
-        onSendImage={handleSendImage}
+        onSendImage={handleImageSelected}
+        onSendFile={handleSendFile}
+        onSendVideo={handleVideoSelected}
         onStartVoiceRecording={startRecording}
+        onPauseVoiceRecording={pauseRecording}
+        onResumeVoiceRecording={resumeRecording}
         onCancelVoiceRecording={cancelRecording}
         isRecording={isRecording}
+        isPaused={isPaused}
         recordingDuration={duration}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
@@ -496,6 +1099,104 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
           variant="danger"
           onConfirm={confirmDelete}
           onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
+      {/* Edit Message Dialog */}
+      {editingMessage && (
+        <EditMessageDialog
+          isOpen={true}
+          messageId={editingMessage.id}
+          currentContent={editingMessage.content}
+          onClose={() => setEditingMessage(null)}
+          onEdit={handleEditComplete}
+        />
+      )}
+
+      {/* Forward Message Dialog */}
+      {forwardingMessage && (
+        <ForwardMessageDialog
+          isOpen={true}
+          messageId={forwardingMessage}
+          currentConversationId={conversationId}
+          onClose={() => setForwardingMessage(null)}
+          onForward={(forwardedMessage, targetConversationId) => {
+            console.log('[ChatWindow] Message forwarded to:', targetConversationId, 'Current:', conversationId);
+            console.log('[ChatWindow] Forwarded message:', forwardedMessage);
+            
+            // If forwarded to the CURRENT conversation, add it to local state immediately
+            if (targetConversationId === conversationId) {
+              console.log('[ChatWindow] Adding forwarded message to current conversation');
+              const updatedMessages = [...messages, forwardedMessage];
+              setMessages(updatedMessages);
+              
+              // Scroll to show the new forwarded message
+              requestAnimationFrame(() => {
+                scrollToBottom(true);
+              });
+            } else {
+              console.log('[ChatWindow] Message forwarded to different conversation');
+              // Dispatch event to notify other ChatWindow instances
+              window.dispatchEvent(new CustomEvent('message_forwarded', {
+                detail: { conversationId: targetConversationId, message: forwardedMessage }
+              }));
+            }
+            
+            setForwardingMessage(null);
+          }}
+        />
+      )}
+
+      {/* Message Info Dialog */}
+      {infoMessage && (
+        <MessageInfoDialog
+          isOpen={true}
+          message={infoMessage}
+          onClose={() => setInfoMessage(null)}
+        />
+      )}
+
+      {/* Chat Profile Dialog */}
+      <ChatProfileDialog
+        isOpen={showProfileDialog}
+        conversation={conversation}
+        onClose={() => setShowProfileDialog(false)}
+        onViewProfile={() => {
+          setShowProfileDialog(false);
+          if (conversation.other_user?.username) {
+            window.location.href = `/profile/${conversation.other_user.username}`;
+          }
+        }}
+      />
+
+      {/* Media Viewer - WhatsApp Style */}
+      {viewingMedia && (
+        <MediaViewer
+          isOpen={true}
+          message={viewingMedia}
+          allMedia={messages.filter(m => m.message_type === 'image' || m.message_type === 'audio' || m.message_type === 'file' || m.message_type === 'video')}
+          onClose={() => setViewingMedia(null)}
+        />
+      )}
+
+      {/* Image Preview Editor - WhatsApp Style */}
+      {pendingImageFile && (
+        <ImagePreviewEditor
+          isOpen={true}
+          file={pendingImageFile}
+          onSend={handleSendFromEditor}
+          onCancel={() => setPendingImageFile(null)}
+        />
+      )}
+
+      {/* Video Quality Dialog */}
+      {pendingVideoFile && (
+        <VideoQualityDialog
+          isOpen={true}
+          videoFile={pendingVideoFile}
+          videoDuration={videoDuration}
+          onSelect={(quality) => handleSendVideo(pendingVideoFile, quality)}
+          onCancel={() => setPendingVideoFile(null)}
         />
       )}
     </div>

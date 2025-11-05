@@ -397,7 +397,7 @@ func (s *MessagingService) SearchMessages(ctx context.Context, userID uuid.UUID,
 // ============================================
 
 // StartTyping sets typing indicator for a user in a conversation
-func (s *MessagingService) StartTyping(ctx context.Context, conversationID, userID uuid.UUID) error {
+func (s *MessagingService) StartTyping(ctx context.Context, conversationID, userID uuid.UUID, isRecording bool) error {
 	// Update database
 	if err := s.repo.UpdateConversationTyping(ctx, conversationID, userID, true); err != nil {
 		return err
@@ -419,8 +419,8 @@ func (s *MessagingService) StartTyping(ctx context.Context, conversationID, user
 		otherUserID = conversation.Participant1ID
 	}
 
-	// Broadcast typing indicator
-	go s.broadcastTyping(otherUserID, conversationID, userID, true)
+	// Broadcast typing indicator with recording status
+	go s.broadcastTyping(otherUserID, conversationID, userID, true, isRecording)
 
 	return nil
 }
@@ -448,8 +448,8 @@ func (s *MessagingService) StopTyping(ctx context.Context, conversationID, userI
 		otherUserID = conversation.Participant1ID
 	}
 
-	// Broadcast stop typing
-	go s.broadcastTyping(otherUserID, conversationID, userID, false)
+	// Broadcast stop typing (not recording)
+	go s.broadcastTyping(otherUserID, conversationID, userID, false, false)
 
 	return nil
 }
@@ -640,10 +640,17 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-func (s *MessagingService) broadcastTyping(recipientID, conversationID, typerID uuid.UUID, isTyping bool) {
+func (s *MessagingService) broadcastTyping(recipientID, conversationID, typerID uuid.UUID, isTyping bool, isRecording bool) {
 	msgType := models.WSMessageTypeTyping
 	if !isTyping {
 		msgType = models.WSMessageTypeStopTyping
+	}
+
+	// Fetch typing user details
+	typer, err := s.userRepo.GetUserByID(context.Background(), typerID)
+	if err != nil {
+		log.Printf("[MessagingService] broadcastTyping - Failed to fetch typer details: %v", err)
+		return
 	}
 
 	envelope := models.WSMessageEnvelope{
@@ -654,11 +661,14 @@ func (s *MessagingService) broadcastTyping(recipientID, conversationID, typerID 
 		Data: models.TypingInfo{
 			ConversationID: conversationID,
 			UserID:         typerID,
+			DisplayName:    typer.DisplayName,
 			IsTyping:       isTyping,
+			IsRecording:    isRecording, // Now properly set!
 		},
 		Timestamp: time.Now().Unix(),
 	}
 
+	log.Printf("[MessagingService] Broadcasting typing: user=%s, typing=%v, recording=%v", typer.DisplayName, isTyping, isRecording)
 	s.wsManager.BroadcastToUserWithData(recipientID, envelope)
 }
 
@@ -771,4 +781,321 @@ func (s *MessagingService) markAsDelivered(ctx context.Context, messageID uuid.U
 
 func (s *MessagingService) markConversationAsRead(ctx context.Context, conversationID, userID uuid.UUID) {
 	s.MarkAsRead(ctx, conversationID, userID)
+}
+
+// ============================================
+// PIN MESSAGES
+// ============================================
+
+// PinMessage pins a message in a conversation
+func (s *MessagingService) PinMessage(ctx context.Context, messageID, userID uuid.UUID) error {
+	// Pin first (most critical operation)
+	if err := s.repo.PinMessage(ctx, messageID, userID); err != nil {
+		return err
+	}
+
+	// Everything else happens asynchronously for speed
+	go func() {
+		message, err := s.repo.GetMessage(context.Background(), messageID)
+		if err != nil {
+			log.Printf("[Messaging] Failed to get message for pin broadcast: %v", err)
+			return
+		}
+
+		s.cache.InvalidateConversationCache(context.Background(), message.ConversationID)
+
+		// Broadcast pin event to other user
+		conversation, _ := s.repo.GetConversation(context.Background(), message.ConversationID)
+		if conversation != nil {
+			var otherUserID uuid.UUID
+			if conversation.Participant1ID == userID {
+				otherUserID = conversation.Participant2ID
+			} else {
+				otherUserID = conversation.Participant1ID
+			}
+
+			s.broadcastMessagePinned(otherUserID, message.ConversationID, messageID)
+		}
+
+		log.Printf("[Messaging] Message %s pinned by user %s", messageID, userID)
+	}()
+
+	return nil
+}
+
+// UnpinMessage unpins a message
+func (s *MessagingService) UnpinMessage(ctx context.Context, messageID, userID uuid.UUID) error {
+	// Unpin first (most critical operation)
+	if err := s.repo.UnpinMessage(ctx, messageID, userID); err != nil {
+		return err
+	}
+
+	// Everything else happens asynchronously for speed
+	go func() {
+		message, err := s.repo.GetMessage(context.Background(), messageID)
+		if err != nil {
+			log.Printf("[Messaging] Failed to get message for unpin broadcast: %v", err)
+			return
+		}
+
+		s.cache.InvalidateConversationCache(context.Background(), message.ConversationID)
+
+		// Broadcast unpin event
+		conversation, _ := s.repo.GetConversation(context.Background(), message.ConversationID)
+		if conversation != nil {
+			var otherUserID uuid.UUID
+			if conversation.Participant1ID == userID {
+				otherUserID = conversation.Participant2ID
+			} else {
+				otherUserID = conversation.Participant1ID
+			}
+
+			s.broadcastMessageUnpinned(otherUserID, message.ConversationID, messageID)
+		}
+
+		log.Printf("[Messaging] Message %s unpinned by user %s", messageID, userID)
+	}()
+
+	return nil
+}
+
+// GetPinnedMessages retrieves all pinned messages in a conversation
+func (s *MessagingService) GetPinnedMessages(ctx context.Context, conversationID, userID uuid.UUID) ([]*models.Message, error) {
+	messages, err := s.repo.GetPinnedMessages(ctx, conversationID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set IsMine flag (IsPinned is already set by repository based on pinned_at)
+	for _, msg := range messages {
+		msg.IsMine = msg.SenderID == userID
+	}
+
+	return messages, nil
+}
+
+// ============================================
+// EDIT MESSAGES
+// ============================================
+
+// EditMessage updates the content of a message
+func (s *MessagingService) EditMessage(ctx context.Context, messageID, userID uuid.UUID, newContent string) error {
+	// Verify user owns the message
+	message, err := s.repo.GetMessage(ctx, messageID)
+	if err != nil {
+		return err
+	}
+
+	if message.SenderID != userID {
+		return fmt.Errorf("unauthorized: cannot edit another user's message")
+	}
+
+	conversationID := message.ConversationID
+
+	// Edit the message
+	if err := s.repo.EditMessage(ctx, messageID, newContent, userID); err != nil {
+		return err
+	}
+
+	// Everything else happens asynchronously for speed
+	go func() {
+		s.cache.InvalidateConversationCache(context.Background(), conversationID)
+
+		// Get updated message for broadcast
+		updatedMsg, err := s.repo.GetMessage(context.Background(), messageID)
+		if err != nil {
+			log.Printf("[Messaging] Failed to get updated message: %v", err)
+			return
+		}
+
+		// Broadcast edit event to other user
+		conversation, _ := s.repo.GetConversation(context.Background(), conversationID)
+		if conversation != nil {
+			var otherUserID uuid.UUID
+			if conversation.Participant1ID == userID {
+				otherUserID = conversation.Participant2ID
+			} else {
+				otherUserID = conversation.Participant1ID
+			}
+
+			s.broadcastMessageEdited(otherUserID, conversationID, updatedMsg)
+		}
+
+		log.Printf("[Messaging] Message %s edited by user %s", messageID, userID)
+	}()
+
+	return nil
+}
+
+// GetMessageEditHistory retrieves the edit history for a message
+func (s *MessagingService) GetMessageEditHistory(ctx context.Context, messageID, userID uuid.UUID) ([]map[string]interface{}, error) {
+	// Verify user is part of the conversation
+	message, err := s.repo.GetMessage(ctx, messageID)
+	if err != nil {
+		return nil, err
+	}
+
+	conversation, err := s.repo.GetConversation(ctx, message.ConversationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if conversation.Participant1ID != userID && conversation.Participant2ID != userID {
+		return nil, fmt.Errorf("unauthorized: not part of this conversation")
+	}
+
+	return s.repo.GetMessageEditHistory(ctx, messageID)
+}
+
+// ============================================
+// FORWARD MESSAGES
+// ============================================
+
+// ForwardMessage forwards a message to another conversation
+func (s *MessagingService) ForwardMessage(ctx context.Context, messageID, toConversationID, userID uuid.UUID) (*models.Message, error) {
+	// Verify user has access to the original message
+	originalMsg, err := s.repo.GetMessage(ctx, messageID)
+	if err != nil {
+		return nil, err
+	}
+
+	originalConv, err := s.repo.GetConversation(ctx, originalMsg.ConversationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if originalConv.Participant1ID != userID && originalConv.Participant2ID != userID {
+		return nil, fmt.Errorf("unauthorized: not part of original conversation")
+	}
+
+	// Verify user has access to target conversation
+	targetConv, err := s.repo.GetConversation(ctx, toConversationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if targetConv.Participant1ID != userID && targetConv.Participant2ID != userID {
+		return nil, fmt.Errorf("unauthorized: not part of target conversation")
+	}
+
+	// Forward the message
+	forwardedMsg, err := s.repo.ForwardMessage(ctx, messageID, toConversationID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	s.cache.InvalidateConversationCache(ctx, toConversationID)
+
+	// Broadcast to the other participant in target conversation
+	var otherUserID uuid.UUID
+	if targetConv.Participant1ID == userID {
+		otherUserID = targetConv.Participant2ID
+	} else {
+		otherUserID = targetConv.Participant1ID
+	}
+
+	// Mark as delivered immediately (before returning)
+	if err := s.repo.UpdateMessageStatus(ctx, forwardedMsg.ID, models.MessageStatusDelivered); err != nil {
+		log.Printf("[Messaging] Warning: Failed to mark forwarded message as delivered: %v", err)
+	} else {
+		// Refresh message to get updated delivered_at timestamp
+		updatedMsg, err := s.repo.GetMessage(ctx, forwardedMsg.ID)
+		if err == nil {
+			forwardedMsg = updatedMsg
+		}
+	}
+
+	// Broadcast new message
+	go s.broadcastNewMessage(otherUserID, forwardedMsg)
+
+	// Check if recipient is online, if not send notification
+	if !s.wsManager.IsUserConnected(otherUserID) && s.notifService != nil {
+		go s.createMessageNotification(otherUserID, userID, forwardedMsg)
+	}
+
+	log.Printf("[Messaging] Message %s forwarded to conversation %s by user %s", messageID, toConversationID, userID)
+	forwardedMsg.IsMine = true
+	return forwardedMsg, nil
+}
+
+// ============================================
+// SEARCH IN CONVERSATION
+// ============================================
+
+// SearchConversationMessages searches messages within a specific conversation
+func (s *MessagingService) SearchConversationMessages(ctx context.Context, conversationID, userID uuid.UUID, query string, limit, offset int) ([]*models.Message, error) {
+	// Verify user is part of the conversation
+	conversation, err := s.repo.GetConversation(ctx, conversationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if conversation.Participant1ID != userID && conversation.Participant2ID != userID {
+		return nil, fmt.Errorf("unauthorized: not part of this conversation")
+	}
+
+	messages, err := s.repo.SearchConversationMessages(ctx, conversationID, query, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set IsMine flag
+	for _, msg := range messages {
+		msg.IsMine = msg.SenderID == userID
+	}
+
+	return messages, nil
+}
+
+// ============================================
+// BROADCAST HELPERS FOR NEW FEATURES
+// ============================================
+
+func (s *MessagingService) broadcastMessagePinned(recipientID, conversationID, messageID uuid.UUID) {
+	envelope := models.WSMessageEnvelope{
+		ID:             uuid.New().String(),
+		Type:           models.WSMessageTypeMessagePinned,
+		Channel:        "messaging",
+		ConversationID: &conversationID,
+		Data: map[string]interface{}{
+			"message_id": messageID,
+		},
+		Timestamp: time.Now().Unix(),
+	}
+
+	s.wsManager.BroadcastToUserWithData(recipientID, envelope)
+	log.Printf("[Messaging] Broadcasted message pinned to user %s", recipientID)
+}
+
+func (s *MessagingService) broadcastMessageUnpinned(recipientID, conversationID, messageID uuid.UUID) {
+	envelope := models.WSMessageEnvelope{
+		ID:             uuid.New().String(),
+		Type:           models.WSMessageTypeMessageUnpinned,
+		Channel:        "messaging",
+		ConversationID: &conversationID,
+		Data: map[string]interface{}{
+			"message_id": messageID,
+		},
+		Timestamp: time.Now().Unix(),
+	}
+
+	s.wsManager.BroadcastToUserWithData(recipientID, envelope)
+	log.Printf("[Messaging] Broadcasted message unpinned to user %s", recipientID)
+}
+
+func (s *MessagingService) broadcastMessageEdited(recipientID, conversationID uuid.UUID, message *models.Message) {
+	message.IsMine = false // For recipient
+	envelope := models.WSMessageEnvelope{
+		ID:             uuid.New().String(),
+		Type:           models.WSMessageTypeMessageEdited,
+		Channel:        "messaging",
+		ConversationID: &conversationID,
+		Data: map[string]interface{}{
+			"message": message,
+		},
+		Timestamp: time.Now().Unix(),
+	}
+
+	s.wsManager.BroadcastToUserWithData(recipientID, envelope)
+	log.Printf("[Messaging] Broadcasted message edited to user %s", recipientID)
 }

@@ -14,19 +14,25 @@ interface Toast {
 
 let toastQueue: Toast[] = [];
 let listeners: Array<(toasts: Toast[]) => void> = [];
+let toastCounter = 0;
+
+const generateToastId = () => {
+  toastCounter++;
+  return `${Date.now()}-${toastCounter}`;
+};
 
 export const toast = {
   success: (message: string, duration = 3000) => {
-    addToast({ id: Date.now().toString(), message, type: 'success', duration });
+    addToast({ id: generateToastId(), message, type: 'success', duration });
   },
   error: (message: string, duration = 4000) => {
-    addToast({ id: Date.now().toString(), message, type: 'error', duration });
+    addToast({ id: generateToastId(), message, type: 'error', duration });
   },
   info: (message: string, duration = 3000) => {
-    addToast({ id: Date.now().toString(), message, type: 'info', duration });
+    addToast({ id: generateToastId(), message, type: 'info', duration });
   },
   warning: (message: string, duration = 3500) => {
-    addToast({ id: Date.now().toString(), message, type: 'warning', duration });
+    addToast({ id: generateToastId(), message, type: 'warning', duration });
   },
 };
 

@@ -93,6 +93,25 @@ export default function MobileMessagesOverlay() {
         ));
       });
 
+      // REAL-TIME TYPING UPDATES FOR CONVERSATION LIST
+      const unsubscribeTyping = messageWS.on('typing', (data: any) => {
+        console.log('[MobileMessages] Typing event for conversation:', data.conversation_id);
+        setConversations(prev => prev.map(conv => 
+          conv.id === data.conversation_id
+            ? { ...conv, is_typing: true }
+            : conv
+        ));
+      });
+
+      const unsubscribeStopTyping = messageWS.on('stop_typing', (data: any) => {
+        console.log('[MobileMessages] Stop typing event for conversation:', data.conversation_id);
+        setConversations(prev => prev.map(conv => 
+          conv.id === data.conversation_id
+            ? { ...conv, is_typing: false }
+            : conv
+        ));
+      });
+
       const handleMarkedRead = (e: any) => {
         // INSTANT update - clear unread count immediately
         const convId = e.detail?.conversationId || selectedConversation;
@@ -109,6 +128,8 @@ export default function MobileMessagesOverlay() {
       return () => {
         unsubscribe();
         unsubscribeRead();
+        unsubscribeTyping();
+        unsubscribeStopTyping();
         window.removeEventListener('messages_marked_read', handleMarkedRead);
       };
     }

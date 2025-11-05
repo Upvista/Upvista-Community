@@ -26,7 +26,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const streamRef = useRef<MediaStream | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
-  const pausedDurationRef = useRef<number>(0);
+  const accumulatedDurationRef = useRef<number>(0); // Changed from pausedDurationRef
 
   /**
    * Start recording audio
@@ -64,10 +64,10 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
 
       // Start duration counter
       startTimeRef.current = Date.now();
-      pausedDurationRef.current = 0;
+      accumulatedDurationRef.current = 0;
 
       durationIntervalRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTimeRef.current - pausedDurationRef.current) / 1000);
+        const elapsed = Math.floor((Date.now() - startTimeRef.current + accumulatedDurationRef.current) / 1000);
         setDuration(elapsed);
       }, 100); // Update every 100ms for smooth counter
 
@@ -166,10 +166,10 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       mediaRecorderRef.current.pause();
       setIsPaused(true);
 
-      // Track paused time
-      pausedDurationRef.current += Date.now() - startTimeRef.current;
+      // Save the current duration before pausing
+      accumulatedDurationRef.current += Date.now() - startTimeRef.current;
 
-      console.log('[VoiceRecorder] Recording paused');
+      console.log('[VoiceRecorder] Recording paused, accumulated duration:', accumulatedDurationRef.current);
     }
   }, []);
 
@@ -181,10 +181,10 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       mediaRecorderRef.current.resume();
       setIsPaused(false);
 
-      // Reset start time for duration calculation
+      // Reset start time to now, keeping accumulated duration
       startTimeRef.current = Date.now();
 
-      console.log('[VoiceRecorder] Recording resumed');
+      console.log('[VoiceRecorder] Recording resumed from:', accumulatedDurationRef.current);
     }
   }, []);
 

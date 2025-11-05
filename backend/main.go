@@ -175,7 +175,7 @@ func main() {
 	// CORS middleware
 	corsConfig := cors.Config{
 		AllowOrigins:     cfg.GetCORSOrigins(),
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -267,6 +267,10 @@ func main() {
 			messagingGroup.POST("/:id/messages", messageHandlers.SendMessage)
 			messagingGroup.PATCH("/:id/read", messageHandlers.MarkAsRead)
 
+			// Pinned messages and search
+			messagingGroup.GET("/:id/pinned", messageHandlers.GetPinnedMessages)
+			messagingGroup.GET("/:id/search", messageHandlers.SearchConversationMessages)
+
 			// Typing indicators
 			messagingGroup.POST("/:id/typing/start", messageHandlers.StartTyping)
 			messagingGroup.POST("/:id/typing/stop", messageHandlers.StopTyping)
@@ -291,10 +295,22 @@ func main() {
 			messageGroup.POST("/:id/star", messageHandlers.StarMessage)
 			messageGroup.DELETE("/:id/star", messageHandlers.UnstarMessage)
 
+			// Pin/Unpin
+			messageGroup.POST("/:id/pin", messageHandlers.PinMessage)
+			messageGroup.DELETE("/:id/pin", messageHandlers.UnpinMessage)
+
+			// Edit
+			messageGroup.PATCH("/:id", messageHandlers.EditMessage)
+			messageGroup.GET("/:id/edit-history", messageHandlers.GetMessageEditHistory)
+
+			// Forward
+			messageGroup.POST("/:id/forward", messageHandlers.ForwardMessage)
+
 			// Media uploads
 			messageGroup.POST("/upload-image", messageHandlers.UploadImage)
 			messageGroup.POST("/upload-audio", messageHandlers.UploadAudio)
 			messageGroup.POST("/upload-file", messageHandlers.UploadFile)
+			messageGroup.POST("/upload-video", messageHandlers.UploadVideo)
 		}
 
 		// Presence routes (protected)

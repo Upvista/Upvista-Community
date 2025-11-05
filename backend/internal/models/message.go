@@ -14,6 +14,7 @@ const (
 	MessageTypeText   MessageType = "text"
 	MessageTypeImage  MessageType = "image"
 	MessageTypeFile   MessageType = "file"
+	MessageTypeVideo  MessageType = "video"
 	MessageTypeAudio  MessageType = "audio"
 	MessageTypeSystem MessageType = "system"
 )
@@ -58,22 +59,40 @@ type Conversation struct {
 
 // Message represents a single message in a conversation
 type Message struct {
-	ID             uuid.UUID      `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	ConversationID uuid.UUID      `json:"conversation_id" gorm:"type:uuid;not null"`
-	SenderID       uuid.UUID      `json:"sender_id" gorm:"type:uuid;not null"`
-	Content        string         `json:"content" gorm:"not null"`
-	MessageType    MessageType    `json:"message_type" gorm:"default:'text'"`
-	AttachmentURL  *string        `json:"attachment_url"`
-	AttachmentName *string        `json:"attachment_name"`
-	AttachmentSize *int           `json:"attachment_size"`
-	AttachmentType *string        `json:"attachment_type"`
-	Status         MessageStatus  `json:"status" gorm:"default:'sent'"`
-	DeliveredAt    *time.Time     `json:"delivered_at"`
-	ReadAt         *time.Time     `json:"read_at"`
-	DeletedBy      pq.StringArray `json:"deleted_by,omitempty" gorm:"type:uuid[]"`
-	ReplyToID      *uuid.UUID     `json:"reply_to_id" gorm:"type:uuid"`
-	CreatedAt      time.Time      `json:"created_at" gorm:"default:now()"`
-	UpdatedAt      time.Time      `json:"updated_at" gorm:"default:now()"`
+	ID             uuid.UUID   `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	ConversationID uuid.UUID   `json:"conversation_id" gorm:"type:uuid;not null"`
+	SenderID       uuid.UUID   `json:"sender_id" gorm:"type:uuid;not null"`
+	Content        string      `json:"content" gorm:"not null"`
+	MessageType    MessageType `json:"message_type" gorm:"default:'text'"`
+	AttachmentURL  *string     `json:"attachment_url"`
+	AttachmentName *string     `json:"attachment_name"`
+	AttachmentSize *int        `json:"attachment_size"`
+	AttachmentType *string     `json:"attachment_type"`
+	// Video-specific fields
+	ThumbnailURL  *string        `json:"thumbnail_url,omitempty"`
+	VideoDuration *int           `json:"video_duration,omitempty"` // Duration in seconds
+	VideoWidth    *int           `json:"video_width,omitempty"`
+	VideoHeight   *int           `json:"video_height,omitempty"`
+	Status        MessageStatus  `json:"status" gorm:"default:'sent'"`
+	DeliveredAt   *time.Time     `json:"delivered_at"`
+	ReadAt        *time.Time     `json:"read_at"`
+	DeletedBy     pq.StringArray `json:"deleted_by,omitempty" gorm:"type:uuid[]"`
+	ReplyToID     *uuid.UUID     `json:"reply_to_id" gorm:"type:uuid"`
+	CreatedAt     time.Time      `json:"created_at" gorm:"default:now()"`
+	UpdatedAt     time.Time      `json:"updated_at" gorm:"default:now()"`
+
+	// Pin feature
+	PinnedAt *time.Time `json:"pinned_at,omitempty"`
+	PinnedBy *uuid.UUID `json:"pinned_by,omitempty" gorm:"type:uuid"`
+
+	// Edit feature
+	EditedAt        *time.Time `json:"edited_at,omitempty"`
+	EditCount       int        `json:"edit_count" gorm:"default:0"`
+	OriginalContent *string    `json:"original_content,omitempty"`
+
+	// Forward feature
+	ForwardedFromID *uuid.UUID `json:"forwarded_from_id,omitempty" gorm:"type:uuid"`
+	IsForwarded     bool       `json:"is_forwarded" gorm:"default:false"`
 
 	// Joined data (populated in queries)
 	Sender         *User              `json:"sender,omitempty" gorm:"foreignKey:SenderID"`
@@ -83,6 +102,7 @@ type Message struct {
 	// Computed fields
 	IsMine    bool `json:"is_mine" gorm:"-"`    // Is this message from current user
 	IsStarred bool `json:"is_starred" gorm:"-"` // Is this message starred by current user
+	IsPinned  bool `json:"is_pinned" gorm:"-"`  // Is this message pinned in conversation
 }
 
 // MessageReaction represents an emoji reaction on a message
@@ -120,6 +140,9 @@ const (
 	WSMessageTypeReaction         WSMessageType = "reaction"
 	WSMessageTypeReactionRemoved  WSMessageType = "reaction_removed"
 	WSMessageTypeMessageDeleted   WSMessageType = "message_deleted"
+	WSMessageTypeMessageEdited    WSMessageType = "message_edited"
+	WSMessageTypeMessagePinned    WSMessageType = "message_pinned"
+	WSMessageTypeMessageUnpinned  WSMessageType = "message_unpinned"
 	WSMessageTypeOnline           WSMessageType = "online"
 	WSMessageTypeOffline          WSMessageType = "offline"
 	WSMessageTypeACK              WSMessageType = "ack"
@@ -146,7 +169,9 @@ type PresenceInfo struct {
 type TypingInfo struct {
 	ConversationID uuid.UUID `json:"conversation_id"`
 	UserID         uuid.UUID `json:"user_id"`
+	DisplayName    string    `json:"display_name"`
 	IsTyping       bool      `json:"is_typing"`
+	IsRecording    bool      `json:"is_recording"`
 }
 
 // MessageRequest represents a request to send a message
@@ -164,6 +189,16 @@ type MessageRequest struct {
 // ReactionRequest represents a request to add a reaction
 type ReactionRequest struct {
 	Emoji string `json:"emoji" binding:"required"`
+}
+
+// EditMessageRequest represents a request to edit a message
+type EditMessageRequest struct {
+	Content string `json:"content" binding:"required"`
+}
+
+// ForwardMessageRequest represents a request to forward a message
+type ForwardMessageRequest struct {
+	ToConversationID uuid.UUID `json:"to_conversation_id" binding:"required"`
 }
 
 // ConversationListResponse represents paginated conversation list

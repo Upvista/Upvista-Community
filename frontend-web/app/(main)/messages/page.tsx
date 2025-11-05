@@ -106,6 +106,27 @@ export default function MessagesPage() {
       ));
     });
 
+    // REAL-TIME TYPING UPDATES FOR CONVERSATION LIST
+    const unsubscribeTyping = messageWS.on('typing', (data: any) => {
+      console.log('[MessagesPage] Typing event for conversation:', data.conversation_id);
+      // Update typing status INSTANTLY (real-time, not cached)
+      setConversations(prev => prev.map(conv => 
+        conv.id === data.conversation_id
+          ? { ...conv, is_typing: true }
+          : conv
+      ));
+    });
+
+    const unsubscribeStopTyping = messageWS.on('stop_typing', (data: any) => {
+      console.log('[MessagesPage] Stop typing event for conversation:', data.conversation_id);
+      // Clear typing status INSTANTLY
+      setConversations(prev => prev.map(conv => 
+        conv.id === data.conversation_id
+          ? { ...conv, is_typing: false }
+          : conv
+      ));
+    });
+
     const handleMarkedRead = (e: any) => {
       // INSTANT update - clear unread count immediately
       const convId = e.detail?.conversationId || selectedConversation;
@@ -122,6 +143,8 @@ export default function MessagesPage() {
     return () => {
       unsubscribe();
       unsubscribeRead();
+      unsubscribeTyping();
+      unsubscribeStopTyping();
       window.removeEventListener('messages_marked_read', handleMarkedRead);
     };
   }, [selectedConversation]);

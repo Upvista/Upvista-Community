@@ -12,19 +12,21 @@ export type ImageQuality = 'standard' | 'hd';
 // ============================================
 
 const STANDARD_OPTIONS = {
-  maxSizeMB: 0.2, // Target 200KB for standard quality
-  maxWidthOrHeight: 1920,
+  maxSizeMB: 0.3, // Target 300KB for standard quality (better than WhatsApp's ~100KB)
+  maxWidthOrHeight: 2048, // Full HD+ resolution
   useWebWorker: true,
   fileType: 'image/jpeg' as const,
-  initialQuality: 0.85,
+  initialQuality: 0.88, // Higher quality than WhatsApp
 };
 
 const HD_OPTIONS = {
-  maxSizeMB: 2, // Target 2MB for HD quality
-  maxWidthOrHeight: 4096,
+  maxSizeMB: 5, // Target 5MB for Ultra HD (WhatsApp uses ~1-2MB)
+  maxWidthOrHeight: 7680, // 8K resolution (WhatsApp max is ~4K)
   useWebWorker: true,
   fileType: 'image/jpeg' as const,
-  initialQuality: 0.95,
+  initialQuality: 0.98, // Near-lossless (WhatsApp uses ~0.9)
+  preserveExif: true, // Keep photo metadata
+  alwaysKeepResolution: true, // Don't downscale unnecessarily
 };
 
 // ============================================

@@ -7,22 +7,44 @@ export interface Message {
   conversation_id: string;
   sender_id: string;
   content: string;
-  message_type: 'text' | 'image' | 'file' | 'audio' | 'system';
+  message_type: 'text' | 'image' | 'file' | 'audio' | 'video' | 'system';
   attachment_url?: string;
   attachment_name?: string;
   attachment_size?: number;
   attachment_type?: string;
+  // Video-specific fields
+  thumbnail_url?: string;
+  video_duration?: number;
+  video_width?: number;
+  video_height?: number;
   status: 'sent' | 'delivered' | 'read';
   delivered_at?: string;
   read_at?: string;
   reply_to_id?: string;
   created_at: string;
   updated_at: string;
+  // Pin feature
+  pinned_at?: string;
+  pinned_by?: string;
+  is_pinned?: boolean;
+  // Edit feature
+  edited_at?: string;
+  edit_count?: number;
+  original_content?: string;
+  // Forward feature
+  forwarded_from_id?: string;
+  is_forwarded?: boolean;
+  // Relations
   sender?: User;
   reply_to?: Message;
   reactions?: MessageReaction[];
   is_mine?: boolean;
   is_starred?: boolean;
+  // Client-side only fields for reliability
+  send_state?: 'sending' | 'sent' | 'failed' | 'queued';
+  temp_id?: string; // For optimistic UI and offline queue
+  retry_count?: number;
+  send_error?: string;
 }
 
 export interface Conversation {
@@ -205,63 +227,234 @@ export const messagesAPI = {
   // ==================== MEDIA UPLOADS ====================
 
   /**
-   * Upload an image attachment
+   * Upload an image attachment with cancellation support
    */
-  async uploadImage(file: File, quality: 'standard' | 'hd' = 'standard') {
+  async uploadImage(
+    file: File, 
+    quality: 'standard' | 'hd' = 'standard',
+    signal?: AbortSignal,
+    onProgress?: (progress: number) => void
+  ) {
     const formData = new FormData();
     formData.append('image', file);
 
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE}/messages/upload-image?quality=${quality}`, {
-      method: 'POST',
-      headers: {
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      body: formData,
-    });
+    
+    // Create XMLHttpRequest for progress tracking
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
 
-    if (!response.ok) throw new Error('Upload failed');
-    return response.json();
+      // Handle abort
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          xhr.abort();
+          reject(new Error('Upload cancelled'));
+        });
+      }
+
+      // Progress tracking
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          const percentComplete = (e.loaded / e.total) * 100;
+          onProgress(percentComplete);
+        }
+      });
+
+      // Success
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (error) {
+            reject(new Error('Invalid response'));
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.statusText}`));
+        }
+      });
+
+      // Error
+      xhr.addEventListener('error', () => {
+        reject(new Error('Network error'));
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload cancelled'));
+      });
+
+      // Send request
+      xhr.open('POST', `${API_BASE}/messages/upload-image?quality=${quality}`);
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      xhr.send(formData);
+    });
   },
 
   /**
-   * Upload an audio attachment (voice message)
+   * Upload an audio attachment with cancellation and progress
    */
-  async uploadAudio(blob: Blob, filename = 'voice-message.webm') {
+  async uploadAudio(
+    blob: Blob, 
+    filename = 'voice-message.webm',
+    signal?: AbortSignal,
+    onProgress?: (progress: number) => void
+  ) {
     const formData = new FormData();
     formData.append('audio', blob, filename);
 
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE}/messages/upload-audio`, {
-      method: 'POST',
-      headers: {
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      body: formData,
-    });
+    
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
 
-    if (!response.ok) throw new Error('Upload failed');
-    return response.json();
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          xhr.abort();
+          reject(new Error('Upload cancelled'));
+        });
+      }
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          const percentComplete = (e.loaded / e.total) * 100;
+          onProgress(percentComplete);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (error) {
+            reject(new Error('Invalid response'));
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.statusText}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => reject(new Error('Network error')));
+      xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+      xhr.open('POST', `${API_BASE}/messages/upload-audio`);
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      xhr.send(formData);
+    });
   },
 
   /**
-   * Upload a generic file attachment
+   * Upload a generic file attachment with cancellation and progress
    */
-  async uploadFile(file: File) {
+  async uploadFile(
+    file: File,
+    signal?: AbortSignal,
+    onProgress?: (progress: number) => void
+  ) {
     const formData = new FormData();
     formData.append('file', file);
 
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE}/messages/upload-file`, {
-      method: 'POST',
-      headers: {
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      body: formData,
-    });
+    
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
 
-    if (!response.ok) throw new Error('Upload failed');
-    return response.json();
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          xhr.abort();
+          reject(new Error('Upload cancelled'));
+        });
+      }
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          const percentComplete = (e.loaded / e.total) * 100;
+          onProgress(percentComplete);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (error) {
+            reject(new Error('Invalid response'));
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.statusText}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => reject(new Error('Network error')));
+      xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+      xhr.open('POST', `${API_BASE}/messages/upload-file`);
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      xhr.send(formData);
+    });
+  },
+
+  /**
+   * Upload a video attachment with optional thumbnail
+   */
+  async uploadVideo(
+    file: File,
+    thumbnail?: Blob,
+    signal?: AbortSignal,
+    onProgress?: (progress: number) => void
+  ) {
+    const formData = new FormData();
+    formData.append('video', file);
+    
+    if (thumbnail) {
+      formData.append('thumbnail', thumbnail, 'thumbnail.jpg');
+    }
+
+    const token = localStorage.getItem('token');
+    
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          xhr.abort();
+          reject(new Error('Upload cancelled'));
+        });
+      }
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          const percentComplete = (e.loaded / e.total) * 100;
+          onProgress(percentComplete);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (error) {
+            reject(new Error('Invalid response'));
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.statusText}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => reject(new Error('Network error')));
+      xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+      xhr.open('POST', `${API_BASE}/messages/upload-video`);
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      xhr.send(formData);
+    });
   },
 
   // ==================== REACTIONS ====================
@@ -306,13 +499,80 @@ export const messagesAPI = {
     return fetchAPI(`/messages/starred?limit=${limit}&offset=${offset}`);
   },
 
+  // ==================== PIN MESSAGES ====================
+
+  /**
+   * Pin a message in conversation
+   */
+  async pinMessage(messageId: string) {
+    return fetchAPI(`/messages/${messageId}/pin`, { method: 'POST' });
+  },
+
+  /**
+   * Unpin a message
+   */
+  async unpinMessage(messageId: string) {
+    return fetchAPI(`/messages/${messageId}/pin`, { method: 'DELETE' });
+  },
+
+  /**
+   * Get all pinned messages in a conversation
+   */
+  async getPinnedMessages(conversationId: string) {
+    return fetchAPI(`/conversations/${conversationId}/pinned`);
+  },
+
+  // ==================== EDIT MESSAGES ====================
+
+  /**
+   * Edit a message content
+   */
+  async editMessage(messageId: string, content: string) {
+    return fetchAPI(`/messages/${messageId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content }),
+    });
+  },
+
+  /**
+   * Get edit history for a message
+   */
+  async getMessageEditHistory(messageId: string) {
+    return fetchAPI(`/messages/${messageId}/edit-history`);
+  },
+
+  // ==================== FORWARD MESSAGES ====================
+
+  /**
+   * Forward a message to another conversation
+   */
+  async forwardMessage(messageId: string, toConversationId: string) {
+    return fetchAPI(`/messages/${messageId}/forward`, {
+      method: 'POST',
+      body: JSON.stringify({ to_conversation_id: toConversationId }),
+    });
+  },
+
+  // ==================== SEARCH MESSAGES ====================
+
+  /**
+   * Search messages in a conversation
+   */
+  async searchConversationMessages(conversationId: string, query: string, limit = 50, offset = 0) {
+    return fetchAPI(`/conversations/${conversationId}/search?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`);
+  },
+
   // ==================== TYPING INDICATORS ====================
 
   /**
    * Start typing indicator
    */
-  async startTyping(conversationId: string) {
-    return fetchAPI(`/conversations/${conversationId}/typing/start`, { method: 'POST' });
+  async startTyping(conversationId: string, isRecording: boolean = false) {
+    return fetchAPI(`/conversations/${conversationId}/typing/start`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_recording: isRecording })
+    });
   },
 
   /**

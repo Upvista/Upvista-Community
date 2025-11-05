@@ -60,6 +60,39 @@ type MessageRepository interface {
 	// SearchMessages searches messages by content for a user
 	SearchMessages(ctx context.Context, userID uuid.UUID, query string, limit, offset int) ([]*models.Message, error)
 
+	// SearchConversationMessages searches messages within a specific conversation
+	SearchConversationMessages(ctx context.Context, conversationID uuid.UUID, query string, limit, offset int) ([]*models.Message, error)
+
+	// ============================================
+	// PIN MESSAGES
+	// ============================================
+
+	// PinMessage pins a message in a conversation
+	PinMessage(ctx context.Context, messageID, userID uuid.UUID) error
+
+	// UnpinMessage unpins a message
+	UnpinMessage(ctx context.Context, messageID, userID uuid.UUID) error
+
+	// GetPinnedMessages retrieves all pinned messages in a conversation
+	GetPinnedMessages(ctx context.Context, conversationID uuid.UUID) ([]*models.Message, error)
+
+	// ============================================
+	// EDIT MESSAGES
+	// ============================================
+
+	// EditMessage updates the content of a message
+	EditMessage(ctx context.Context, messageID uuid.UUID, newContent string, editorID uuid.UUID) error
+
+	// GetMessageEditHistory retrieves the edit history for a message
+	GetMessageEditHistory(ctx context.Context, messageID uuid.UUID) ([]map[string]interface{}, error)
+
+	// ============================================
+	// FORWARD MESSAGES
+	// ============================================
+
+	// ForwardMessage creates a forwarded copy of a message in another conversation
+	ForwardMessage(ctx context.Context, messageID uuid.UUID, toConversationID uuid.UUID, forwarderID uuid.UUID) (*models.Message, error)
+
 	// ============================================
 	// REACTIONS
 	// ============================================
