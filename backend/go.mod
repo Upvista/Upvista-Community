@@ -1,6 +1,6 @@
 module upvista-community-backend
 
-go 1.25.3
+go 1.24.0
 
 require (
 	github.com/disintegration/imaging v1.6.2
@@ -17,8 +17,6 @@ require (
 	github.com/spf13/viper v1.21.0
 	golang.org/x/crypto v0.40.0
 	golang.org/x/oauth2 v0.32.0
-	gorm.io/driver/postgres v1.6.0
-	gorm.io/gorm v1.31.1
 )
 
 require (
@@ -40,8 +38,6 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect

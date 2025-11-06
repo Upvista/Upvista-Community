@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useEffect, memo, useCallback } from 'react';
-import { VariableSizeList as List } from 'react-window';
 import { Message } from '@/lib/api/messages';
 import MessageBubble from './MessageBubble';
 
@@ -62,7 +61,7 @@ export default function VirtualMessageList({
   onViewMedia,
   onRetry,
 }: VirtualMessageListProps) {
-  const listRef = useRef<List>(null);
+  const listRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemSizeCache = useRef<Map<number, number>>(new Map());
   const measurementDivRef = useRef<HTMLDivElement>(null);
