@@ -1,7 +1,6 @@
 # Use the official Golang image as the base image
-# Note: Using latest stable Go version (1.22) as 1.25.3 doesn't exist yet
-# If you need 1.25.3 specifically, update go.mod to use an available version
-FROM golang:1.22-alpine AS builder
+# Using latest Go version to support all dependencies
+FROM golang:1.23-alpine AS builder
 
 # Set the working directory
 WORKDIR /app
