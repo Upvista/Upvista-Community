@@ -51,8 +51,8 @@ func NewMessagingService(
 
 // GetConversations retrieves user's conversations with caching
 func (s *MessagingService) GetConversations(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Conversation, error) {
-	// Try cache first (for initial load)
-	if offset == 0 {
+	// Try cache first (for initial load) - only if cache is available
+	if offset == 0 && s.cache != nil {
 		cached, err := s.cache.GetCachedConversations(ctx, userID)
 		if err == nil && cached != nil {
 			log.Printf("[Messaging] Returning %d cached conversations for user %s", len(cached), userID)
@@ -74,7 +74,7 @@ func (s *MessagingService) GetConversations(ctx context.Context, userID uuid.UUI
 			conv.IsOnline = isOnline
 
 			// Get last seen from cache if offline
-			if !isOnline {
+			if !isOnline && s.cache != nil {
 				_, lastSeen, _ := s.cache.GetUserPresence(ctx, conv.OtherUser.ID)
 				if !lastSeen.IsZero() {
 					conv.LastSeen = &lastSeen
@@ -84,7 +84,7 @@ func (s *MessagingService) GetConversations(ctx context.Context, userID uuid.UUI
 	}
 
 	// Cache for next time (only first page)
-	if offset == 0 {
+	if offset == 0 && s.cache != nil {
 		s.cache.CacheConversations(ctx, userID, conversations)
 	}
 
@@ -119,7 +119,7 @@ func (s *MessagingService) GetConversation(ctx context.Context, conversationID, 
 		conversation.IsOnline = isOnline
 
 		// Get last seen from cache if offline
-		if !isOnline {
+		if !isOnline && s.cache != nil {
 			_, lastSeen, _ := s.cache.GetUserPresence(ctx, conversation.OtherUser.ID)
 			if !lastSeen.IsZero() {
 				conversation.LastSeen = &lastSeen
@@ -147,18 +147,22 @@ func (s *MessagingService) StartConversation(ctx context.Context, user1ID, user2
 	}
 
 	// Invalidate cache
-	s.cache.InvalidateUserConversations(ctx, user1ID)
-	s.cache.InvalidateUserConversations(ctx, user2ID)
+	if s.cache != nil {
+		s.cache.InvalidateUserConversations(ctx, user1ID)
+		s.cache.InvalidateUserConversations(ctx, user2ID)
+	}
 
 	return conversation, nil
 }
 
 // GetUnreadCount returns total unread message count
 func (s *MessagingService) GetUnreadCount(ctx context.Context, userID uuid.UUID) (int, error) {
-	// Try cache first
-	total, err := s.cache.GetTotalUnread(ctx, userID)
-	if err == nil && total > 0 {
-		return total, nil
+	// Try cache first - only if cache is available
+	if s.cache != nil {
+		total, err := s.cache.GetTotalUnread(ctx, userID)
+		if err == nil && total > 0 {
+			return total, nil
+		}
 	}
 
 	// Fall back to database
@@ -211,15 +215,17 @@ func (s *MessagingService) SendMessage(ctx context.Context, conversationID, send
 	}
 
 	// Update sender's last seen (they're active sending messages)
-	s.cache.SetUserOnline(ctx, senderID)
+	if s.cache != nil {
+		s.cache.SetUserOnline(ctx, senderID)
 
-	// Update cache
-	s.cache.PrependMessage(ctx, message)
-	s.cache.IncrementUnread(ctx, conversationID, recipientID)
+		// Update cache
+		s.cache.PrependMessage(ctx, message)
+		s.cache.IncrementUnread(ctx, conversationID, recipientID)
 
-	// Invalidate conversation list cache
-	s.cache.InvalidateUserConversations(ctx, senderID)
-	s.cache.InvalidateUserConversations(ctx, recipientID)
+		// Invalidate conversation list cache
+		s.cache.InvalidateUserConversations(ctx, senderID)
+		s.cache.InvalidateUserConversations(ctx, recipientID)
+	}
 
 	// Send via WebSocket to recipient (IsMine = false for recipient)
 	messageCopy := *message
@@ -257,8 +263,8 @@ func (s *MessagingService) GetMessages(ctx context.Context, conversationID, user
 		return nil, fmt.Errorf("user is not a participant in this conversation")
 	}
 
-	// Try cache for recent messages (offset = 0)
-	if offset == 0 {
+	// Try cache for recent messages (offset = 0) - only if cache is available
+	if offset == 0 && s.cache != nil {
 		cached, err := s.cache.GetCachedMessages(ctx, conversationID, limit)
 		if err == nil && cached != nil && len(cached) > 0 {
 			log.Printf("[Messaging] Returning %d cached messages for conversation %s", len(cached), conversationID)
@@ -287,7 +293,7 @@ func (s *MessagingService) GetMessages(ctx context.Context, conversationID, user
 	}
 
 	// Cache if first page
-	if offset == 0 {
+	if offset == 0 && s.cache != nil {
 		s.cache.CacheMessages(ctx, conversationID, messages)
 	}
 
@@ -309,10 +315,12 @@ func (s *MessagingService) MarkAsRead(ctx context.Context, conversationID, userI
 	}
 
 	// Update user's last seen (they're active reading messages)
-	s.cache.SetUserOnline(ctx, userID)
+	if s.cache != nil {
+		s.cache.SetUserOnline(ctx, userID)
 
-	// Update cache
-	s.cache.ResetUnread(ctx, conversationID, userID)
+		// Update cache
+		s.cache.ResetUnread(ctx, conversationID, userID)
+	}
 
 	// Broadcast read receipt to sender
 	conversation, _ := s.repo.GetConversation(ctx, conversationID)
@@ -404,7 +412,9 @@ func (s *MessagingService) StartTyping(ctx context.Context, conversationID, user
 	}
 
 	// Update cache
-	s.cache.SetTyping(ctx, conversationID, userID)
+	if s.cache != nil {
+		s.cache.SetTyping(ctx, conversationID, userID)
+	}
 
 	// Get other user
 	conversation, err := s.repo.GetConversation(ctx, conversationID)
@@ -433,7 +443,9 @@ func (s *MessagingService) StopTyping(ctx context.Context, conversationID, userI
 	}
 
 	// Update cache
-	s.cache.ClearTyping(ctx, conversationID, userID)
+	if s.cache != nil {
+		s.cache.ClearTyping(ctx, conversationID, userID)
+	}
 
 	// Get other user
 	conversation, err := s.repo.GetConversation(ctx, conversationID)
@@ -469,7 +481,9 @@ func (s *MessagingService) AddReaction(ctx context.Context, messageID, userID uu
 	message, _ := s.repo.GetMessage(ctx, messageID)
 	if message != nil {
 		// Invalidate cache
-		s.cache.InvalidateConversationCache(ctx, message.ConversationID)
+		if s.cache != nil {
+			s.cache.InvalidateConversationCache(ctx, message.ConversationID)
+		}
 
 		// Broadcast reaction to other user
 		conversation, _ := s.repo.GetConversation(ctx, message.ConversationID)
@@ -550,22 +564,34 @@ func (s *MessagingService) GetStarredMessages(ctx context.Context, userID uuid.U
 
 // SetUserOnline marks a user as online
 func (s *MessagingService) SetUserOnline(ctx context.Context, userID uuid.UUID) error {
-	return s.cache.SetUserOnline(ctx, userID)
+	if s.cache != nil {
+		return s.cache.SetUserOnline(ctx, userID)
+	}
+	return nil
 }
 
 // SetUserOffline marks a user as offline
 func (s *MessagingService) SetUserOffline(ctx context.Context, userID uuid.UUID) error {
-	return s.cache.SetUserOffline(ctx, userID)
+	if s.cache != nil {
+		return s.cache.SetUserOffline(ctx, userID)
+	}
+	return nil
 }
 
 // GetUserPresence retrieves a user's presence status
 func (s *MessagingService) GetUserPresence(ctx context.Context, userID uuid.UUID) (bool, time.Time, error) {
-	return s.cache.GetUserPresence(ctx, userID)
+	if s.cache != nil {
+		return s.cache.GetUserPresence(ctx, userID)
+	}
+	return false, time.Time{}, nil
 }
 
 // GetMultiplePresence retrieves presence for multiple users
 func (s *MessagingService) GetMultiplePresence(ctx context.Context, userIDs []uuid.UUID) (map[uuid.UUID]*models.PresenceInfo, error) {
-	return s.cache.GetMultiplePresence(ctx, userIDs)
+	if s.cache != nil {
+		return s.cache.GetMultiplePresence(ctx, userIDs)
+	}
+	return make(map[uuid.UUID]*models.PresenceInfo), nil
 }
 
 // ============================================
@@ -802,7 +828,9 @@ func (s *MessagingService) PinMessage(ctx context.Context, messageID, userID uui
 			return
 		}
 
-		s.cache.InvalidateConversationCache(context.Background(), message.ConversationID)
+		if s.cache != nil {
+			s.cache.InvalidateConversationCache(context.Background(), message.ConversationID)
+		}
 
 		// Broadcast pin event to other user
 		conversation, _ := s.repo.GetConversation(context.Background(), message.ConversationID)
@@ -838,7 +866,9 @@ func (s *MessagingService) UnpinMessage(ctx context.Context, messageID, userID u
 			return
 		}
 
-		s.cache.InvalidateConversationCache(context.Background(), message.ConversationID)
+		if s.cache != nil {
+			s.cache.InvalidateConversationCache(context.Background(), message.ConversationID)
+		}
 
 		// Broadcast unpin event
 		conversation, _ := s.repo.GetConversation(context.Background(), message.ConversationID)
@@ -984,7 +1014,9 @@ func (s *MessagingService) ForwardMessage(ctx context.Context, messageID, toConv
 		return nil, err
 	}
 
-	s.cache.InvalidateConversationCache(ctx, toConversationID)
+	if s.cache != nil {
+		s.cache.InvalidateConversationCache(ctx, toConversationID)
+	}
 
 	// Broadcast to the other participant in target conversation
 	var otherUserID uuid.UUID
