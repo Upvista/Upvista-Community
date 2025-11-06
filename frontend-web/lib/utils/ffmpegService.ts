@@ -153,7 +153,7 @@ class FFmpegService {
 
       // Read compressed video
       const data = await ffmpeg.readFile('output.mp4');
-      const blob = new Blob([data], { type: 'video/mp4' });
+      const blob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'video/mp4' });
 
       onProgress?.(85);
 
@@ -167,7 +167,7 @@ class FFmpegService {
       ]);
 
       const thumbnailData = await ffmpeg.readFile('thumbnail.jpg');
-      const thumbnailBlob = new Blob([thumbnailData], { type: 'image/jpeg' });
+      const thumbnailBlob = new Blob([new Uint8Array(thumbnailData as Uint8Array)], { type: 'image/jpeg' });
       const thumbnail = await blobToBase64(thumbnailBlob);
 
       onProgress?.(95);
@@ -241,7 +241,7 @@ class FFmpegService {
 
       // Read compressed audio
       const data = await ffmpeg.readFile('output.webm');
-      const blob = new Blob([data], { type: 'audio/webm' });
+      const blob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'audio/webm' });
 
       // Cleanup
       await ffmpeg.deleteFile('input.webm');

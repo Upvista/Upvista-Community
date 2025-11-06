@@ -186,7 +186,7 @@ export const messagesAPI = {
     attachmentName: string,
     attachmentSize: number,
     attachmentType: string,
-    messageType: 'image' | 'audio' | 'file',
+    messageType: 'image' | 'audio' | 'file' | 'video',
     replyToId?: string
   ) {
     return fetchAPI(`/conversations/${conversationId}/messages`, {

@@ -143,7 +143,7 @@ export function useOptimisticMessages({
             replyToId,
             timestamp: Date.now(),
             retryCount: 0,
-            lastError: msg.sendError,
+            lastError: error instanceof Error ? error.message : 'Failed to send',
           });
         } catch (queueError) {
           console.error('[OptimisticUI] Failed to queue failed message:', queueError);

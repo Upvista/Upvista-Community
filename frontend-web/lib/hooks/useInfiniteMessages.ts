@@ -140,8 +140,8 @@ export function useInfiniteMessages({
           const newMessages = response.messages || [];
           
           // Deduplicate: remove any messages that already exist
-          const existingIds = new Set(prev.map(m => m.id));
-          const uniqueNew = newMessages.filter(m => !existingIds.has(m.id));
+          const existingIds = new Set(prev.map((m: Message) => m.id));
+          const uniqueNew = newMessages.filter((m: Message) => !existingIds.has(m.id));
           
           console.log(`[InfiniteScroll] ✅ Loaded ${newMessages.length} messages, ${uniqueNew.length} unique, total now: ${prev.length + uniqueNew.length}`);
           
