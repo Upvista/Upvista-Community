@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 
 	"github.com/go-redis/redis/v8"
@@ -14,6 +15,10 @@ func InitializeRedis(host, port, password string, db int) (*redis.Client, error)
 		Password: password,
 		DB:       db,
 		PoolSize: 10, // Connection pool size
+		// Enable TLS for Upstash and other cloud Redis providers
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
 	})
 
 	// Test the connection
