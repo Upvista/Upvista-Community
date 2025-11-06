@@ -1,6 +1,6 @@
 # Use the official Golang image as the base image
 # Using latest Go version to support all dependencies
-FROM golang:1.23-alpine AS builder
+FROM golang:alpine AS builder
 
 # Set the working directory
 WORKDIR /app
