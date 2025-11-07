@@ -19,11 +19,11 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
   const [show, setShow] = useState(true);
 
   useEffect(() => {
-    // Show splash for 1.8 seconds - quick and professional
+    // Show splash for 3 seconds - professional branding time
     const timer = setTimeout(() => {
       setShow(false);
       setTimeout(onComplete, 300);
-    }, 1800);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [onComplete]);
@@ -67,9 +67,9 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.35, ease: 'easeOut' }}
-            className="text-5xl md:text-6xl font-bold text-white mb-3 tracking-tight"
+            className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight"
           >
-            Upvista
+            Upvista Community
           </motion.h1>
 
           {/* Tagline - Subtle entrance */}

@@ -114,13 +114,13 @@ export default function InstallPrompt() {
 
               {/* Text */}
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-1">
-                  Install Upvista
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white mb-1">
+                  Install Upvista Community
                 </h3>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
                   {isIOS
-                    ? 'Tap Share and "Add to Home Screen" for the full experience'
-                    : ' Professional Social Networking. Install for instant access.'}
+                    ? 'Tap Share → "Add to Home Screen" for the full experience'
+                    : 'Your whole world in one app. Install for instant access.'}
                 </p>
               </div>
             </div>
@@ -142,24 +142,22 @@ export default function InstallPrompt() {
             </ul>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               {!isIOS && deferredPrompt && (
-                <Button
-                  variant="primary"
+                <button
                   onClick={handleInstall}
-                  className="flex-1 flex items-center justify-center gap-2"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
                 >
                   <Download className="w-4 h-4" />
-                  Install App
-                </Button>
+                  Install
+                </button>
               )}
-              <Button
-                variant="secondary"
+              <button
                 onClick={handleDismiss}
-                className={isIOS || !deferredPrompt ? 'flex-1' : ''}
+                className={`${isIOS || !deferredPrompt ? 'flex-1' : 'px-4'} py-2.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-sm font-medium rounded-lg transition-colors`}
               >
-                {isIOS || !deferredPrompt ? 'Got it' : 'Maybe Later'}
-              </Button>
+                {isIOS || !deferredPrompt ? 'Got it' : 'Later'}
+              </button>
             </div>
           </motion.div>
         </>

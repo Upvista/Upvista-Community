@@ -11,9 +11,9 @@ import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 import PWAWrapper from "@/components/pwa/PWAWrapper";
 
 export const metadata: Metadata = {
-  title: "Upvista - Professional Social Networking",
+  title: "Upvista Community - Professional Social Networking",
   description: "Post your wins, connect with legends, collab on projects, and get paid. Build a different world.",
-  applicationName: "Upvista",
+  applicationName: "Upvista Community",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "Upvista",
-    title: "Upvista - Professional Social Networking",
+    siteName: "Upvista Community",
+    title: "Upvista Community - Your Whole World in One App",
     description: "Post your wins, connect with legends, collab on projects, and get paid. Build a different world.",
     images: [
       {
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Upvista - Professional Social Networking",
+    title: "Upvista Community - Professional Social Networking",
     description: "Post your wins, connect with legends, collab on projects, and get paid. Build a different world.",
     images: ["/PWA-icons/ios/1024.png"],
   },
