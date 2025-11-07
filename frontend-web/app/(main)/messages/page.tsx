@@ -33,19 +33,23 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!isMobile) return; // Only handle on mobile
 
-    const handleBackButton = (e: PopStateEvent) => {
+    const handleBackButton = () => {
       if (selectedConversation) {
         // If chat is open, close it and show conversation list
-        e.preventDefault();
+        console.log('[MessagesPage] Back pressed - closing chat');
         setSelectedConversation(null);
-        window.history.pushState(null, '', window.location.pathname);
+        // Push state again to prevent app close
+        window.history.pushState({ page: 'messages-list' }, '', window.location.pathname);
+        return;
       }
       // If conversation list is shown, allow natural back navigation
+      console.log('[MessagesPage] Back pressed - allowing natural navigation');
     };
 
-    // Push initial state to enable back button
+    // Push initial state when chat opens to enable back button
     if (selectedConversation) {
-      window.history.pushState(null, '', window.location.pathname);
+      window.history.pushState({ page: 'messages-chat', conversationId: selectedConversation }, '', window.location.pathname);
+      console.log('[MessagesPage] Pushed chat state to history');
     }
 
     window.addEventListener('popstate', handleBackButton);

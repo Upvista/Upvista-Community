@@ -220,7 +220,7 @@ export default function MessageBubble({
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-    }, 600);
+    }, 500);
 
     setLongPressTimer(timer);
   };
@@ -291,9 +291,9 @@ export default function MessageBubble({
         {/* Action Menu (on hover) - WhatsApp Style */}
         {showActions && !showReactions && (
           <div
-            className={`absolute -top-10 ${
+            className={`absolute -top-11 ${
               isMine ? 'right-0' : 'left-0'
-            } flex items-center gap-0.5 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-1`}
+            } flex items-center gap-0.5 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-1 z-50`}
           >
             <button
               onClick={() => setShowReactions(true)}

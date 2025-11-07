@@ -186,15 +186,21 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
       setHasInitialLoad(true);
       
       // ALWAYS scroll to bottom on initial load (WhatsApp behavior)
+      // Use multiple RAF to ensure DOM is fully rendered
       requestAnimationFrame(() => {
-        scrollToBottom(true); // Instant scroll
-        console.log('[ChatWindow] 📜 Auto-scrolled to bottom on initial load');
+        requestAnimationFrame(() => {
+          const scrollElement = scrollRef.current;
+          if (scrollElement) {
+            scrollElement.scrollTop = scrollElement.scrollHeight;
+            console.log('[ChatWindow] 📜 Auto-scrolled to bottom:', scrollElement.scrollHeight);
+          }
+        });
       });
     } else if (_loadedMessages.length > 0 && hasInitialLoad) {
       // For infinite scroll: merge new loaded messages without replacing existing
       console.log('[ChatWindow] 📥 Infinite scroll loaded more messages');
     }
-  }, [_loadedMessages, setMessages, hasInitialLoad, scrollToBottom]);
+  }, [_loadedMessages, setMessages, hasInitialLoad]);
 
   // Reset initial load flag when conversation changes
   useEffect(() => {

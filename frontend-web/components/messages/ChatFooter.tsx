@@ -540,20 +540,20 @@ export default function ChatFooter({
       )}
 
       {/* Input Area */}
-      <div className="p-4 flex items-center gap-2">
+      <div className="p-4 flex items-center gap-2.5">
         {/* Emoji Button */}
         <button
           onClick={async () => {
             const { toast } = await import('@/components/ui/Toast');
             toast.info('Emoji picker coming soon!');
           }}
-          className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors flex-shrink-0"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors flex-shrink-0"
         >
           <Smile className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
 
         {/* Text Input */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative flex items-center">
           <textarea
             ref={textareaRef}
             value={text}
@@ -563,16 +563,16 @@ export default function ChatFooter({
             disabled={isRecording}
             className="w-full px-4 py-2.5 pr-10 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 max-h-32"
             rows={1}
-            style={{ minHeight: '42px' }}
+            style={{ minHeight: '44px', lineHeight: '1.5' }}
           />
 
-          {/* Attachment Button (inside input) */}
-          <div className="absolute right-2 bottom-2.5">
+          {/* Attachment Button (inside input, vertically centered) */}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
             <button
               onClick={handleAttachment}
               className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors relative"
             >
-              <Paperclip className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <Paperclip className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
 
             {/* Attachment Grid Menu - Compact Dropdown */}
@@ -715,11 +715,12 @@ export default function ChatFooter({
           />
         </div>
 
-        {/* Send / Voice Button */}
+        {/* Send / Voice Button - Equal height to input */}
         {text.trim() ? (
           <button
             onClick={handleSend}
             className="p-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors flex-shrink-0"
+            style={{ height: '44px', width: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             title="Send message"
           >
             <Send className="w-5 h-5" />
@@ -727,11 +728,12 @@ export default function ChatFooter({
         ) : (
           <button
             onClick={handleVoiceClick}
-            className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${
+            className={`rounded-full transition-colors flex-shrink-0 ${
               isRecording
                 ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
                 : 'bg-purple-600 hover:bg-purple-700 text-white'
             }`}
+            style={{ height: '44px', width: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             title={isRecording ? 'Click to send voice message' : 'Click to start recording'}
           >
             {isRecording ? <Send className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
