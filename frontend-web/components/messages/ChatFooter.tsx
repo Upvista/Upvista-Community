@@ -540,14 +540,14 @@ export default function ChatFooter({
       )}
 
       {/* Input Area */}
-      <div className="p-4 flex items-end gap-2">
+      <div className="p-4 flex items-center gap-2">
         {/* Emoji Button */}
         <button
           onClick={async () => {
             const { toast } = await import('@/components/ui/Toast');
             toast.info('Emoji picker coming soon!');
           }}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors flex-shrink-0"
+          className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors flex-shrink-0"
         >
           <Smile className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
@@ -561,12 +561,13 @@ export default function ChatFooter({
             onKeyPress={handleKeyPress}
             placeholder={isRecording ? 'Recording audio...' : 'Type a message...'}
             disabled={isRecording}
-            className="w-full px-4 py-2 pr-10 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 max-h-32"
+            className="w-full px-4 py-2.5 pr-10 rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 max-h-32"
             rows={1}
+            style={{ minHeight: '42px' }}
           />
 
           {/* Attachment Button (inside input) */}
-          <div className="absolute right-2 bottom-2">
+          <div className="absolute right-2 bottom-2.5">
             <button
               onClick={handleAttachment}
               className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors relative"
@@ -718,7 +719,7 @@ export default function ChatFooter({
         {text.trim() ? (
           <button
             onClick={handleSend}
-            className="p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors flex-shrink-0"
+            className="p-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-full transition-colors flex-shrink-0"
             title="Send message"
           >
             <Send className="w-5 h-5" />
@@ -726,7 +727,7 @@ export default function ChatFooter({
         ) : (
           <button
             onClick={handleVoiceClick}
-            className={`p-3 rounded-full transition-colors flex-shrink-0 ${
+            className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${
               isRecording
                 ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
                 : 'bg-purple-600 hover:bg-purple-700 text-white'

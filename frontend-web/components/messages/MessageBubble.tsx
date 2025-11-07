@@ -47,6 +47,9 @@ export default function MessageBubble({
   const [showDeleteMenu, setShowDeleteMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [manageReaction, setManageReaction] = useState<{ emoji: string; reactionId: string } | null>(null);
+  const [isHighlighted, setIsHighlighted] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null);
 
   const isMine = message.is_mine || false;
   const isForwarded = message.is_forwarded || false;
@@ -198,21 +201,93 @@ export default function MessageBubble({
     }
   };
 
+  // ==================== LONG PRESS HANDLING ====================
+
+  const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
+    // Record touch/click position
+    const pos = 'touches' in e ? 
+      { x: e.touches[0].clientX, y: e.touches[0].clientY } :
+      { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY };
+    
+    setTouchStartPos(pos);
+
+    // Start timer for long press (600ms - WhatsApp standard)
+    const timer = setTimeout(() => {
+      setShowActions(true);
+      setIsHighlighted(true);
+      
+      // Haptic feedback on mobile
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 600);
+
+    setLongPressTimer(timer);
+  };
+
+  const handleLongPressMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (!touchStartPos || !longPressTimer) return;
+
+    // Get current position
+    const currentPos = 'touches' in e ?
+      { x: e.touches[0].clientX, y: e.touches[0].clientY } :
+      { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY };
+
+    // Cancel if moved more than 10px (prevents accidental long press during scroll)
+    const distance = Math.sqrt(
+      Math.pow(currentPos.x - touchStartPos.x, 2) +
+      Math.pow(currentPos.y - touchStartPos.y, 2)
+    );
+
+    if (distance > 10) {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        setLongPressTimer(null);
+      }
+      setTouchStartPos(null);
+    }
+  };
+
+  const handleLongPressEnd = () => {
+    // Clear timer if released before timeout
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    setTouchStartPos(null);
+  };
+
+  // Close actions when clicking outside
+  const handleClickOutside = () => {
+    if (showActions) {
+      setShowActions(false);
+      setIsHighlighted(false);
+      setShowReactions(false);
+      setShowDeleteMenu(false);
+      setShowEmojiPicker(false);
+    }
+  };
+
   // ==================== RENDER ====================
 
   return (
-    <div
-      id={`message-${message.id}`}
-      className={`flex ${isMine ? 'justify-end' : 'justify-start'} group scroll-mt-4 transition-all duration-200`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => {
-        setShowActions(false);
-        setShowReactions(false);
-        setShowDeleteMenu(false);
-        setShowEmojiPicker(false);
-      }}
-    >
-      <div className={`relative max-w-[80%]`}>
+    <>
+      {/* Backdrop for closing actions */}
+      {showActions && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={handleClickOutside}
+          onTouchEnd={handleClickOutside}
+        />
+      )}
+
+      <div
+        id={`message-${message.id}`}
+        className={`flex ${isMine ? 'justify-end' : 'justify-start'} group scroll-mt-4 transition-all duration-200 ${
+          isHighlighted ? 'relative z-50' : ''
+        }`}
+      >
+        <div className={`relative max-w-[80%]`}>
         {/* Action Menu (on hover) - WhatsApp Style */}
         {showActions && !showReactions && (
           <div
@@ -387,6 +462,13 @@ export default function MessageBubble({
 
         {/* Message Bubble - WhatsApp Style with Tail */}
         <div
+          onTouchStart={handleLongPressStart}
+          onTouchMove={handleLongPressMove}
+          onTouchEnd={handleLongPressEnd}
+          onMouseDown={handleLongPressStart}
+          onMouseMove={handleLongPressMove}
+          onMouseUp={handleLongPressEnd}
+          onMouseLeave={handleLongPressEnd}
           className={`break-words ${
             message.message_type === 'image' || message.message_type === 'file' || message.message_type === 'video'
               ? 'p-0.5 overflow-hidden' // Minimal 2px padding for images, videos and files
@@ -395,7 +477,9 @@ export default function MessageBubble({
             isMine
               ? 'bg-purple-600 text-white rounded-[18px] rounded-br-[4px]'
               : 'bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white rounded-[18px] rounded-bl-[4px]'
-          }`}
+          } ${
+            isHighlighted ? 'ring-2 ring-purple-400 ring-opacity-50 scale-[1.02]' : ''
+          } transition-all duration-150 select-none`}
           style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', maxWidth: '100%' }}
         >
           {/* Forwarded Label */}
@@ -669,17 +753,18 @@ export default function MessageBubble({
             })}
           </div>
         )}
-      </div>
+        </div>
 
-      {/* Reaction Management Dialog */}
-      <ReactionManageDialog
-        isOpen={!!manageReaction}
-        currentEmoji={manageReaction?.emoji || ''}
-        onClose={() => setManageReaction(null)}
-        onRemove={handleRemoveReaction}
-        onChange={handleChangeReaction}
-      />
-    </div>
+        {/* Reaction Management Dialog */}
+        <ReactionManageDialog
+          isOpen={!!manageReaction}
+          currentEmoji={manageReaction?.emoji || ''}
+          onClose={() => setManageReaction(null)}
+          onRemove={handleRemoveReaction}
+          onChange={handleChangeReaction}
+        />
+      </div>
+    </>
   );
 }
 

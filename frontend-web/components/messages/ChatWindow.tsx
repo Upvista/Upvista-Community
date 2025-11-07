@@ -184,11 +184,17 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
       console.log('[ChatWindow] 📥 Initial load:', _loadedMessages.length, 'messages');
       setMessages(_loadedMessages);
       setHasInitialLoad(true);
+      
+      // ALWAYS scroll to bottom on initial load (WhatsApp behavior)
+      requestAnimationFrame(() => {
+        scrollToBottom(true); // Instant scroll
+        console.log('[ChatWindow] 📜 Auto-scrolled to bottom on initial load');
+      });
     } else if (_loadedMessages.length > 0 && hasInitialLoad) {
       // For infinite scroll: merge new loaded messages without replacing existing
       console.log('[ChatWindow] 📥 Infinite scroll loaded more messages');
     }
-  }, [_loadedMessages, setMessages, hasInitialLoad]);
+  }, [_loadedMessages, setMessages, hasInitialLoad, scrollToBottom]);
 
   // Reset initial load flag when conversation changes
   useEffect(() => {
@@ -339,11 +345,22 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
         // Increment unread count by number of new messages from others
         setUnreadWhileScrolledUp(prev => prev + newUnreadCount);
       }
+    } else if (isUserAtBottom && messages.length > prevMessageCount) {
+      // User is at bottom - auto-scroll to show new messages (WhatsApp behavior)
+      const newMessages = messages.slice(prevMessageCount);
+      const hasNewMessages = newMessages.length > 0;
+      
+      if (hasNewMessages) {
+        console.log('[ChatWindow] 📜 New messages while at bottom, auto-scrolling');
+        requestAnimationFrame(() => {
+          scrollToBottom(true); // Smooth scroll
+        });
+      }
     }
     
     // Update previous count
     setPrevMessageCount(messages.length);
-  }, [messages, isUserAtBottom, prevMessageCount]);
+  }, [messages, isUserAtBottom, prevMessageCount, scrollToBottom]);
 
   // Reset unread count when conversation changes
   useEffect(() => {

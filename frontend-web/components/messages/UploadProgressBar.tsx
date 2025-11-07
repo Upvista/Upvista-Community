@@ -55,9 +55,43 @@ export function UploadProgressBar({ upload, onCancel }: UploadProgressBarProps) 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 mb-2 animate-slide-in-up">
       <div className="flex items-center gap-3">
-        {/* File Icon */}
-        <div className="flex-shrink-0">
-          {getFileIcon()}
+        {/* File Icon with Circular Progress (WhatsApp-style) */}
+        <div className="flex-shrink-0 relative">
+          {upload.status === 'uploading' ? (
+            <div className="relative w-12 h-12">
+              {/* Background Circle */}
+              <svg className="w-12 h-12 transform -rotate-90">
+                <circle
+                  cx="24"
+                  cy="24"
+                  r="20"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  fill="none"
+                  className="text-gray-200 dark:text-gray-700"
+                />
+                {/* Progress Circle */}
+                <circle
+                  cx="24"
+                  cy="24"
+                  r="20"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  fill="none"
+                  strokeDasharray={`${2 * Math.PI * 20}`}
+                  strokeDashoffset={`${2 * Math.PI * 20 * (1 - upload.progress / 100)}`}
+                  className="text-purple-600 transition-all duration-300"
+                  strokeLinecap="round"
+                />
+              </svg>
+              {/* File Icon in Center */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                {getFileIcon()}
+              </div>
+            </div>
+          ) : (
+            getFileIcon()
+          )}
         </div>
 
         {/* Upload Info */}
@@ -69,16 +103,16 @@ export function UploadProgressBar({ upload, onCancel }: UploadProgressBarProps) 
             {upload.status === 'uploading' && (
               <button
                 onClick={() => onCancel(upload.uploadId)}
-                className="flex-shrink-0 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                className="flex-shrink-0 p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors group"
                 title="Cancel upload"
               >
-                <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <X className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400" />
               </button>
             )}
           </div>
 
-          {/* Progress Bar */}
-          <div className="relative w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          {/* Progress Bar (Linear fallback) */}
+          <div className="relative w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-1">
             <div
               className={`absolute top-0 left-0 h-full ${getStatusColor()} transition-all duration-300 ease-out`}
               style={{ width: `${upload.progress}%` }}
@@ -86,7 +120,7 @@ export function UploadProgressBar({ upload, onCancel }: UploadProgressBarProps) 
           </div>
 
           {/* Status Text */}
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
             {getStatusText()}
           </p>
         </div>

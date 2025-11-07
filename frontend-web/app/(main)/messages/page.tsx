@@ -28,6 +28,33 @@ export default function MessagesPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // ==================== MOBILE BACK BUTTON HANDLING ====================
+
+  useEffect(() => {
+    if (!isMobile) return; // Only handle on mobile
+
+    const handleBackButton = (e: PopStateEvent) => {
+      if (selectedConversation) {
+        // If chat is open, close it and show conversation list
+        e.preventDefault();
+        setSelectedConversation(null);
+        window.history.pushState(null, '', window.location.pathname);
+      }
+      // If conversation list is shown, allow natural back navigation
+    };
+
+    // Push initial state to enable back button
+    if (selectedConversation) {
+      window.history.pushState(null, '', window.location.pathname);
+    }
+
+    window.addEventListener('popstate', handleBackButton);
+
+    return () => {
+      window.removeEventListener('popstate', handleBackButton);
+    };
+  }, [selectedConversation, isMobile]);
+
   // ==================== LOAD CONVERSATIONS ====================
 
   useEffect(() => {

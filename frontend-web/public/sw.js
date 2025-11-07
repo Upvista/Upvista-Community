@@ -3,7 +3,7 @@
  * Handles offline support and caching
  */
 
-const CACHE_NAME = 'upvista-v1';
+const CACHE_NAME = 'upvista-v2';
 const OFFLINE_URL = '/offline';
 
 // Assets to cache on install

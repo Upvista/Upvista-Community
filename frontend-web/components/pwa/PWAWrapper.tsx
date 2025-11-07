@@ -24,13 +24,18 @@ export default function PWAWrapper({ children }: PWAWrapperProps) {
     // Register service worker
     registerServiceWorker();
     
-    // Show splash EVERY TIME in standalone mode (PWA)
+    // Check if running in standalone mode (installed PWA)
     const isStandalone = 
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
 
-    if (isStandalone) {
+    // Check if splash was already shown in this session
+    const hasShownSplash = sessionStorage.getItem('upvista-splash-shown');
+
+    // Show splash only on fresh app launch (not on page navigation)
+    if (isStandalone && !hasShownSplash) {
       setShowSplash(true);
+      sessionStorage.setItem('upvista-splash-shown', 'true');
     } else {
       setAppReady(true);
     }
