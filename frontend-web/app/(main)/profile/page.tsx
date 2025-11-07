@@ -582,24 +582,33 @@ export default function ProfilePage() {
 
                 {/* Action Buttons at Bottom - Mobile Only */}
                 {profile.is_own_profile && !previewMode ? (
-                  <div className="flex gap-2 mt-4">
-                    <Button 
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setPreviewMode(true)}
-                      className="flex-1"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Preview as Public
-                    </Button>
+                  <div className="flex gap-2 mt-3">
                     <Button 
                       variant="secondary" 
                       size="sm"
                       onClick={() => router.push('/settings')}
-                      className="flex-1"
+                      className="flex-1 text-xs py-2"
                     >
-                      <Edit3 className="w-4 h-4" />
+                      <Edit3 className="w-3.5 h-3.5" />
                       Edit Profile
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={handleShareProfile}
+                      className="flex-1 text-xs py-2"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      Share
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => setPreviewMode(true)}
+                      className="px-3 text-xs py-2"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Preview
                     </Button>
                   </div>
                 ) : (
@@ -1165,7 +1174,7 @@ export default function ProfilePage() {
                     <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
                       Skills & Achievements
                     </h3>
-                    <span className="ml-auto text-xs px-2 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
+                    <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-medium">
                       Coming Soon
                     </span>
                   </div>

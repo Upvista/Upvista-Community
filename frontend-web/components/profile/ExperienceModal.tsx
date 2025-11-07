@@ -102,21 +102,21 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-2xl bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-neutral-200 dark:border-neutral-800">
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-neutral-200 dark:border-neutral-800">
+          <h2 className="text-lg md:text-xl font-semibold text-neutral-900 dark:text-white">
             {experience ? 'Edit Experience' : 'Add Experience'}
           </h2>
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+            className="p-1.5 md:p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 md:space-y-4">
           <Input
             label="Company Name"
             value={formData.company_name}
@@ -134,14 +134,14 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
           />
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+            <label className="block text-xs md:text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 md:mb-2">
               Employment Type
             </label>
             <select
               value={formData.employment_type}
               onChange={(e) => setFormData({ ...formData, employment_type: e.target.value })}
               disabled={isLoading}
-              className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-brand-purple-500"
+              className="w-full px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base rounded-xl border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-brand-purple-500"
             >
               {EMPLOYMENT_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -175,15 +175,15 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
               checked={formData.is_current}
               onChange={(e) => setFormData({ ...formData, is_current: e.target.checked, end_date: e.target.checked ? '' : formData.end_date })}
               disabled={isLoading}
-              className="w-5 h-5 rounded text-brand-purple-600"
+              className="w-4 h-4 md:w-5 md:h-5 rounded text-brand-purple-600"
             />
-            <span className="text-sm text-neutral-700 dark:text-neutral-300">
+            <span className="text-xs md:text-sm text-neutral-700 dark:text-neutral-300">
               I currently work here
             </span>
           </label>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+            <label className="block text-xs md:text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5 md:mb-2">
               Description (optional)
             </label>
             <textarea
@@ -191,9 +191,9 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Describe your role and achievements..."
               maxLength={200}
-              rows={4}
+              rows={3}
               disabled={isLoading}
-              className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-brand-purple-500 resize-none"
+              className="w-full px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base rounded-xl border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-brand-purple-500 resize-none"
             />
             <div className="mt-1 text-xs text-neutral-500 text-right">
               {formData.description.length} / 200
@@ -206,9 +206,9 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
               checked={formData.is_public}
               onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
               disabled={isLoading}
-              className="w-5 h-5 rounded text-brand-purple-600"
+              className="w-4 h-4 md:w-5 md:h-5 rounded text-brand-purple-600"
             />
-            <span className="text-sm text-neutral-700 dark:text-neutral-300">
+            <span className="text-xs md:text-sm text-neutral-700 dark:text-neutral-300">
               Make this experience public (uncheck to show only to recruiters)
             </span>
           </label>
@@ -221,13 +221,21 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-neutral-200 dark:border-neutral-800">
-          <Button variant="ghost" size="md" onClick={onClose} disabled={isLoading}>
+        <div className="flex items-center justify-end gap-2 p-4 md:p-6 border-t border-neutral-200 dark:border-neutral-800">
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="px-4 py-2 md:px-5 md:py-2.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+          >
             Cancel
-          </Button>
-          <Button variant="primary" size="md" onClick={handleSave} isLoading={isLoading}>
-            {experience ? 'Save Changes' : 'Add Experience'}
-          </Button>
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isLoading}
+            className="px-4 py-2 md:px-5 md:py-2.5 text-sm font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
+          >
+            {isLoading ? 'Saving...' : experience ? 'Save' : 'Add'}
+          </button>
         </div>
       </div>
     </div>

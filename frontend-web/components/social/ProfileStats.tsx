@@ -126,21 +126,42 @@ export default function ProfileStats({
   const statsToShow = visibleStats.length >= 3 ? visibleStats : allStatItems.slice(0, 3);
 
   return (
-    <div className="flex gap-4 py-4 border-y border-neutral-200 dark:border-neutral-700 flex-wrap justify-center">
-      {statsToShow.map((item) => (
-        <button
-          key={item.type}
-          onClick={() => onStatClick && onStatClick(item.type)}
-          className="flex flex-col items-center hover:bg-neutral-100 dark:hover:bg-neutral-800 px-3 py-1 rounded-lg transition-colors min-w-[80px]"
-        >
-          <span className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
-            {item.count}
-          </span>
-          <span className="text-sm text-neutral-600 dark:text-neutral-400">
-            {item.label}
-          </span>
-        </button>
-      ))}
+    <div className="py-3 border-y border-neutral-200 dark:border-neutral-700">
+      {/* Mobile: 2x3 Grid */}
+      <div className="grid grid-cols-3 gap-2 md:hidden">
+        {statsToShow.map((item) => (
+          <button
+            key={item.type}
+            onClick={() => onStatClick && onStatClick(item.type)}
+            className="flex flex-col items-center hover:bg-neutral-100 dark:hover:bg-neutral-800 px-2 py-1.5 rounded-lg transition-colors"
+          >
+            <span className="text-base font-bold text-neutral-900 dark:text-neutral-50">
+              {item.count}
+            </span>
+            <span className="text-xs text-neutral-600 dark:text-neutral-400">
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </div>
+      
+      {/* Desktop: Horizontal flex */}
+      <div className="hidden md:flex gap-4 justify-center">
+        {statsToShow.map((item) => (
+          <button
+            key={item.type}
+            onClick={() => onStatClick && onStatClick(item.type)}
+            className="flex flex-col items-center hover:bg-neutral-100 dark:hover:bg-neutral-800 px-3 py-1 rounded-lg transition-colors min-w-[80px]"
+          >
+            <span className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+              {item.count}
+            </span>
+            <span className="text-sm text-neutral-600 dark:text-neutral-400">
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
