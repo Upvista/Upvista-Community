@@ -1418,7 +1418,7 @@ func (r *supabaseMessageRepository) SearchConversationMessages(ctx context.Conte
 
 func (r *supabaseMessageRepository) editHistoryURL(query url.Values) string {
 	baseURL := fmt.Sprintf("%s/rest/v1/message_edit_history", r.supabaseURL)
-	if query != nil && len(query) > 0 {
+	if len(query) > 0 {
 		return fmt.Sprintf("%s?%s", baseURL, query.Encode())
 	}
 	return baseURL

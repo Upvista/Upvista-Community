@@ -42,9 +42,34 @@ class NotificationWebSocket {
   private isIntentionallyClosed = false;
 
   private constructor() {
+    // Auto-detect environment: dev vs production
+    const isDevelopment = 
+      typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === '0.0.0.0' ||
+        process.env.NODE_ENV === 'development'
+      );
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = process.env.NEXT_PUBLIC_API_URL || 'localhost:8081';
-    this.url = `${protocol}//${host.replace(/^https?:\/\//, '')}/api/v1/ws`;
+    
+    let host: string;
+    if (isDevelopment) {
+      // Development: always use localhost
+      host = 'localhost:8081';
+    } else {
+      // Production: use env variable or extract from current hostname
+      const envUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (envUrl) {
+        // Extract host from URL (remove protocol)
+        host = envUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      } else {
+        // Fallback: use current hostname (for production deployments)
+        host = window.location.hostname;
+      }
+    }
+    
+    this.url = `${protocol}//${host}/api/v1/ws`;
   }
 
   public static getInstance(): NotificationWebSocket {
@@ -90,8 +115,19 @@ class NotificationWebSocket {
       };
 
       this.ws.onerror = (error) => {
-        console.error('[WebSocket] Connection error. Make sure backend is running on port 8081');
-        console.error('[WebSocket] Expected URL:', this.url);
+        // Only log error if not in development or if explicitly configured
+        const isDev = process.env.NODE_ENV === 'development';
+        const hasApiUrl = !!process.env.NEXT_PUBLIC_API_URL;
+        
+        if (!isDev || hasApiUrl) {
+          console.error('[WebSocket] Connection error. Make sure backend is running.');
+          console.error('[WebSocket] Expected URL:', this.url);
+        } else {
+          // In dev without API URL configured, just log once
+          if (this.reconnectAttempts === 0) {
+            console.warn('[WebSocket] Backend not configured. Set NEXT_PUBLIC_API_URL to enable real-time features.');
+          }
+        }
       };
 
       this.ws.onclose = (event) => {
@@ -185,14 +221,25 @@ class NotificationWebSocket {
     }
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('[WebSocket] Max reconnection attempts reached');
+      const isDev = process.env.NODE_ENV === 'development';
+      const hasApiUrl = !!process.env.NEXT_PUBLIC_API_URL;
+      
+      if (!isDev || hasApiUrl) {
+        console.error('[WebSocket] Max reconnection attempts reached');
+      }
       return;
     }
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
 
-    console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    // Only log reconnection attempts if API is configured or not in dev
+    const isDev = process.env.NODE_ENV === 'development';
+    const hasApiUrl = !!process.env.NEXT_PUBLIC_API_URL;
+    
+    if (!isDev || hasApiUrl) {
+      console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    }
 
     setTimeout(() => {
       this.connect(token);

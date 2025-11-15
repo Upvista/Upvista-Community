@@ -13,6 +13,7 @@ import (
 	"upvista-community-backend/internal/jobs"
 	"upvista-community-backend/internal/messaging"
 	"upvista-community-backend/internal/notifications"
+	"upvista-community-backend/internal/posts"
 	"upvista-community-backend/internal/repository"
 	"upvista-community-backend/internal/search"
 	"upvista-community-backend/internal/social"
@@ -148,17 +149,40 @@ func main() {
 	// Initialize message handlers
 	messageHandlers := messaging.NewMessageHandlers(messagingSvc, storageSvc, mediaOptimizer)
 
+	// ============================================
+	// POSTS & FEED SYSTEM INITIALIZATION
+	// ============================================
+
+	// Initialize post repositories
+	postRepo := repository.NewSupabasePostRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	pollRepo := repository.NewSupabasePollRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	articleRepo := repository.NewSupabaseArticleRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	commentRepo := repository.NewSupabaseCommentRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+
+	// Initialize post service
+	postSvc := posts.NewService(postRepo, pollRepo, articleRepo, commentRepo, wsManager)
+
+	// Initialize feed service
+	feedSvc := posts.NewFeedService(postRepo, relationshipRepo)
+
+	// Initialize post handlers
+	postHandlers := posts.NewHandlers(postSvc, feedSvc)
+
+	log.Println("[Posts] Post & feed system initialized")
+
 	// Initialize background jobs
 	cleanupJob := jobs.NewNotificationCleanupJob(notificationRepo)
 	digestJob := jobs.NewNotificationDigestJob(notificationRepo, userRepo, notificationEmailSvc)
+	hashtagTrendingJob := jobs.NewHashtagTrendingJob(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
 
 	// Start background jobs
 	jobCtx := context.Background()
-	go cleanupJob.Start(jobCtx)      // Runs daily at 2:00 AM
-	go digestJob.StartDaily(jobCtx)  // Runs daily at 9:00 AM
-	go digestJob.StartWeekly(jobCtx) // Runs Monday at 9:00 AM
+	go cleanupJob.Start(jobCtx)         // Runs daily at 2:00 AM
+	go digestJob.StartDaily(jobCtx)     // Runs daily at 9:00 AM
+	go digestJob.StartWeekly(jobCtx)    // Runs Monday at 9:00 AM
+	go hashtagTrendingJob.Start(jobCtx) // Runs daily at 3:00 AM
 
-	log.Println("[Jobs] Background jobs started: cleanup (2 AM daily), digest (9 AM daily/weekly)")
+	log.Println("[Jobs] Background jobs started: cleanup (2 AM), digest (9 AM), hashtag trending (3 AM)")
 
 	// Initialize handlers
 	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc, rateLimiter, cfg, googleOAuth, githubOAuth, linkedinOAuth, sessionRepo)
@@ -322,6 +346,69 @@ func main() {
 
 		// Search routes (public - no auth required)
 		searchHandlers.SetupRoutes(api)
+
+		// ============================================
+		// POSTS & FEED ROUTES
+		// ============================================
+
+		// Posts CRUD (protected)
+		postsGroup := protected.Group("/posts")
+		{
+			postsGroup.POST("", postHandlers.CreatePost)                 // Create post
+			postsGroup.GET("/:id", postHandlers.GetPost)                 // Get single post
+			postsGroup.PUT("/:id", postHandlers.UpdatePost)              // Update post
+			postsGroup.DELETE("/:id", postHandlers.DeletePost)           // Delete post
+			postsGroup.GET("/user/:username", postHandlers.GetUserPosts) // User's posts
+
+			// Engagement
+			postsGroup.POST("/:id/like", postHandlers.LikePost)     // Like post
+			postsGroup.DELETE("/:id/like", postHandlers.UnlikePost) // Unlike post
+			postsGroup.POST("/:id/share", postHandlers.SharePost)   // Share post
+			postsGroup.POST("/:id/save", postHandlers.SavePost)     // Save post
+			postsGroup.DELETE("/:id/save", postHandlers.UnsavePost) // Unsave post
+
+			// Comments
+			postsGroup.POST("/:id/comments", postHandlers.CreateComment) // Create comment
+			postsGroup.GET("/:id/comments", postHandlers.GetComments)    // Get comments
+
+			// Polls
+			postsGroup.POST("/:id/vote", postHandlers.VotePoll)         // Vote on poll
+			postsGroup.GET("/:id/results", postHandlers.GetPollResults) // Get poll results
+		}
+
+		// Comments (protected)
+		commentsGroup := protected.Group("/comments")
+		{
+			commentsGroup.PUT("/:id", postHandlers.UpdateComment)     // Update comment
+			commentsGroup.DELETE("/:id", postHandlers.DeleteComment)  // Delete comment
+			commentsGroup.POST("/:id/like", postHandlers.LikeComment) // Like comment
+		}
+
+		// Feed (protected)
+		feedGroup := protected.Group("/feed")
+		{
+			feedGroup.GET("/home", postHandlers.GetHomeFeed)           // Home feed
+			feedGroup.GET("/following", postHandlers.GetFollowingFeed) // Following feed
+			feedGroup.GET("/explore", postHandlers.GetExploreFeed)     // Explore feed
+			feedGroup.GET("/saved", postHandlers.GetSavedFeed)         // Saved posts
+		}
+
+		// Hashtags (mixed public/protected)
+		hashtagGroup := api.Group("/hashtags")
+		{
+			hashtagGroup.GET("/:tag/posts", postHandlers.GetHashtagFeed)    // Hashtag feed (public)
+			hashtagGroup.GET("/trending", postHandlers.GetTrendingHashtags) // Trending (public)
+
+			// Protected hashtag actions
+			hashtagProtected := hashtagGroup.Group("")
+			hashtagProtected.Use(auth.JWTAuthMiddleware(jwtSvc))
+			{
+				hashtagProtected.POST("/:tag/follow", postHandlers.FollowHashtag)     // Follow hashtag
+				hashtagProtected.DELETE("/:tag/follow", postHandlers.UnfollowHashtag) // Unfollow hashtag
+			}
+		}
+
+		log.Println("[Routes] Post & feed routes registered")
 
 		// WebSocket route (protected - JWT in query param or header)
 		wsHandlers.SetupRoutes(api)

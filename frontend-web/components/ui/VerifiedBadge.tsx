@@ -4,11 +4,11 @@
  * Verified Badge Component
  * Created by: Hamza Hafeez - Founder & CEO of Upvista
  * 
- * Professional verified badge with brand purple styling
- * Executive and authoritative design
+ * Minimal Instagram-style verification badge with purple gradient
+ * Professional and clean design
  */
 
-import { CheckCircle2, Shield } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 interface VerifiedBadgeProps {
   size?: 'sm' | 'md' | 'lg';
@@ -26,19 +26,25 @@ export default function VerifiedBadge({
   
   const sizeClasses = {
     sm: {
-      icon: 'w-4 h-4',
+      container: 'w-3.5 h-3.5',
+      icon: 'w-2.5 h-2.5',
+      border: 'border-[0.5px]',
       text: 'text-[10px]',
       padding: 'px-2 py-0.5',
       gap: 'gap-1',
     },
     md: {
-      icon: 'w-4 h-4',
+      container: 'w-4 h-4',
+      icon: 'w-3 h-3',
+      border: 'border-[0.5px]',
       text: 'text-xs',
       padding: 'px-2.5 py-1',
       gap: 'gap-1.5',
     },
     lg: {
-      icon: 'w-5 h-5',
+      container: 'w-5 h-5',
+      icon: 'w-3.5 h-3.5',
+      border: 'border-[0.5px]',
       text: 'text-sm',
       padding: 'px-3 py-1.5',
       gap: 'gap-2',
@@ -47,31 +53,68 @@ export default function VerifiedBadge({
 
   const classes = sizeClasses[size];
 
-  if (variant === 'inline') {
+  // Instagram-style circular badge with checkmark
+  if (variant === 'badge' || variant === 'inline') {
+    if (!isVerified) {
+      return null; // Don't show anything if not verified
+    }
+
     return (
-      <div className="relative inline-flex items-center justify-center">
-        <CheckCircle2 
-          className={`${classes.icon} ${
-            isVerified 
-              ? 'text-blue-500 dark:text-blue-400 fill-blue-500 dark:fill-blue-400'
-              : 'text-neutral-400 dark:text-neutral-600 fill-neutral-400 dark:fill-neutral-600'
-          }`}
+      <div className={`
+        ${classes.container}
+        rounded-full
+        flex items-center justify-center
+        relative
+        ${isVerified 
+          ? 'bg-gradient-to-br from-purple-600 via-purple-500 to-purple-600'
+          : 'bg-neutral-200 dark:bg-neutral-700'
+        }
+        ${classes.border}
+        ${isVerified 
+          ? 'border-white/40'
+          : 'border-neutral-400 dark:border-neutral-500'
+        }
+        flex-shrink-0
+        shadow-sm
+        ${isVerified ? 'shadow-purple-500/20' : ''}
+      `}>
+        {/* Conical border effect - inner ring */}
+        <div className={`
+          absolute inset-0 rounded-full
+          ${isVerified 
+            ? 'border border-white/20'
+            : 'border border-neutral-300 dark:border-neutral-600'
+          }
+        `} />
+        
+        {/* Centered checkmark */}
+        <Check 
+          className={`
+            ${classes.icon} 
+            relative z-10
+            ${isVerified 
+              ? 'text-white'
+              : 'text-neutral-500 dark:text-neutral-400'
+            }
+            stroke-[4]
+          `}
         />
       </div>
     );
   }
 
+  // Fallback for any other variant
   return (
     <div className={`
       inline-flex items-center ${classes.gap} ${classes.padding}
       ${isVerified 
-        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm shadow-blue-500/20'
+        ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-sm shadow-purple-500/20'
         : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
       }
       font-semibold rounded-full
       ${classes.text}
     `}>
-      <Shield className={`${classes.icon} ${isVerified ? 'fill-white' : 'fill-neutral-500 dark:fill-neutral-400'}`} />
+      <Check className={`${classes.icon} ${isVerified ? 'text-white' : 'text-neutral-500 dark:text-neutral-400'}`} />
       {showText && <span>{isVerified ? 'Verified' : 'Not Verified'}</span>}
     </div>
   );

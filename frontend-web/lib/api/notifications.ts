@@ -74,21 +74,29 @@ export const notificationAPI = {
     if (params?.limit) queryParams.set('limit', params.limit.toString());
     if (params?.offset) queryParams.set('offset', params.offset.toString());
 
-    const response = await fetch(
-      `${API_BASE_URL}/notifications?${queryParams.toString()}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/notifications?${queryParams.toString()}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch notifications');
       }
-    );
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch notifications');
+      return response.json();
+    } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        console.error('[notificationsAPI] Network error:', error);
+        throw new Error('Network error: Unable to connect to server');
+      }
+      throw error;
     }
-
-    return response.json();
   },
 
   /**
@@ -98,21 +106,29 @@ export const notificationAPI = {
     const queryParams = new URLSearchParams();
     if (category) queryParams.set('category', category);
 
-    const response = await fetch(
-      `${API_BASE_URL}/notifications/unread-count?${queryParams.toString()}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/notifications/unread-count?${queryParams.toString()}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch unread count');
       }
-    );
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch unread count');
+      return response.json();
+    } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        console.error('[notificationsAPI] Network error in getUnreadCount:', error);
+        throw new Error('Network error: Unable to connect to server');
+      }
+      throw error;
     }
-
-    return response.json();
   },
 
   /**

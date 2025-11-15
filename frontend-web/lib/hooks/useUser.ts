@@ -102,25 +102,36 @@ export function useUser() {
       }
 
       // Create the request promise and store it
-      inflightRequest = fetch('/api/proxy/v1/account/profile', {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-        },
-      }).then(async (response) => {
-        // Auto-refresh token (sliding window authentication)
-        const newToken = response.headers.get('x-new-token');
-        if (newToken) {
-          localStorage.setItem('token', newToken);
-        }
+      inflightRequest = (async () => {
+        try {
+          const response = await fetch('/api/proxy/v1/account/profile', {
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          
+          // Auto-refresh token (sliding window authentication)
+          const newToken = response.headers.get('x-new-token');
+          if (newToken) {
+            localStorage.setItem('token', newToken);
+          }
 
-        if (response.ok) {
-          const data = await response.json();
-          return data.user;
-        } else {
-          const data = await response.json();
-          throw new Error(data.message || 'Failed to fetch profile');
+          if (response.ok) {
+            const data = await response.json();
+            return data.user;
+          } else {
+            const data = await response.json().catch(() => ({ message: 'Failed to fetch profile' }));
+            throw new Error(data.message || 'Failed to fetch profile');
+          }
+        } catch (error) {
+          // Handle network errors
+          if (error instanceof TypeError && error.message === 'Failed to fetch') {
+            console.error('[useUser] Network error:', error);
+            throw new Error('Network error: Unable to connect to server');
+          }
+          throw error;
         }
-      });
+      })();
 
       const userData = await inflightRequest;
       console.log('[useUser] Fetched user data');

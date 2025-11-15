@@ -77,92 +77,83 @@ export default function SearchPage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50 mb-2">
-            Search
-          </h1>
-          <p className="text-base text-neutral-600 dark:text-neutral-400">
-            Find and connect with developers, designers, and creators
-          </p>
-        </div>
-
-        {/* Search Input */}
-        <Card variant="solid" hoverable={false}>
+      <div className="max-w-4xl mx-auto">
+        {/* Search Bar - Clean & Professional */}
+        <div className="sticky top-0 z-10 bg-white dark:bg-neutral-900 pb-4 mb-6 border-b border-neutral-200 dark:border-neutral-800">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 dark:text-neutral-500" />
             <input
               type="text"
-              placeholder="Search by name, username, bio, or location..."
+              placeholder="Search people by name, username, bio, or location..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-12 pr-4 py-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-50 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-purple-500 focus:border-transparent"
+              className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-neutral-50 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-base"
               autoFocus
             />
+            {loading && (
+              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-purple-600" />
+            )}
           </div>
-        </Card>
+        </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-brand-purple-600" />
-          </div>
-        )}
-
-        {/* Results */}
-        {!loading && hasSearched && (
+        {/* Results Section */}
+        {hasSearched && (
           <>
             {/* Results Header */}
-            {results.length > 0 && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                  Found {total} {total === 1 ? 'user' : 'users'}
+            {results.length > 0 && !loading && (
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                  {total} {total === 1 ? 'result' : 'results'}
                 </p>
               </div>
             )}
 
             {/* Results List */}
-            {results.length > 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-purple-600 mx-auto mb-3" />
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Searching...</p>
+                </div>
+              </div>
+            ) : results.length > 0 ? (
               <div className="space-y-3">
                 {results.map((user) => (
                   <UserCard key={user.id} user={user} />
                 ))}
               </div>
             ) : (
-              <Card variant="solid" hoverable={false}>
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 mx-auto mb-4 text-neutral-300 dark:text-neutral-700" />
-                  <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
-                    No users found
-                  </h3>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                    Try a different search term or check your spelling
-                  </p>
-                </div>
-              </Card>
+              <div className="text-center py-16">
+                <Users className="w-16 h-16 mx-auto mb-4 text-neutral-300 dark:text-neutral-700" />
+                <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
+                  No results found
+                </h3>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                  Try adjusting your search or check your spelling
+                </p>
+              </div>
             )}
 
             {/* Pagination */}
-            {results.length > 0 && total > 20 && (
-              <div className="flex items-center justify-center gap-2">
+            {results.length > 0 && total > 20 && !loading && (
+              <div className="flex items-center justify-center gap-3 pt-4 mt-6 border-t border-neutral-200 dark:border-neutral-800">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+                  className="px-5 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors font-medium text-sm text-neutral-700 dark:text-neutral-300"
                 >
                   Previous
                 </button>
-                <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                  Page {page} of {Math.ceil(total / 20)}
+                <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400 px-2">
+                  {page} / {Math.ceil(total / 20)}
                 </span>
                 <button
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page >= Math.ceil(total / 20)}
-                  className="px-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+                  className="px-5 py-2.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors font-medium text-sm text-neutral-700 dark:text-neutral-300"
                 >
                   Next
                 </button>
@@ -173,18 +164,17 @@ export default function SearchPage() {
 
         {/* Empty State - Before Search */}
         {!hasSearched && !loading && (
-          <Card variant="solid" hoverable={false}>
-            <div className="text-center py-16">
-              <Search className="w-20 h-20 mx-auto mb-4 text-neutral-200 dark:text-neutral-800" />
-              <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
-                Search for people
-              </h3>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 max-w-md mx-auto">
-                Find developers, designers, engineers, and creators to connect with.
-                Search by name, username, location, or interests.
-              </p>
+          <div className="text-center py-20">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 flex items-center justify-center">
+              <Search className="w-10 h-10 text-purple-600 dark:text-purple-400" />
             </div>
-      </Card>
+            <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-3">
+              Discover amazing people
+            </h3>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-md mx-auto leading-relaxed">
+              Search for developers, designers, creators, and professionals. Connect with the community.
+            </p>
+          </div>
         )}
       </div>
     </MainLayout>

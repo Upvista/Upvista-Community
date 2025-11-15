@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 import PWAWrapper from "@/components/pwa/PWAWrapper";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://upvista-community.vercel.app'),
   title: "Upvista Community - Professional Social Networking",
   description: "Post your wins, connect with legends, collab on projects, and get paid. Build a different world.",
   applicationName: "Upvista Community",
