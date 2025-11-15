@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Post, postsAPI } from '@/lib/api/posts';
 import PostCard from './PostCard';
+import CommentModal from './CommentModal';
 import { toast } from '../ui/Toast';
+import NotificationWebSocket from '@/lib/websocket/NotificationWebSocket';
 
 interface FeedContainerProps {
   feedType?: 'home' | 'following' | 'explore' | 'saved';
@@ -19,11 +21,47 @@ export default function FeedContainer({ feedType = 'home', userId, hashtag }: Fe
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPostForComment, setSelectedPostForComment] = useState<Post | null>(null);
 
   // Load initial feed
   useEffect(() => {
     loadFeed(true);
   }, [feedType, hashtag]);
+
+  // WebSocket real-time updates
+  useEffect(() => {
+    const ws = NotificationWebSocket.getInstance();
+    
+    // Listen for new posts
+    const handleNewPost = (data: any) => {
+      if (data.type === 'new_post' && data.post) {
+        // Add new post to the top of the feed
+        setPosts(prev => [data.post, ...prev]);
+        toast.success('New post available');
+      }
+    };
+
+    // Listen for post updates (likes, comments, etc.)
+    const handlePostUpdate = (data: any) => {
+      if (data.type === 'post_liked' && data.post_id) {
+        setPosts(prev => prev.map(post => 
+          post.id === data.post_id 
+            ? { ...post, likes_count: data.likes_count || post.likes_count, is_liked: data.liker_id ? true : post.is_liked }
+            : post
+        ));
+      }
+    };
+
+    ws.on('new_post', handleNewPost);
+    ws.on('post_liked', handlePostUpdate);
+    ws.on('post_updated', handlePostUpdate);
+
+    return () => {
+      ws.off('new_post', handleNewPost);
+      ws.off('post_liked', handlePostUpdate);
+      ws.off('post_updated', handlePostUpdate);
+    };
+  }, []);
 
   const loadFeed = async (reset = false) => {
     if (reset) {
@@ -154,11 +192,24 @@ export default function FeedContainer({ feedType = 'home', userId, hashtag }: Fe
         <PostCard 
           key={post.id} 
           post={post}
-          onComment={(p) => toast.info('Comments coming soon')}
+          onComment={(p) => setSelectedPostForComment(p)}
           onShare={(p) => toast.info('Share coming soon')}
           onSave={(p) => toast.info('Save coming soon')}
         />
       ))}
+
+      {/* Comment Modal */}
+      {selectedPostForComment && (
+        <CommentModal
+          post={selectedPostForComment}
+          isOpen={!!selectedPostForComment}
+          onClose={() => {
+            setSelectedPostForComment(null);
+            // Refresh feed to show updated comment counts
+            loadFeed(true);
+          }}
+        />
+      )}
 
       {/* Load More Indicator */}
       {isLoadingMore && (

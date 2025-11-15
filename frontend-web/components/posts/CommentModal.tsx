@@ -9,6 +9,7 @@ import VerifiedBadge from '../ui/VerifiedBadge';
 import { toast } from '../ui/Toast';
 import CommentInput from './CommentInput';
 import { useUser } from '@/lib/hooks/useUser';
+import NotificationWebSocket from '@/lib/websocket/NotificationWebSocket';
 
 interface CommentModalProps {
   post: Post;
@@ -79,6 +80,58 @@ export default function CommentModal({ post, isOpen, onClose }: CommentModalProp
       commentsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [comments.length]);
+
+  // WebSocket real-time comment updates
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const ws = NotificationWebSocket.getInstance();
+    
+    // Listen for new comments
+    const handleNewComment = (data: any) => {
+      if (data.type === 'new_comment' && data.comment && data.comment.post_id === post.id) {
+        // Add new comment to the list
+        setComments(prev => {
+          // Check if comment already exists
+          const exists = prev.some(c => c.id === data.comment.id);
+          if (exists) return prev;
+          
+          // If it's a reply, add to parent's replies
+          if (data.comment.parent_comment_id) {
+            return prev.map(comment => {
+              if (comment.id === data.comment.parent_comment_id) {
+                return {
+                  ...comment,
+                  replies_count: comment.replies_count + 1,
+                  replies: [...(comment.replies || []), data.comment],
+                };
+              }
+              return comment;
+            });
+          }
+          // Otherwise, add as top-level comment
+          return [data.comment, ...prev];
+        });
+      }
+    };
+
+    // Listen for comment updates
+    const handleCommentUpdate = (data: any) => {
+      if (data.type === 'comment_updated' && data.comment && data.post_id === post.id) {
+        setComments(prev => updateCommentInList(prev, data.comment));
+      }
+    };
+
+    ws.on('new_comment', handleNewComment);
+    ws.on('comment_updated', handleCommentUpdate);
+    ws.on('comment_reply', handleNewComment);
+
+    return () => {
+      ws.off('new_comment', handleNewComment);
+      ws.off('comment_updated', handleCommentUpdate);
+      ws.off('comment_reply', handleNewComment);
+    };
+  }, [isOpen, post.id]);
 
   // Handle scroll for infinite loading
   const handleScroll = () => {

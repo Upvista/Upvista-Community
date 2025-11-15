@@ -537,7 +537,7 @@ func (r *SupabasePostRepository) GetPostByID(ctx context.Context, postID uuid.UU
 // GetUserPosts retrieves posts by a specific user
 func (r *SupabasePostRepository) GetUserPosts(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Post, int, error) {
 	query := fmt.Sprintf(
-		"?user_id=eq.%s&is_published=eq.true&deleted_at=is.null&order=published_at.desc&limit=%d&offset=%d",
+		"?user_id=eq.%s&is_published=eq.true&deleted_at=is.null&order=created_at.desc&limit=%d&offset=%d",
 		userID.String(), limit, offset,
 	)
 
@@ -595,7 +595,7 @@ func (r *SupabasePostRepository) GetHomeFeed(ctx context.Context, userID uuid.UU
 	// Use Supabase join to get posts with authors in one query
 	// This reduces N+1 queries from N+1 to just 1 query for posts + authors
 	query := fmt.Sprintf(
-		"?is_published=eq.true&deleted_at=is.null&visibility=eq.public&order=published_at.desc&limit=%d&offset=%d&select=*,author:user_id(id,username,display_name,profile_picture,is_verified)",
+		"?is_published=eq.true&deleted_at=is.null&visibility=eq.public&order=created_at.desc&limit=%d&offset=%d&select=*,author:user_id(id,username,display_name,profile_picture,is_verified)",
 		limit, offset,
 	)
 
@@ -677,7 +677,7 @@ func (r *SupabasePostRepository) GetFollowingFeed(ctx context.Context, userID uu
 func (r *SupabasePostRepository) GetExploreFeed(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Post, int, error) {
 	// Use Supabase join to get posts with authors in one query
 	query := fmt.Sprintf(
-		"?is_published=eq.true&deleted_at=is.null&visibility=eq.public&order=likes_count.desc,published_at.desc&limit=%d&offset=%d&select=*,author:user_id(id,username,display_name,profile_picture,is_verified)",
+		"?is_published=eq.true&deleted_at=is.null&visibility=eq.public&order=likes_count.desc,created_at.desc&limit=%d&offset=%d&select=*,author:user_id(id,username,display_name,profile_picture,is_verified)",
 		limit, offset,
 	)
 

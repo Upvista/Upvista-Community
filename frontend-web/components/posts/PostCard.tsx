@@ -72,7 +72,7 @@ export default function PostCard({
 
             <div className="px-6 pt-6 pb-6">
               {/* Header */}
-              <div className="flex items-start justify-between mb-5 pt-2">
+              <div className="flex items-start justify-between mb-5 pt-0 md:pt-2">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <button
                     onClick={handleProfileClick}
@@ -144,6 +144,27 @@ export default function PostCard({
                     {post.article.subtitle}
                   </p>
                 )}
+
+                {/* Article Body Preview - 150 characters */}
+                {post.article.content_html && (() => {
+                  // Extract text from HTML and truncate to 150 characters
+                  const stripHtml = (html: string) => {
+                    if (typeof window === 'undefined') return html;
+                    const tmp = document.createElement('DIV');
+                    tmp.innerHTML = html;
+                    return tmp.textContent || tmp.innerText || '';
+                  };
+                  const textContent = stripHtml(post.article.content_html);
+                  const preview = textContent.length > 150 
+                    ? textContent.substring(0, 150).trim() + '...'
+                    : textContent;
+                  
+                  return (
+                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4 leading-relaxed text-justify" style={{ textAlignLast: 'left' }}>
+                      {preview}
+                    </p>
+                  );
+                })()}
 
                 {/* Meta Information with Read More Link */}
                 <div className="flex items-center gap-4 text-sm text-neutral-500 dark:text-neutral-400 mb-5 flex-wrap">
@@ -231,7 +252,7 @@ export default function PostCard({
     >
       <Card variant="glass" hoverable={false} className="p-6 overflow-hidden">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4 pt-2">
+        <div className="flex items-start justify-between mb-4 pt-0 md:pt-2">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <button
               onClick={handleProfileClick}

@@ -147,7 +147,7 @@ export default function ArticleView({
           {/* Article Content - Justified and Professional */}
           <div className="article-content">
             <div 
-              className="prose prose-xl dark:prose-invert max-w-none
+              className="prose prose-xl dark:prose-invert max-w-none break-words overflow-wrap-anywhere
                 prose-headings:font-bold prose-headings:text-neutral-900 dark:prose-headings:text-neutral-50
                 prose-headings:mt-12 prose-headings:mb-6
                 prose-h1:text-3xl prose-h1:font-bold prose-h1:leading-tight
