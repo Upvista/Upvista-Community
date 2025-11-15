@@ -813,3 +813,167 @@ func (h *Handlers) UnfollowHashtag(c *gin.Context) {
 		"message": "Hashtag unfollowed",
 	})
 }
+
+// GetUserInteractions handles GET /api/v1/activity/interactions
+func (h *Handlers) GetUserInteractions(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	filter := c.Query("filter") // 'likes', 'comments', 'reposts', etc.
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	var posts []models.Post
+	var total int
+
+	switch filter {
+	case "likes":
+		posts, total, err = h.service.GetUserLikedPosts(c.Request.Context(), uid, limit, offset)
+	case "comments":
+		posts, total, err = h.service.GetUserCommentedPosts(c.Request.Context(), uid, limit, offset)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filter. Use 'likes' or 'comments'"})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.PostsResponse{
+		Success: true,
+		Posts:   posts,
+		Total:   total,
+		Page:    offset / limit,
+		Limit:   limit,
+		HasMore: offset+limit < total,
+	})
+}
+
+// GetUserArchived handles GET /api/v1/activity/archived
+func (h *Handlers) GetUserArchived(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	filter := c.Query("filter") // 'deleted', 'archived', etc.
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	var posts []models.Post
+	var total int
+
+	switch filter {
+	case "deleted":
+		posts, total, err = h.service.GetUserDeletedPosts(c.Request.Context(), uid, limit, offset)
+	case "archived":
+		// TODO: Implement archived posts (different from deleted - user can restore archived)
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "Archived posts not yet implemented"})
+		return
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid filter. Use 'deleted' or 'archived'"})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.PostsResponse{
+		Success: true,
+		Posts:   posts,
+		Total:   total,
+		Page:    offset / limit,
+		Limit:   limit,
+		HasMore: offset+limit < total,
+	})
+}
+
+// GetUserShared handles GET /api/v1/activity/shared
+func (h *Handlers) GetUserShared(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	filter := c.Query("filter") // 'posts', 'articles', 'reels', 'projects', etc.
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	var posts []models.Post
+	var total int
+	var postType string
+
+	switch filter {
+	case "posts":
+		postType = "post"
+		posts, total, err = h.service.GetUserSharedPosts(c.Request.Context(), uid, postType, limit, offset)
+	case "articles":
+		postType = "article"
+		posts, total, err = h.service.GetUserSharedPosts(c.Request.Context(), uid, postType, limit, offset)
+	case "reels":
+		// TODO: Implement reels (might be a post_type or separate table)
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "Reels not yet implemented"})
+		return
+	case "projects":
+		// TODO: Implement projects
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "Projects not yet implemented"})
+		return
+	default:
+		// Default to all shared content
+		postType = ""
+		posts, total, err = h.service.GetUserSharedPosts(c.Request.Context(), uid, postType, limit, offset)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.PostsResponse{
+		Success: true,
+		Posts:   posts,
+		Total:   total,
+		Page:    offset / limit,
+		Limit:   limit,
+		HasMore: offset+limit < total,
+	})
+}

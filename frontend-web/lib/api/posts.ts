@@ -413,6 +413,21 @@ export const postsAPI = {
     return fetchAPI(`/feed/saved?collection=${collection}&limit=${limit}&offset=${page * limit}`);
   },
   
+  // Get user interactions (likes, comments)
+  getUserInteractions: async (filter: 'likes' | 'comments', page = 0, limit = 20): Promise<PostsResponse> => {
+    return fetchAPI(`/activity/interactions?filter=${filter}&limit=${limit}&offset=${page * limit}`);
+  },
+  
+  // Get user archived/deleted posts
+  getUserArchived: async (filter: 'deleted' | 'archived', page = 0, limit = 20): Promise<PostsResponse> => {
+    return fetchAPI(`/activity/archived?filter=${filter}&limit=${limit}&offset=${page * limit}`);
+  },
+  
+  // Get user shared posts/articles
+  getUserShared: async (filter: 'posts' | 'articles' | 'reels' | 'projects', page = 0, limit = 20): Promise<PostsResponse> => {
+    return fetchAPI(`/activity/shared?filter=${filter}&limit=${limit}&offset=${page * limit}`);
+  },
+  
   // ============================================
   // HASHTAGS
   // ============================================

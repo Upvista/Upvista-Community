@@ -396,6 +396,14 @@ func main() {
 			feedGroup.GET("/saved", postHandlers.GetSavedFeed)         // Saved posts
 		}
 
+		// Activity (protected)
+		activityGroup := protected.Group("/activity")
+		{
+			activityGroup.GET("/interactions", postHandlers.GetUserInteractions) // User interactions (likes, comments)
+			activityGroup.GET("/archived", postHandlers.GetUserArchived)         // User archived/deleted posts
+			activityGroup.GET("/shared", postHandlers.GetUserShared)             // User shared posts/articles
+		}
+
 		// Hashtags (mixed public/protected)
 		hashtagGroup := api.Group("/hashtags")
 		{

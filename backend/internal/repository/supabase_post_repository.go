@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
@@ -1986,4 +1987,357 @@ func extractMentions(text string) []string {
 	}
 
 	return mentions
+}
+
+// GetUserLikedPosts retrieves all posts that a user has liked
+func (r *SupabasePostRepository) GetUserLikedPosts(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Post, int, error) {
+	// Query post_likes to get post IDs, then get full post data
+	query := fmt.Sprintf("?user_id=eq.%s&order=created_at.desc&limit=%d&offset=%d&select=post_id,created_at", userID.String(), limit, offset)
+
+	data, err := r.makeRequest("GET", "post_likes", query, nil)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get liked posts: %w", err)
+	}
+
+	var likes []struct {
+		PostID    string `json:"post_id"`
+		CreatedAt string `json:"created_at"`
+	}
+	if err := json.Unmarshal(data, &likes); err != nil {
+		return nil, 0, fmt.Errorf("failed to parse liked posts: %w", err)
+	}
+
+	if len(likes) == 0 {
+		return []models.Post{}, 0, nil
+	}
+
+	// Get post IDs
+	postIDs := make([]uuid.UUID, 0, len(likes))
+	for _, like := range likes {
+		postID, err := uuid.Parse(like.PostID)
+		if err != nil {
+			continue
+		}
+		postIDs = append(postIDs, postID)
+	}
+
+	// Get full posts
+	posts := make([]models.Post, 0, len(postIDs))
+	for _, postID := range postIDs {
+		post, err := r.GetPost(ctx, postID, userID)
+		if err != nil {
+			continue // Skip posts that can't be fetched (deleted, etc.)
+		}
+		posts = append(posts, *post)
+	}
+
+	// Get total count using makeRequest with count preference
+	// Note: We'll need to modify makeRequest or create a separate method for count queries
+	// For now, we'll estimate based on returned results
+	total := len(posts)
+	if len(posts) == limit {
+		// If we got a full page, there might be more
+		// Try to get one more to see if there are more
+		countQuery := fmt.Sprintf("?user_id=eq.%s&limit=1&offset=%d&select=id", userID.String(), limit+offset)
+		countData, err := r.makeRequest("GET", "post_likes", countQuery, nil)
+		if err == nil {
+			var countLikes []map[string]interface{}
+			if json.Unmarshal(countData, &countLikes) == nil && len(countLikes) > 0 {
+				total = limit + offset + 1 // At least this many
+			} else {
+				total = limit + offset // Exactly this many
+			}
+		}
+	} else {
+		total = offset + len(posts) // Exact count
+	}
+
+	return posts, total, nil
+}
+
+// GetUserCommentedPosts retrieves all posts that a user has commented on
+func (r *SupabasePostRepository) GetUserCommentedPosts(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Post, int, error) {
+	// Query post_comments to get unique post IDs, then get full post data
+	// Get more comments to account for duplicates (user might comment multiple times on same post)
+	query := fmt.Sprintf("?user_id=eq.%s&order=created_at.desc&select=post_id,created_at&limit=%d", userID.String(), limit*3)
+
+	data, err := r.makeRequest("GET", "post_comments", query, nil)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get commented posts: %w", err)
+	}
+
+	var comments []struct {
+		PostID    string `json:"post_id"`
+		CreatedAt string `json:"created_at"`
+	}
+	if err := json.Unmarshal(data, &comments); err != nil {
+		return nil, 0, fmt.Errorf("failed to parse commented posts: %w", err)
+	}
+
+	if len(comments) == 0 {
+		return []models.Post{}, 0, nil
+	}
+
+	// Get unique post IDs (keep first occurrence for ordering by most recent comment)
+	seen := make(map[string]bool)
+	uniquePostIDs := make([]uuid.UUID, 0)
+	for _, comment := range comments {
+		if !seen[comment.PostID] {
+			postID, err := uuid.Parse(comment.PostID)
+			if err != nil {
+				continue
+			}
+			uniquePostIDs = append(uniquePostIDs, postID)
+			seen[comment.PostID] = true
+			if len(uniquePostIDs) >= limit {
+				break
+			}
+		}
+	}
+
+	// Get full posts
+	posts := make([]models.Post, 0, len(uniquePostIDs))
+	for _, postID := range uniquePostIDs {
+		post, err := r.GetPost(ctx, postID, userID)
+		if err != nil {
+			continue // Skip posts that can't be fetched (deleted, etc.)
+		}
+		posts = append(posts, *post)
+	}
+
+	// Get total count of unique posts user commented on
+	// For accurate count, we need to fetch all comments and count unique post IDs
+	// This is expensive but necessary for accurate pagination
+	countQuery := fmt.Sprintf("?user_id=eq.%s&select=post_id", userID.String())
+	countData, err := r.makeRequest("GET", "post_comments", countQuery, nil)
+	total := len(uniquePostIDs) // Default to current count
+
+	if err == nil && countData != nil {
+		var allComments []struct {
+			PostID string `json:"post_id"`
+		}
+		if err := json.Unmarshal(countData, &allComments); err == nil {
+			// Count unique post IDs
+			uniqueCount := make(map[string]bool)
+			for _, comment := range allComments {
+				if comment.PostID != "" {
+					uniqueCount[comment.PostID] = true
+				}
+			}
+			total = len(uniqueCount)
+		}
+	} else if len(posts) == limit {
+		// If we got a full page and couldn't get count, estimate there are more
+		total = offset + limit + 1
+	} else {
+		// Exact count
+		total = offset + len(posts)
+	}
+
+	return posts, total, nil
+}
+
+// GetUserDeletedPosts retrieves all posts that a user has deleted (within last 30 days)
+func (r *SupabasePostRepository) GetUserDeletedPosts(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Post, int, error) {
+	// Calculate 30 days ago
+	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
+	thirtyDaysAgoStr := url.QueryEscape(thirtyDaysAgo.Format(time.RFC3339))
+
+	// Query posts that are deleted and within last 30 days
+	query := fmt.Sprintf(
+		"?user_id=eq.%s&deleted_at=not.is.null&deleted_at=gte.%s&order=deleted_at.desc&limit=%d&offset=%d",
+		userID.String(), thirtyDaysAgoStr, limit, offset,
+	)
+
+	data, err := r.makeRequest("GET", "posts", query, nil)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get deleted posts: %w", err)
+	}
+
+	posts, err := r.parsePostsFromJSON(data)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to parse deleted posts: %w", err)
+	}
+
+	if len(posts) == 0 {
+		return []models.Post{}, 0, nil
+	}
+
+	// Load authors
+	for i := range posts {
+		r.loadPostAuthor(ctx, &posts[i])
+	}
+
+	// Get total count
+	countQuery := fmt.Sprintf(
+		"?user_id=eq.%s&deleted_at=not.is.null&deleted_at=gte.%s&select=id&limit=1",
+		userID.String(), thirtyDaysAgoStr,
+	)
+	countData, err := r.makeRequest("GET", "posts", countQuery, nil)
+	total := len(posts) // Default to current count
+
+	if err == nil && countData != nil {
+		var countPosts []map[string]interface{}
+		if err := json.Unmarshal(countData, &countPosts); err == nil {
+			// For accurate count, we'd need to fetch all, but that's expensive
+			// Estimate based on current page
+			if len(posts) == limit {
+				total = offset + limit + 1 // At least this many
+			} else {
+				total = offset + len(posts) // Exact count
+			}
+		}
+	} else if len(posts) == limit {
+		total = offset + limit + 1
+	} else {
+		total = offset + len(posts)
+	}
+
+	return posts, total, nil
+}
+
+// GetUserSharedPosts retrieves all posts/articles that a user has shared
+// postType can be "post", "article", or "" for all
+func (r *SupabasePostRepository) GetUserSharedPosts(ctx context.Context, userID uuid.UUID, postType string, limit, offset int) ([]models.Post, int, error) {
+	// Query post_shares to get post IDs, then get full post data
+	query := fmt.Sprintf("?user_id=eq.%s&order=created_at.desc&select=post_id,created_at&limit=%d&offset=%d",
+		userID.String(), limit*2, offset) // Get more to account for filtering
+
+	data, err := r.makeRequest("GET", "post_shares", query, nil)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get shared posts: %w", err)
+	}
+
+	var shares []struct {
+		PostID    string `json:"post_id"`
+		CreatedAt string `json:"created_at"`
+	}
+	if err := json.Unmarshal(data, &shares); err != nil {
+		return nil, 0, fmt.Errorf("failed to parse shared posts: %w", err)
+	}
+
+	if len(shares) == 0 {
+		return []models.Post{}, 0, nil
+	}
+
+	// Get post IDs
+	postIDs := make([]uuid.UUID, 0, len(shares))
+	for _, share := range shares {
+		postID, err := uuid.Parse(share.PostID)
+		if err != nil {
+			continue
+		}
+		postIDs = append(postIDs, postID)
+	}
+
+	if len(postIDs) == 0 {
+		return []models.Post{}, 0, nil
+	}
+
+	// Build query to get posts
+	postIDsStr := make([]string, len(postIDs))
+	for i, id := range postIDs {
+		postIDsStr[i] = id.String()
+	}
+
+	postsQuery := fmt.Sprintf("?id=in.(%s)&is_published=eq.true&deleted_at=is.null&order=published_at.desc&limit=%d&offset=%d",
+		strings.Join(postIDsStr, ","), limit*2, offset)
+
+	// Filter by post_type if specified
+	if postType != "" {
+		postsQuery += fmt.Sprintf("&post_type=eq.%s", postType)
+	}
+
+	postsData, err := r.makeRequest("GET", "posts", postsQuery, nil)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get posts: %w", err)
+	}
+
+	posts, err := r.parsePostsFromJSON(postsData)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to parse posts: %w", err)
+	}
+
+	// Filter to only include posts that were actually shared (maintain order from shares)
+	// Create a map of post IDs to share order
+	shareOrder := make(map[string]int)
+	for i, share := range shares {
+		shareOrder[share.PostID] = i
+	}
+
+	// Sort posts by share order
+	sortedPosts := make([]models.Post, 0, len(posts))
+	for _, share := range shares {
+		for _, post := range posts {
+			if post.ID.String() == share.PostID {
+				// Only include if post type matches (or no filter)
+				if postType == "" || post.PostType == postType {
+					sortedPosts = append(sortedPosts, post)
+					if len(sortedPosts) >= limit {
+						break
+					}
+				}
+			}
+		}
+		if len(sortedPosts) >= limit {
+			break
+		}
+	}
+
+	// Limit to requested amount
+	if len(sortedPosts) > limit {
+		sortedPosts = sortedPosts[:limit]
+	}
+
+	// Load authors
+	for i := range sortedPosts {
+		r.loadPostAuthor(ctx, &sortedPosts[i])
+	}
+
+	// Get total count
+	countQuery := fmt.Sprintf("?user_id=eq.%s&select=post_id", userID.String())
+	countData, err := r.makeRequest("GET", "post_shares", countQuery, nil)
+	total := len(sortedPosts) // Default to current count
+
+	if err == nil && countData != nil {
+		var allShares []struct {
+			PostID string `json:"post_id"`
+		}
+		if err := json.Unmarshal(countData, &allShares); err == nil {
+			// Get unique post IDs
+			uniquePostIDs := make(map[string]bool)
+			for _, share := range allShares {
+				uniquePostIDs[share.PostID] = true
+			}
+
+			// If filtering by post type, we need to check each post
+			if postType != "" {
+				// Fetch all shared post IDs to check their types
+				allPostIDsStr := make([]string, 0, len(uniquePostIDs))
+				for postID := range uniquePostIDs {
+					allPostIDsStr = append(allPostIDsStr, postID)
+				}
+
+				if len(allPostIDsStr) > 0 {
+					typeQuery := fmt.Sprintf("?id=in.(%s)&post_type=eq.%s&select=id&limit=1",
+						strings.Join(allPostIDsStr, ","), postType)
+					typeData, err := r.makeRequest("GET", "posts", typeQuery, nil)
+					if err == nil && typeData != nil {
+						var typedPosts []map[string]interface{}
+						if err := json.Unmarshal(typeData, &typedPosts); err == nil {
+							total = len(typedPosts)
+						}
+					}
+				}
+			} else {
+				total = len(uniquePostIDs)
+			}
+		}
+	} else if len(sortedPosts) == limit {
+		total = offset + limit + 1
+	} else {
+		total = offset + len(sortedPosts)
+	}
+
+	return sortedPosts, total, nil
 }

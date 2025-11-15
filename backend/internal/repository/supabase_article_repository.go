@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -319,16 +320,26 @@ func (r *SupabaseArticleRepository) GetArticle(ctx context.Context, articleID uu
 
 // GetArticleBySlug retrieves an article by its URL slug
 func (r *SupabaseArticleRepository) GetArticleBySlug(ctx context.Context, slugStr string) (*models.Article, error) {
-	query := fmt.Sprintf("?slug=eq.%s&select=*", slugStr)
+	// Normalize slug: lowercase and trim whitespace
+	slugStr = strings.ToLower(strings.TrimSpace(slugStr))
+	
+	// URL decode the slug in case it's encoded
+	if decoded, err := url.QueryUnescape(slugStr); err == nil {
+		slugStr = strings.ToLower(strings.TrimSpace(decoded))
+	}
+	
+	// Use eq for exact match (slugs should already be normalized to lowercase)
+	// Escape the slug for URL safety
+	query := fmt.Sprintf("?slug=eq.%s&select=*", url.QueryEscape(slugStr))
 
 	data, err := r.makeRequest("GET", "articles", query, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query article: %w", err)
 	}
 
 	var articles []models.Article
 	if err := json.Unmarshal(data, &articles); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse article: %w", err)
 	}
 
 	if len(articles) == 0 {

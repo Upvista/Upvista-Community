@@ -474,3 +474,23 @@ func (s *Service) broadcastPollVote(pollID uuid.UUID, results *models.PollResult
 	// Broadcast poll results to viewers
 	fmt.Printf("[Posts] Poll vote recorded: %s\n", pollID)
 }
+
+// GetUserLikedPosts retrieves all posts that a user has liked
+func (s *Service) GetUserLikedPosts(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Post, int, error) {
+	return s.postRepo.GetUserLikedPosts(ctx, userID, limit, offset)
+}
+
+// GetUserCommentedPosts retrieves all posts that a user has commented on
+func (s *Service) GetUserCommentedPosts(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Post, int, error) {
+	return s.postRepo.GetUserCommentedPosts(ctx, userID, limit, offset)
+}
+
+// GetUserDeletedPosts retrieves all posts that a user has deleted (within last 30 days)
+func (s *Service) GetUserDeletedPosts(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Post, int, error) {
+	return s.postRepo.GetUserDeletedPosts(ctx, userID, limit, offset)
+}
+
+// GetUserSharedPosts retrieves all posts/articles that a user has shared
+func (s *Service) GetUserSharedPosts(ctx context.Context, userID uuid.UUID, postType string, limit, offset int) ([]models.Post, int, error) {
+	return s.postRepo.GetUserSharedPosts(ctx, userID, postType, limit, offset)
+}
