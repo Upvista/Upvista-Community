@@ -9,6 +9,9 @@ import AudioUploader, { type AudioUpload } from './AudioUploader';
 
 export type MediaType = 'image' | 'video' | 'audio';
 
+// Re-export types for convenience
+export type { ImageUpload, VideoUpload, AudioUpload };
+
 interface MediaUploaderProps {
   onMediaChange?: (media: {
     images: ImageUpload[];
