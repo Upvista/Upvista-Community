@@ -166,7 +166,7 @@ func main() {
 	feedSvc := posts.NewFeedService(postRepo, relationshipRepo)
 
 	// Initialize post handlers
-	postHandlers := posts.NewHandlers(postSvc, feedSvc)
+	postHandlers := posts.NewHandlers(postSvc, feedSvc, storageSvc, mediaOptimizer)
 
 	log.Println("[Posts] Post & feed system initialized")
 
@@ -357,6 +357,11 @@ func main() {
 		// Posts CRUD (protected)
 		postsGroup := protected.Group("/posts")
 		{
+			// Media uploads (must come before :id routes)
+			postsGroup.POST("/upload-image", postHandlers.UploadImage) // Upload image
+			postsGroup.POST("/upload-video", postHandlers.UploadVideo) // Upload video
+			postsGroup.POST("/upload-audio", postHandlers.UploadAudio) // Upload audio
+
 			postsGroup.POST("", postHandlers.CreatePost)                 // Create post
 			postsGroup.GET("/:id", postHandlers.GetPost)                 // Get single post
 			postsGroup.PUT("/:id", postHandlers.UpdatePost)              // Update post

@@ -11,8 +11,6 @@ import { Card } from '../ui/Card';
 import VerifiedBadge from '../ui/VerifiedBadge';
 import PostActions from './PostActions';
 import PollCard from './PollCard';
-import { Modal } from '../ui/Modal';
-import ArticleView from './ArticleView';
 import CommentModal from './CommentModal';
 
 interface PostCardProps {
@@ -32,7 +30,6 @@ export default function PostCard({
 }: PostCardProps) {
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
-  const [showArticleModal, setShowArticleModal] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
 
   const handleProfileClick = (e: React.MouseEvent) => {
@@ -189,11 +186,9 @@ export default function PostCard({
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
-                      // Navigate to article page instead of modal
+                      // Navigate to article page
                       if (post.article?.slug) {
                         router.push(`/articles/${post.article.slug}`);
-                      } else {
-                      setShowArticleModal(true);
                       }
                     }}
                     className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium transition-colors group"
@@ -219,23 +214,6 @@ export default function PostCard({
             </div>
           </Card>
         </motion.div>
-
-        {/* Article Modal */}
-        <Modal
-          isOpen={showArticleModal}
-          onClose={() => setShowArticleModal(false)}
-          size="full"
-        >
-          <ArticleView
-            post={post}
-            onComment={() => {
-              setShowArticleModal(false);
-              setShowCommentModal(true);
-            }}
-            onShare={onShare}
-            onSave={onSave}
-          />
-        </Modal>
 
         {/* Comment Modal */}
         <CommentModal

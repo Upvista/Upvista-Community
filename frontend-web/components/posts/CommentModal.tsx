@@ -304,55 +304,44 @@ export default function CommentModal({ post, isOpen, onClose }: CommentModalProp
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[300] flex items-end md:items-center justify-center">
-        {/* Backdrop - Enhanced Glassmorphism */}
+        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="absolute inset-0 bg-black/50 backdrop-blur-md"
+          transition={{ duration: 0.2 }}
+          className="absolute inset-0 bg-black/50"
           onClick={onClose}
         />
 
-        {/* Modal Content - Glassmorphism */}
+        {/* Modal Content */}
         <motion.div
-          initial={{ opacity: 0, y: '100%', scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: '100%', scale: 0.95 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 0, y: '100%' }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: '100%' }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
           className="relative
-            w-full h-[90vh] md:h-[80vh] md:max-w-2xl md:rounded-2xl
-            bg-white/90 dark:bg-neutral-900/90
-            backdrop-blur-2xl
-            border border-white/30 dark:border-neutral-700/30
-            shadow-2xl shadow-black/20
+            w-full h-[90vh] md:h-[80vh] md:max-w-2xl md:rounded-t-2xl
+            bg-white dark:bg-neutral-900
             flex flex-col overflow-hidden
           "
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Glossy top highlight */}
-          <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/30 to-transparent pointer-events-none rounded-t-2xl" />
-          
-          {/* Header - Glassmorphism */}
-          <div className="relative flex items-center justify-between px-5 py-4 border-b border-white/20 dark:border-neutral-700/30 flex-shrink-0 backdrop-blur-sm">
-            <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 flex-shrink-0">
+            <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-50">
               Comments
             </h2>
-            <motion.button
-              whileTap={{ scale: 0.9 }}
+            <button
               onClick={onClose}
-              className="
-                p-2 rounded-full
-                hover:bg-white/50 dark:hover:bg-neutral-800/50
-                transition-all duration-200
-              "
+              className="p-1 hover:opacity-70 transition-opacity"
             >
               <X className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
-            </motion.button>
+            </button>
           </div>
 
-          {/* Post Preview (Mobile) - Glassmorphism */}
-          <div className="md:hidden px-4 py-3 border-b border-white/20 dark:border-neutral-700/30 flex items-center gap-3 flex-shrink-0 backdrop-blur-sm">
+          {/* Post Preview (Mobile) */}
+          <div className="md:hidden px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center gap-3 flex-shrink-0">
             <Avatar
               src={post.author?.profile_picture}
               alt={post.author?.display_name || post.author?.username || 'User'}
@@ -374,15 +363,11 @@ export default function CommentModal({ post, isOpen, onClose }: CommentModalProp
             </div>
           </div>
 
-          {/* Comments List - Smooth Scroll */}
+          {/* Comments List */}
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto px-5 py-5 space-y-4
-              scrollbar-thin scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-700
-              scrollbar-track-transparent
-            "
-            style={{ scrollBehavior: 'smooth' }}
+            className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
           >
             {comments.length === 0 && !loading ? (
               <motion.div
@@ -434,20 +419,16 @@ export default function CommentModal({ post, isOpen, onClose }: CommentModalProp
             )}
           </div>
 
-          {/* Comment Input - Glassmorphism Footer */}
-          <div className="relative border-t border-white/20 dark:border-neutral-700/30 flex-shrink-0 backdrop-blur-sm">
-            {/* Glossy bottom highlight */}
-            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white/20 to-transparent pointer-events-none" />
-            
+          {/* Comment Input Footer */}
+          <div className="border-t border-neutral-200 dark:border-neutral-800 flex-shrink-0">
             {replyingTo && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="px-4 py-2.5
-                  bg-purple-50/80 dark:bg-purple-900/20
-                  backdrop-blur-md
-                  border-b border-purple-200/30 dark:border-purple-800/30
+                className="px-4 py-2
+                  bg-neutral-50 dark:bg-neutral-800/50
+                  border-b border-neutral-200 dark:border-neutral-800
                   flex items-center justify-between
                 "
               >

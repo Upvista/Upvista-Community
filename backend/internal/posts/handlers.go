@@ -1,11 +1,20 @@
 package posts
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
+	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
+	"time"
 
+	"upvista-community-backend/internal/messaging"
 	"upvista-community-backend/internal/models"
+	"upvista-community-backend/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -13,16 +22,41 @@ import (
 
 // Handlers manages HTTP handlers for posts
 type Handlers struct {
-	service     *Service
-	feedService *FeedService
+	service        *Service
+	feedService    *FeedService
+	storageService *utils.StorageService
+	mediaOptimizer *messaging.MediaOptimizer
 }
 
 // NewHandlers creates new post handlers
-func NewHandlers(service *Service, feedService *FeedService) *Handlers {
+func NewHandlers(service *Service, feedService *FeedService, storageService *utils.StorageService, mediaOptimizer *messaging.MediaOptimizer) *Handlers {
 	return &Handlers{
-		service:     service,
-		feedService: feedService,
+		service:        service,
+		feedService:    feedService,
+		storageService: storageService,
+		mediaOptimizer: mediaOptimizer,
 	}
+}
+
+// sanitizeFilename removes non-ASCII characters, spaces, and special characters from filename
+func sanitizeFilename(filename string) string {
+	ext := filepath.Ext(filename)
+	nameWithoutExt := strings.TrimSuffix(filename, ext)
+	nameWithoutExt = strings.ReplaceAll(nameWithoutExt, " ", "_")
+	reg := regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
+	nameWithoutExt = reg.ReplaceAllString(nameWithoutExt, "")
+	if nameWithoutExt == "" {
+		nameWithoutExt = "file"
+	}
+	if len(nameWithoutExt) > 100 {
+		nameWithoutExt = nameWithoutExt[:100]
+	}
+	ext = strings.ToLower(ext)
+	ext = regexp.MustCompile(`[^a-zA-Z0-9.]+`).ReplaceAllString(ext, "")
+	if ext == "" {
+		ext = ".bin"
+	}
+	return nameWithoutExt + ext
 }
 
 // ============================================
@@ -984,5 +1018,203 @@ func (h *Handlers) GetUserShared(c *gin.Context) {
 		Page:    offset / limit,
 		Limit:   limit,
 		HasMore: offset+limit < total,
+	})
+}
+
+// ============================================
+// MEDIA UPLOAD ENDPOINTS
+// ============================================
+
+// UploadImage handles POST /api/v1/posts/upload-image
+func (h *Handlers) UploadImage(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Get quality parameter
+	quality := c.DefaultQuery("quality", "standard")
+	var optimizeQuality messaging.OptimizeImageQuality
+	if quality == "hd" {
+		optimizeQuality = messaging.QualityHD
+	} else {
+		optimizeQuality = messaging.QualityStandard
+	}
+
+	// Get file from form (expecting "file" field name)
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
+		return
+	}
+	defer file.Close()
+
+	// Read file
+	fileData, err := io.ReadAll(file)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+
+	// Validate image
+	isValid, _, err := h.mediaOptimizer.ValidateImage(fileData)
+	if !isValid || err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image format"})
+		return
+	}
+
+	// Optimize image
+	optimizedData, newFormat, err := h.mediaOptimizer.OptimizeImageFromBytes(fileData, optimizeQuality)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to optimize image"})
+		return
+	}
+
+	// Upload to Supabase Storage (use "public" bucket for posts)
+	fileName := fmt.Sprintf("posts/%s/%s_%d.%s", uid.String(), uuid.New().String(), time.Now().Unix(), newFormat)
+	uploadedURL, err := h.storageService.UploadFile(c.Request.Context(), "public", fileName, bytes.NewReader(optimizedData), "image/"+newFormat)
+	if err != nil {
+		log.Printf("[UploadImage] Failed to upload: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"url":     uploadedURL,
+		"name":    header.Filename,
+		"size":    len(optimizedData),
+		"type":    "image/" + newFormat,
+	})
+}
+
+// UploadVideo handles POST /api/v1/posts/upload-video
+func (h *Handlers) UploadVideo(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Get file from form (expecting "file" field name)
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No video file provided"})
+		return
+	}
+	defer file.Close()
+
+	// Validate file size (max 100MB for videos)
+	maxSize := int64(100 * 1024 * 1024)
+	if header.Size > maxSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Video too large (max 100MB). Your file: %.1fMB", float64(header.Size)/(1024*1024))})
+		return
+	}
+
+	// Read video file
+	fileData, err := io.ReadAll(file)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+
+	// Sanitize filename
+	sanitizedFilename := sanitizeFilename(header.Filename)
+
+	// Upload video to Supabase Storage
+	videoFileName := fmt.Sprintf("posts/%s/video_%s_%s", uid.String(), uuid.New().String(), sanitizedFilename)
+	uploadedURL, err := h.storageService.UploadFile(c.Request.Context(), "public", videoFileName, bytes.NewReader(fileData), header.Header.Get("Content-Type"))
+	if err != nil {
+		log.Printf("[UploadVideo] Failed to upload: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload video"})
+		return
+	}
+
+	// Get optional thumbnail from form
+	var thumbnailURL string
+	thumbnailFile, thumbnailHeader, err := c.Request.FormFile("thumbnail")
+	if err == nil {
+		defer thumbnailFile.Close()
+		thumbnailData, err := io.ReadAll(thumbnailFile)
+		if err == nil {
+			thumbnailFileName := fmt.Sprintf("posts/%s/thumb_%s.jpg", uid.String(), uuid.New().String())
+			thumbnailURL, _ = h.storageService.UploadFile(c.Request.Context(), "public", thumbnailFileName, bytes.NewReader(thumbnailData), thumbnailHeader.Header.Get("Content-Type"))
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":       true,
+		"url":           uploadedURL,
+		"thumbnail_url": thumbnailURL,
+		"name":          header.Filename,
+		"size":          header.Size,
+		"type":          header.Header.Get("Content-Type"),
+	})
+}
+
+// UploadAudio handles POST /api/v1/posts/upload-audio
+func (h *Handlers) UploadAudio(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Get file from form (expecting "file" field name)
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No audio file provided"})
+		return
+	}
+	defer file.Close()
+
+	// Read file
+	fileData, err := io.ReadAll(file)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+
+	// Validate audio
+	isValid, err := h.mediaOptimizer.ValidateAudio(fileData, header.Header.Get("Content-Type"))
+	if !isValid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid audio format: " + err.Error()})
+		return
+	}
+
+	// Upload to Supabase Storage
+	fileName := fmt.Sprintf("posts/%s/audio_%s_%d.webm", uid.String(), uuid.New().String(), time.Now().Unix())
+	uploadedURL, err := h.storageService.UploadFile(c.Request.Context(), "public", fileName, bytes.NewReader(fileData), "audio/webm")
+	if err != nil {
+		log.Printf("[UploadAudio] Failed to upload: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload audio"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"url":     uploadedURL,
+		"name":    header.Filename,
+		"size":    len(fileData),
+		"type":    "audio/webm",
 	})
 }

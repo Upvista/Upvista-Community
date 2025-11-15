@@ -449,13 +449,17 @@ func (r *SupabaseArticleRepository) GetArticleTags(ctx context.Context, articleI
 	return tags, nil
 }
 
-// generateUniqueSlug generates a unique URL slug for an article
+// generateUniqueSlug generates a unique URL slug for an article with a unique ID suffix
 func (r *SupabaseArticleRepository) generateUniqueSlug(ctx context.Context, title string) string {
 	baseSlug := slug.Make(title)
-	uniqueSlug := baseSlug
-	counter := 1
-
-	// Check if slug exists
+	
+	// Generate a short unique ID (12 characters: mix of alphanumeric)
+	// Use UUID and convert to a more readable format
+	uniqueID := generateShortID()
+	uniqueSlug := fmt.Sprintf("%s-%s", baseSlug, uniqueID)
+	
+	// Check if slug exists (very unlikely with UUID, but check anyway)
+	counter := 0
 	for {
 		query := fmt.Sprintf("?slug=eq.%s&select=id", uniqueSlug)
 		data, err := r.makeRequest("GET", "articles", query, nil)
@@ -468,16 +472,50 @@ func (r *SupabaseArticleRepository) generateUniqueSlug(ctx context.Context, titl
 			break
 		}
 
-		// Slug exists, try with counter
-		uniqueSlug = fmt.Sprintf("%s-%d", baseSlug, counter)
+		// If slug exists (extremely rare), generate a new ID
+		uniqueID = generateShortID()
+		uniqueSlug = fmt.Sprintf("%s-%s", baseSlug, uniqueID)
 		counter++
 
-		if counter > 10 {
-			// Add random suffix
-			uniqueSlug = fmt.Sprintf("%s-%s", baseSlug, uuid.New().String()[:8])
+		// Safety limit
+		if counter > 5 {
+			// Use full UUID as last resort
+			uniqueSlug = fmt.Sprintf("%s-%s", baseSlug, strings.ReplaceAll(uuid.New().String(), "-", ""))
 			break
 		}
 	}
 
 	return uniqueSlug
+}
+
+// generateShortID generates a short, readable unique ID (12 characters)
+// Format: mix of lowercase, uppercase, and numbers (e.g., "094aB79oapU")
+func generateShortID() string {
+	// Use UUID and convert to a readable alphanumeric format
+	u := uuid.New()
+	id := strings.ReplaceAll(u.String(), "-", "")
+	
+	// Convert hex characters to alphanumeric with mixed case
+	// Pattern: numbers stay as-is, hex letters become mixed case letters
+	result := make([]byte, 12)
+	for i := 0; i < 12 && i < len(id); i++ {
+		char := id[i]
+		switch {
+		case char >= '0' && char <= '9':
+			// Keep numbers as-is
+			result[i] = char
+		case char >= 'a' && char <= 'f':
+			// Convert hex to letters with mixed case
+			// Use uppercase for some positions, lowercase for others
+			if i%2 == 0 {
+				result[i] = char - 32 // uppercase (a->A, b->B, etc.)
+			} else {
+				result[i] = char // lowercase
+			}
+		default:
+			// Fallback: use modulo to get a valid character
+			result[i] = 'a' + (char % 26)
+		}
+	}
+	return string(result)
 }
