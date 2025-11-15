@@ -96,6 +96,10 @@ func (h *Handlers) GetArticleBySlug(c *gin.Context) {
 		return
 	}
 
+	// Log for debugging
+	fmt.Printf("[GetArticleBySlug] Received slug: %s\n", slug)
+	fmt.Printf("[GetArticleBySlug] Request URL: %s\n", c.Request.URL.String())
+
 	// Get viewer ID (optional - for engagement state like is_liked, is_saved)
 	var viewerID uuid.UUID
 	if userID, exists := c.Get("user_id"); exists {
@@ -104,7 +108,12 @@ func (h *Handlers) GetArticleBySlug(c *gin.Context) {
 
 	post, err := h.service.GetArticleBySlug(c.Request.Context(), slug, viewerID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
+		fmt.Printf("[GetArticleBySlug] Error: %v\n", err)
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "Article not found",
+			"message": err.Error(),
+			"slug":    slug,
+		})
 		return
 	}
 

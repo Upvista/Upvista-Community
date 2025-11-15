@@ -320,30 +320,44 @@ func (r *SupabaseArticleRepository) GetArticle(ctx context.Context, articleID uu
 
 // GetArticleBySlug retrieves an article by its URL slug
 func (r *SupabaseArticleRepository) GetArticleBySlug(ctx context.Context, slugStr string) (*models.Article, error) {
+	// Log original slug
+	fmt.Printf("[GetArticleBySlug] Original slug: %q\n", slugStr)
+	
 	// Normalize slug: lowercase and trim whitespace
 	slugStr = strings.ToLower(strings.TrimSpace(slugStr))
 	
 	// URL decode the slug in case it's encoded
 	if decoded, err := url.QueryUnescape(slugStr); err == nil {
 		slugStr = strings.ToLower(strings.TrimSpace(decoded))
+		fmt.Printf("[GetArticleBySlug] After URL decode: %q\n", slugStr)
 	}
 	
 	// Use eq for exact match (slugs should already be normalized to lowercase)
-	// Escape the slug for URL safety
-	query := fmt.Sprintf("?slug=eq.%s&select=*", url.QueryEscape(slugStr))
+	// URL encode the slug value for Supabase PostgREST (handles special characters)
+	encodedSlug := url.QueryEscape(slugStr)
+	query := fmt.Sprintf("?slug=eq.%s&select=*", encodedSlug)
+	
+	fmt.Printf("[GetArticleBySlug] Query string: %q\n", query)
+	fmt.Printf("[GetArticleBySlug] Full URL will be: /rest/v1/articles%s\n", query)
 
 	data, err := r.makeRequest("GET", "articles", query, nil)
 	if err != nil {
+		fmt.Printf("[GetArticleBySlug] makeRequest error: %v\n", err)
 		return nil, fmt.Errorf("failed to query article: %w", err)
 	}
 
+	fmt.Printf("[GetArticleBySlug] Response data length: %d bytes\n", len(data))
+
 	var articles []models.Article
 	if err := json.Unmarshal(data, &articles); err != nil {
+		fmt.Printf("[GetArticleBySlug] JSON unmarshal error: %v\n", err)
 		return nil, fmt.Errorf("failed to parse article: %w", err)
 	}
 
+	fmt.Printf("[GetArticleBySlug] Found %d articles\n", len(articles))
+
 	if len(articles) == 0 {
-		return nil, fmt.Errorf("article not found")
+		return nil, fmt.Errorf("article not found for slug: %s", slugStr)
 	}
 
 	article := &articles[0]
