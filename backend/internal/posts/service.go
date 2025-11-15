@@ -158,6 +158,31 @@ func (s *Service) GetPost(ctx context.Context, postID, viewerID uuid.UUID) (*mod
 	return post, nil
 }
 
+// GetArticleBySlug retrieves an article by its slug and returns the full post
+func (s *Service) GetArticleBySlug(ctx context.Context, slug string, viewerID uuid.UUID) (*models.Post, error) {
+	// Get article by slug
+	article, err := s.articleRepo.GetArticleBySlug(ctx, slug)
+	if err != nil {
+		return nil, fmt.Errorf("article not found: %w", err)
+	}
+
+	// Get the post associated with this article
+	post, err := s.postRepo.GetPost(ctx, article.PostID, viewerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get post: %w", err)
+	}
+
+	// Ensure article is attached (it should be from GetPost, but double-check)
+	if post.Article == nil {
+		post.Article = article
+	}
+
+	// Increment article views
+	go s.articleRepo.IncrementViews(context.Background(), article.ID)
+
+	return post, nil
+}
+
 // UpdatePost updates a post
 func (s *Service) UpdatePost(ctx context.Context, postID, userID uuid.UUID, updates *models.UpdatePostRequest) error {
 	// Verify ownership

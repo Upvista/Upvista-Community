@@ -88,6 +88,32 @@ func (h *Handlers) GetPost(c *gin.Context) {
 	})
 }
 
+// GetArticleBySlug handles GET /api/v1/articles/:slug (PUBLIC)
+func (h *Handlers) GetArticleBySlug(c *gin.Context) {
+	slug := c.Param("slug")
+	if slug == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Slug is required"})
+		return
+	}
+
+	// Get viewer ID (optional - for engagement state like is_liked, is_saved)
+	var viewerID uuid.UUID
+	if userID, exists := c.Get("user_id"); exists {
+		viewerID, _ = uuid.Parse(userID.(string))
+	}
+
+	post, err := h.service.GetArticleBySlug(c.Request.Context(), slug, viewerID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.PostResponse{
+		Success: true,
+		Post:    post,
+	})
+}
+
 // UpdatePost handles PUT /api/v1/posts/:id
 func (h *Handlers) UpdatePost(c *gin.Context) {
 	postID, err := uuid.Parse(c.Param("id"))

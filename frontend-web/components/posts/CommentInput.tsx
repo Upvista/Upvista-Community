@@ -95,17 +95,26 @@ export default function CommentInput({
   return (
     <div className="relative">
       <div className="flex items-end gap-2 px-4 py-3">
-        {/* Emoji Button */}
-        <button
+        {/* Emoji Button - Glassmorphism */}
+        <motion.button
+          whileTap={{ scale: 0.9 }}
           data-emoji-button
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors flex-shrink-0"
+          className="
+            p-2.5 rounded-full flex-shrink-0
+            bg-white/60 dark:bg-neutral-800/60
+            backdrop-blur-md
+            border border-white/30 dark:border-neutral-700/30
+            hover:bg-white/80 dark:hover:bg-neutral-700/80
+            transition-all duration-200
+            shadow-sm
+          "
           type="button"
         >
-          <Smile className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
-        </button>
+          <Smile className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
+        </motion.button>
 
-        {/* Text Input */}
+        {/* Text Input - Glassmorphism */}
         <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
@@ -114,34 +123,61 @@ export default function CommentInput({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={1}
-            className="w-full px-4 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent text-sm text-neutral-900 dark:text-neutral-50 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 max-h-[120px] overflow-y-auto"
-            style={{ minHeight: '40px' }}
+            className="
+              w-full px-4 py-2.5
+              bg-white/70 dark:bg-neutral-800/70
+              backdrop-blur-xl
+              border border-white/30 dark:border-neutral-700/30
+              rounded-2xl
+              resize-none
+              focus:outline-none
+              focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50
+              focus:border-purple-500/50 dark:focus:border-purple-400/50
+              text-sm text-neutral-900 dark:text-neutral-50
+              placeholder:text-neutral-400 dark:placeholder:text-neutral-500
+              max-h-[120px] overflow-y-auto
+              shadow-sm
+              transition-all duration-200
+            "
+            style={{ minHeight: '44px' }}
           />
         </div>
 
         {/* Submit/Cancel Buttons */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {editingComment && onCancel && (
-            <button
+            <motion.button
+              whileTap={{ scale: 0.9 }}
               onClick={onCancel}
-              className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
+              className="
+                p-2.5 rounded-full
+                bg-white/60 dark:bg-neutral-800/60
+                backdrop-blur-md
+                border border-white/30 dark:border-neutral-700/30
+                hover:bg-white/80 dark:hover:bg-neutral-700/80
+                transition-all duration-200
+                shadow-sm
+              "
               type="button"
             >
               <X className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
-            </button>
+            </motion.button>
           )}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={handleSubmit}
             disabled={isDisabled}
-            className={`p-2 rounded-full transition-colors ${
-              isDisabled
-                ? 'text-neutral-300 dark:text-neutral-600 cursor-not-allowed'
-                : 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
-            }`}
+            className={`
+              p-2.5 rounded-full transition-all duration-200
+              ${isDisabled
+                ? 'text-neutral-300 dark:text-neutral-600 cursor-not-allowed opacity-50'
+                : 'text-purple-600 dark:text-purple-400 bg-purple-50/80 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 shadow-sm'
+              }
+            `}
             type="button"
           >
             <Send className="w-5 h-5" />
-          </button>
+          </motion.button>
         </div>
       </div>
 

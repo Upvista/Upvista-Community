@@ -145,9 +145,9 @@ export default function PostCard({
                   </p>
                 )}
 
-                {/* Article Body Preview - 150 characters */}
+                {/* Article Body Preview - 80 characters */}
                 {post.article.content_html && (() => {
-                  // Extract text from HTML and truncate to 150 characters
+                  // Extract text from HTML and truncate to 80 characters
                   const stripHtml = (html: string) => {
                     if (typeof window === 'undefined') return html;
                     const tmp = document.createElement('DIV');
@@ -155,12 +155,12 @@ export default function PostCard({
                     return tmp.textContent || tmp.innerText || '';
                   };
                   const textContent = stripHtml(post.article.content_html);
-                  const preview = textContent.length > 150 
-                    ? textContent.substring(0, 150).trim() + '...'
+                  const preview = textContent.length > 80 
+                    ? textContent.substring(0, 80).trim() + '...'
                     : textContent;
                   
                   return (
-                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4 leading-relaxed text-justify" style={{ textAlignLast: 'left' }}>
+                    <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4 leading-relaxed break-words overflow-wrap-anywhere max-w-full">
                       {preview}
                     </p>
                   );
@@ -189,7 +189,12 @@ export default function PostCard({
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
+                      // Navigate to article page instead of modal
+                      if (post.article?.slug) {
+                        router.push(`/articles/${post.article.slug}`);
+                      } else {
                       setShowArticleModal(true);
+                      }
                     }}
                     className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium transition-colors group"
                   >
@@ -243,11 +248,19 @@ export default function PostCard({
   }
 
   // Standard text/image post
+  const handlePostClick = () => {
+    if (onPostClick) {
+      onPostClick(post);
+    } else {
+      router.push(`/posts/${post.id}`);
+    }
+  };
+
   return (
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
-      onClick={() => onPostClick?.(post)}
+      onClick={handlePostClick}
       className="cursor-pointer"
     >
       <Card variant="glass" hoverable={false} className="p-6 overflow-hidden">

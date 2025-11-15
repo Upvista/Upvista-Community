@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Image as ImageIcon, Video, Globe, Users, Lock, Loader2 } from 'lucide-react';
+import { Globe, Users, Lock, Loader2 } from 'lucide-react';
 import { postsAPI, CreatePostRequest } from '@/lib/api/posts';
 import { toast } from '../ui/Toast';
 import { Avatar } from '../ui/Avatar';
+import MediaUploader, { type ImageUpload, type VideoUpload, type AudioUpload } from './MediaUploader';
+import { mediaAPI } from '@/lib/api/media';
 
 interface TextPostComposerProps {
   onClose: () => void;
@@ -15,6 +17,15 @@ export default function TextPostComposer({ onClose, onPostCreated }: TextPostCom
   const [content, setContent] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'connections' | 'private'>('public');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mediaFiles, setMediaFiles] = useState<{
+    images: ImageUpload[];
+    videos: VideoUpload[];
+    audios: AudioUpload[];
+  }>({
+    images: [],
+    videos: [],
+    audios: [],
+  });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Auto-resize textarea
@@ -26,8 +37,8 @@ export default function TextPostComposer({ onClose, onPostCreated }: TextPostCom
   }, [content]);
 
   const handleSubmit = async () => {
-    if (!content.trim()) {
-      toast.error('Post content cannot be empty');
+    if (!content.trim() && mediaFiles.images.length === 0 && mediaFiles.videos.length === 0 && mediaFiles.audios.length === 0) {
+      toast.error('Post content or media is required');
       return;
     }
 
@@ -39,9 +50,60 @@ export default function TextPostComposer({ onClose, onPostCreated }: TextPostCom
     setIsSubmitting(true);
 
     try {
+      // Upload media files
+      const mediaUrls: string[] = [];
+      const mediaTypes: string[] = [];
+
+      // Upload images
+      for (const image of mediaFiles.images) {
+        const fileToUpload = image.compressed || image.file;
+        try {
+          const result = await mediaAPI.uploadImage(fileToUpload, (progress) => {
+            // Update progress if needed
+          });
+          mediaUrls.push(result.url);
+          mediaTypes.push('image');
+        } catch (error) {
+          console.error('Failed to upload image:', error);
+          toast.error(`Failed to upload image: ${image.file.name}`);
+        }
+      }
+
+      // Upload videos
+      for (const video of mediaFiles.videos) {
+        const fileToUpload = video.compressed ? new File([video.compressed], video.file.name, { type: video.file.type }) : video.file;
+        try {
+          const result = await mediaAPI.uploadVideo(fileToUpload, (progress) => {
+            // Update progress if needed
+          });
+          mediaUrls.push(result.url);
+          mediaTypes.push('video');
+        } catch (error) {
+          console.error('Failed to upload video:', error);
+          toast.error(`Failed to upload video: ${video.file.name}`);
+        }
+      }
+
+      // Upload audios
+      for (const audio of mediaFiles.audios) {
+        const fileToUpload = audio.compressed ? new File([audio.compressed], audio.file.name, { type: audio.file.type }) : audio.file;
+        try {
+          const result = await mediaAPI.uploadAudio(fileToUpload, (progress) => {
+            // Update progress if needed
+          });
+          mediaUrls.push(result.url);
+          mediaTypes.push('audio');
+        } catch (error) {
+          console.error('Failed to upload audio:', error);
+          toast.error(`Failed to upload audio: ${audio.file.name}`);
+        }
+      }
+
       const postData: CreatePostRequest = {
         post_type: 'post',
         content: content.trim(),
+        media_urls: mediaUrls.length > 0 ? mediaUrls : undefined,
+        media_types: mediaTypes.length > 0 ? mediaTypes : undefined,
         visibility,
         allows_comments: true,
         allows_sharing: true,
@@ -107,22 +169,20 @@ export default function TextPostComposer({ onClose, onPostCreated }: TextPostCom
         </div>
       </div>
 
-      {/* Media Attachments (Placeholder for Phase 2) */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => toast.info('Image upload coming in Phase 2')}
-          className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
-        >
-          <ImageIcon className="w-4 h-4" />
-          <span className="text-sm">Add Images</span>
-        </button>
-        <button
-          onClick={() => toast.info('Video upload coming in Phase 2')}
-          className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg transition-colors"
-        >
-          <Video className="w-4 h-4" />
-          <span className="text-sm">Add Video</span>
-        </button>
+      {/* Media Uploader */}
+      <div className="space-y-3">
+        <MediaUploader
+          onMediaChange={(media) => {
+            // Store media for upload
+            setMediaFiles(media);
+          }}
+          maxImages={10}
+          maxVideos={1}
+          maxAudios={5}
+          imageQuality="standard"
+          videoQuality="standard"
+          audioType="music"
+        />
       </div>
 
       {/* Visibility Selector */}

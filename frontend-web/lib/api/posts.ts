@@ -265,6 +265,13 @@ export const postsAPI = {
     return fetchAPI(`/posts/${postId}`);
   },
   
+  // Get article by slug (public endpoint)
+  getArticleBySlug: async (slug: string): Promise<PostResponse> => {
+    return fetchAPI(`/articles/${slug}`, {
+      method: 'GET',
+    });
+  },
+  
   // Update post
   updatePost: async (postId: string, updates: Partial<CreatePostRequest>): Promise<{success: boolean; message: string}> => {
     return fetchAPI(`/posts/${postId}`, {

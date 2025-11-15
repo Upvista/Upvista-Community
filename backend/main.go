@@ -351,6 +351,9 @@ func main() {
 		// POSTS & FEED ROUTES
 		// ============================================
 
+		// Public article route (no auth required for SEO and sharing)
+		api.GET("/articles/:slug", postHandlers.GetArticleBySlug) // Get article by slug (PUBLIC)
+
 		// Posts CRUD (protected)
 		postsGroup := protected.Group("/posts")
 		{

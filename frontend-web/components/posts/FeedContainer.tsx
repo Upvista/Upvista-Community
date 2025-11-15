@@ -193,8 +193,52 @@ export default function FeedContainer({ feedType = 'home', userId, hashtag }: Fe
           key={post.id} 
           post={post}
           onComment={(p) => setSelectedPostForComment(p)}
-          onShare={(p) => toast.info('Share coming soon')}
-          onSave={(p) => toast.info('Save coming soon')}
+          onShare={(p) => {
+            if (p.post_type === 'article' && p.article?.slug) {
+              const url = `${window.location.origin}/articles/${p.article.slug}`;
+              if (navigator.share) {
+                navigator.share({
+                  title: p.article.title,
+                  text: p.article.subtitle || p.article.meta_description || '',
+                  url: url,
+                }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(url);
+                toast.success('Link copied to clipboard');
+              }
+            } else {
+              const url = `${window.location.origin}/posts/${p.id}`;
+              if (navigator.share) {
+                navigator.share({
+                  title: 'Check out this post',
+                  text: p.content.substring(0, 100),
+                  url: url,
+                }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(url);
+                toast.success('Link copied to clipboard');
+              }
+            }
+          }}
+          onSave={async (p) => {
+            try {
+              if (p.is_saved) {
+                await postsAPI.unsavePost(p.id);
+                setPosts(prev => prev.map(post => 
+                  post.id === p.id ? { ...post, is_saved: false } : post
+                ));
+                toast.success('Removed from saved');
+              } else {
+                await postsAPI.savePost(p.id);
+                setPosts(prev => prev.map(post => 
+                  post.id === p.id ? { ...post, is_saved: true } : post
+                ));
+                toast.success('Saved');
+              }
+            } catch (error: any) {
+              toast.error(error.message || 'Failed to update save status');
+            }
+          }}
         />
       ))}
 

@@ -5,11 +5,13 @@ import { Post } from '@/lib/api/posts';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { formatPostTimestamp } from '@/lib/api/posts';
-import { Clock, BookOpen } from 'lucide-react';
+import { Clock, BookOpen, Share2 } from 'lucide-react';
 import VerifiedBadge from '../ui/VerifiedBadge';
 import PostActions from './PostActions';
 import CommentModal from './CommentModal';
-import { useState } from 'react';
+import TableOfContents from './TableOfContents';
+import ReadingProgress from './ReadingProgress';
+import { useState, useEffect } from 'react';
 
 interface ArticleViewProps {
   post: Post;
@@ -29,11 +31,48 @@ export default function ArticleView({
   const router = useRouter();
   const [showCommentModal, setShowCommentModal] = useState(false);
   
+  useEffect(() => {
+    // Add IDs to headings in the content for TOC navigation
+    if (post.article?.content_html && typeof window !== 'undefined') {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = post.article.content_html;
+      const headings = tempDiv.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      
+      headings.forEach((heading) => {
+        if (!heading.id) {
+          const id = heading.textContent?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || '';
+          heading.id = id;
+        }
+      });
+    }
+  }, [post.article?.content_html]);
+  
   if (!post.article) {
     return null;
   }
 
   const article = post.article;
+  
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: article.title,
+        text: article.subtitle || '',
+        url: window.location.href,
+      }).catch(() => {
+        // Fallback to copy
+        copyToClipboard();
+      });
+    } else {
+      copyToClipboard();
+    }
+    onShare?.(post);
+  };
+  
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(window.location.href);
+    // You might want to show a toast here
+  };
 
   const handleProfileClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -43,7 +82,10 @@ export default function ArticleView({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900">
+    <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900 relative">
+      {/* Reading Progress Bar */}
+      <ReadingProgress />
+      
       {/* Cover Image - Full Width Hero */}
       {article.cover_image_url && (
         <div className="w-full h-80 md:h-[32rem] relative overflow-hidden">
@@ -58,8 +100,11 @@ export default function ArticleView({
 
       {/* Scrollable Content Container */}
       <div className="flex-1 overflow-y-auto">
-        {/* Article Container - Centered with Max Width */}
-        <div className="max-w-4xl mx-auto px-4 md:px-8 lg:px-12 py-8 md:py-12">
+        {/* Article Container - Centered with Max Width and TOC */}
+        <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-8 md:py-12">
+          <div className="flex gap-8">
+            {/* Main Content */}
+            <div className="flex-1 max-w-4xl">
           {/* Author Header */}
           <div className="flex items-center gap-4 mb-8 pb-6 pt-2 border-b border-neutral-200 dark:border-neutral-800">
             <button
@@ -196,9 +241,18 @@ export default function ArticleView({
               commentsCount={post.comments_count}
               sharesCount={post.shares_count}
               onComment={() => setShowCommentModal(true)}
-              onShare={() => onShare?.(post)}
+              onShare={handleShare}
               onSave={() => onSave?.(post)}
             />
+          </div>
+            </div>
+            
+            {/* Table of Contents Sidebar */}
+            {article.content_html && (
+              <div className="w-64 flex-shrink-0">
+                <TableOfContents contentHtml={article.content_html} />
+              </div>
+            )}
           </div>
         </div>
       </div>
