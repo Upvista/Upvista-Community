@@ -24,34 +24,44 @@ export default function ArticlePage() {
         setLoading(true);
         setError(null);
         
+        console.log('[ArticlePage] Fetching article with slug:', slug);
+        
         // Try to fetch article by slug
-        // First try the dedicated endpoint, fallback to getting all posts and finding by slug
         try {
           const response = await postsAPI.getArticleBySlug(slug);
-          if (response.success && response.post) {
-            setPost(response.post);
+          console.log('[ArticlePage] Response received:', response);
+          
+          // Handle both 'post' and 'Post' field names (backend might return either)
+          const articlePost = response.post || (response as any).Post;
+          
+          if (response.success && articlePost) {
+            console.log('[ArticlePage] Article found:', articlePost);
+            setPost(articlePost);
             return;
+          } else {
+            console.warn('[ArticlePage] Response success but no post:', response);
+            setError('Article not found');
           }
         } catch (err: any) {
-          // If endpoint doesn't exist (404), try fallback method
-          if (err.message?.includes('404') || err.message?.includes('not found')) {
-            // Fallback: Get posts and find by slug
-            // This is a temporary workaround until backend endpoint is added
-            console.log('Article endpoint not found, using fallback method');
-            // For now, we'll show an error and suggest using post ID
-            setError('Article endpoint not available. Please ensure backend has /api/v1/articles/:slug endpoint.');
+          console.error('[ArticlePage] Error fetching article:', err);
+          console.error('[ArticlePage] Error details:', {
+            message: err.message,
+            stack: err.stack,
+            response: err.response,
+          });
+          
+          // If endpoint doesn't exist (404), show error
+          if (err.message?.includes('404') || err.message?.includes('not found') || err.message?.includes('Article not found')) {
+            setError('Article not found. The article may have been deleted or the URL is incorrect.');
             return;
           }
-          throw err;
+          
+          // Network or other errors
+          setError(`Failed to load article: ${err.message || 'Unknown error'}`);
         }
       } catch (err: any) {
-        console.error('Error fetching article:', err);
-        // Fallback: try to get by post ID if slug is actually an ID
-        if (err.message?.includes('404') || err.message?.includes('not found')) {
-          setError('Article not found');
-        } else {
-          setError('Failed to load article. Please try again.');
-        }
+        console.error('[ArticlePage] Unexpected error:', err);
+        setError('Failed to load article. Please try again.');
       } finally {
         setLoading(false);
       }
