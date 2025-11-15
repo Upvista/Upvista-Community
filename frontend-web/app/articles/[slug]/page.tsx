@@ -18,8 +18,11 @@ export default function ArticlePage() {
 
   // Set SEO metadata dynamically - MUST be before any early returns to follow hooks rules
   useEffect(() => {
-    const article = post?.article;
-    if (!article || typeof window === 'undefined') return;
+    // Early return if no post or article, but hook is still called
+    // This ensures the hook is always called, maintaining hook order
+    if (typeof window === 'undefined' || !post || !post.article) return;
+    
+    const article = post.article;
 
     try {
       const siteUrl = window.location.origin;
@@ -125,7 +128,8 @@ export default function ArticlePage() {
     } catch (error) {
       console.error('[ArticlePage] Error setting SEO metadata:', error);
     }
-  }, [post]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post?.id, post?.article?.slug]);
 
   useEffect(() => {
     if (!slug) return;
