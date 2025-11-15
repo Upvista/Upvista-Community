@@ -16,6 +16,118 @@ export default function ArticlePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const article = post?.article;
+
+  // Set SEO metadata dynamically - MUST be before any early returns to follow hooks rules
+  useEffect(() => {
+    if (!article || typeof window === 'undefined') return;
+
+    try {
+      const siteUrl = window.location.origin;
+      const articleUrl = `${siteUrl}/articles/${article.slug || ''}`;
+      const coverImage = article.cover_image_url || `${siteUrl}/assets/u.png`;
+      const authorName = post?.author?.display_name || post?.author?.username || 'UpVista Author';
+      const description = article.meta_description || article.subtitle || `${article.title || ''} - Read on UpVista Community`;
+      const title = article.meta_title || article.title || 'Article';
+
+      // Update document title
+      document.title = `${title} | UpVista Community`;
+
+      // Update or create meta tags
+      const updateMetaTag = (name: string, content: string, isProperty = false) => {
+        const attribute = isProperty ? 'property' : 'name';
+        let element = document.querySelector(`meta[${attribute}="${name}"]`);
+        if (!element) {
+          element = document.createElement('meta');
+          element.setAttribute(attribute, name);
+          document.head.appendChild(element);
+        }
+        element.setAttribute('content', content);
+      };
+
+      // Basic meta tags
+      updateMetaTag('description', description);
+      updateMetaTag('author', authorName);
+
+      // Open Graph tags
+      updateMetaTag('og:type', 'article', true);
+      updateMetaTag('og:title', title, true);
+      updateMetaTag('og:description', description, true);
+      updateMetaTag('og:url', articleUrl, true);
+      updateMetaTag('og:image', coverImage, true);
+      updateMetaTag('og:site_name', 'UpVista Community', true);
+      // Format dates as ISO strings
+      const publishedTime = post?.created_at ? (typeof post.created_at === 'string' ? post.created_at : new Date(post.created_at).toISOString()) : '';
+      const modifiedTime = article.updated_at ? (typeof article.updated_at === 'string' ? article.updated_at : new Date(article.updated_at).toISOString()) : '';
+      if (publishedTime) updateMetaTag('article:published_time', publishedTime, true);
+      if (modifiedTime) updateMetaTag('article:modified_time', modifiedTime, true);
+      updateMetaTag('article:author', authorName, true);
+      if (article.category) {
+        updateMetaTag('article:section', article.category, true);
+      }
+
+      // Twitter Card tags
+      updateMetaTag('twitter:card', 'summary_large_image');
+      updateMetaTag('twitter:title', title);
+      updateMetaTag('twitter:description', description);
+      updateMetaTag('twitter:image', coverImage);
+      if (post?.author?.username) {
+        updateMetaTag('twitter:creator', `@${post.author.username}`);
+      }
+
+      // Canonical URL
+      let canonicalLink = document.querySelector('link[rel="canonical"]');
+      if (!canonicalLink) {
+        canonicalLink = document.createElement('link');
+        canonicalLink.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonicalLink);
+      }
+      canonicalLink.setAttribute('href', articleUrl);
+
+      // Structured data (JSON-LD)
+      const structuredData = {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: title,
+        description: description,
+        image: coverImage,
+        datePublished: publishedTime || post?.created_at,
+        dateModified: modifiedTime || article.updated_at,
+        author: {
+          '@type': 'Person',
+          name: authorName,
+          ...(post?.author?.username && { url: `${siteUrl}/profile?u=${post.author.username}` }),
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: 'UpVista Community',
+          url: siteUrl,
+        },
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': articleUrl,
+        },
+        ...(article.category && { articleSection: article.category }),
+        ...(article.tags && article.tags.length > 0 && { keywords: article.tags.join(', ') }),
+      };
+
+      // Remove existing structured data
+      const existingScript = document.querySelector('script[type="application/ld+json"][data-article]');
+      if (existingScript) {
+        existingScript.remove();
+      }
+
+      // Add new structured data
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.setAttribute('data-article', 'true');
+      script.textContent = JSON.stringify(structuredData);
+      document.head.appendChild(script);
+    } catch (error) {
+      console.error('[ArticlePage] Error setting SEO metadata:', error);
+    }
+  }, [article, post]);
+
   useEffect(() => {
     if (!slug) return;
 
@@ -119,111 +231,6 @@ export default function ArticlePage() {
       </MainLayout>
     );
   }
-
-  const article = post.article;
-
-  // Set SEO metadata dynamically
-  useEffect(() => {
-    if (!article) return;
-
-    const siteUrl = window.location.origin;
-    const articleUrl = `${siteUrl}/articles/${article.slug}`;
-    const coverImage = article.cover_image_url || `${siteUrl}/assets/u.png`;
-    const authorName = post.author?.display_name || post.author?.username || 'UpVista Author';
-    const description = article.meta_description || article.subtitle || `${article.title} - Read on UpVista Community`;
-    const title = article.meta_title || article.title;
-
-    // Update document title
-    document.title = `${title} | UpVista Community`;
-
-    // Update or create meta tags
-    const updateMetaTag = (name: string, content: string, isProperty = false) => {
-      const attribute = isProperty ? 'property' : 'name';
-      let element = document.querySelector(`meta[${attribute}="${name}"]`);
-      if (!element) {
-        element = document.createElement('meta');
-        element.setAttribute(attribute, name);
-        document.head.appendChild(element);
-      }
-      element.setAttribute('content', content);
-    };
-
-    // Basic meta tags
-    updateMetaTag('description', description);
-    updateMetaTag('author', authorName);
-
-    // Open Graph tags
-    updateMetaTag('og:type', 'article', true);
-    updateMetaTag('og:title', title, true);
-    updateMetaTag('og:description', description, true);
-    updateMetaTag('og:url', articleUrl, true);
-    updateMetaTag('og:image', coverImage, true);
-    updateMetaTag('og:site_name', 'UpVista Community', true);
-    updateMetaTag('article:published_time', post.created_at, true);
-    updateMetaTag('article:modified_time', article.updated_at, true);
-    updateMetaTag('article:author', authorName, true);
-    if (article.category) {
-      updateMetaTag('article:section', article.category, true);
-    }
-
-    // Twitter Card tags
-    updateMetaTag('twitter:card', 'summary_large_image');
-    updateMetaTag('twitter:title', title);
-    updateMetaTag('twitter:description', description);
-    updateMetaTag('twitter:image', coverImage);
-    if (post.author?.username) {
-      updateMetaTag('twitter:creator', `@${post.author.username}`);
-    }
-
-    // Canonical URL
-    let canonicalLink = document.querySelector('link[rel="canonical"]');
-    if (!canonicalLink) {
-      canonicalLink = document.createElement('link');
-      canonicalLink.setAttribute('rel', 'canonical');
-      document.head.appendChild(canonicalLink);
-    }
-    canonicalLink.setAttribute('href', articleUrl);
-
-    // Structured data (JSON-LD)
-    const structuredData = {
-      '@context': 'https://schema.org',
-      '@type': 'Article',
-      headline: title,
-      description: description,
-      image: coverImage,
-      datePublished: post.created_at,
-      dateModified: article.updated_at,
-      author: {
-        '@type': 'Person',
-        name: authorName,
-        ...(post.author?.username && { url: `${siteUrl}/profile?u=${post.author.username}` }),
-      },
-      publisher: {
-        '@type': 'Organization',
-        name: 'UpVista Community',
-        url: siteUrl,
-      },
-      mainEntityOfPage: {
-        '@type': 'WebPage',
-        '@id': articleUrl,
-      },
-      ...(article.category && { articleSection: article.category }),
-      ...(article.tags && article.tags.length > 0 && { keywords: article.tags.join(', ') }),
-    };
-
-    // Remove existing structured data
-    const existingScript = document.querySelector('script[type="application/ld+json"][data-article]');
-    if (existingScript) {
-      existingScript.remove();
-    }
-
-    // Add new structured data
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.setAttribute('data-article', 'true');
-    script.textContent = JSON.stringify(structuredData);
-    document.head.appendChild(script);
-  }, [article, post]);
 
   return (
     <MainLayout>
