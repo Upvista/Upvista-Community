@@ -319,6 +319,7 @@ func (r *SupabaseArticleRepository) GetArticle(ctx context.Context, articleID uu
 }
 
 // GetArticleBySlug retrieves an article by its URL slug
+// Supports both old format (title-only) and new format (title-uniqueid)
 func (r *SupabaseArticleRepository) GetArticleBySlug(ctx context.Context, slugStr string) (*models.Article, error) {
 	// Log original slug
 	fmt.Printf("[GetArticleBySlug] Original slug: %q\n", slugStr)
@@ -332,7 +333,7 @@ func (r *SupabaseArticleRepository) GetArticleBySlug(ctx context.Context, slugSt
 		fmt.Printf("[GetArticleBySlug] After URL decode: %q\n", slugStr)
 	}
 	
-	// Use eq for exact match (slugs should already be normalized to lowercase)
+	// Try exact match first (for new format with unique ID)
 	// URL encode the slug value for Supabase PostgREST (handles special characters)
 	encodedSlug := url.QueryEscape(slugStr)
 	query := fmt.Sprintf("?slug=eq.%s&select=*", encodedSlug)
@@ -348,19 +349,26 @@ func (r *SupabaseArticleRepository) GetArticleBySlug(ctx context.Context, slugSt
 
 	fmt.Printf("[GetArticleBySlug] Response data length: %d bytes\n", len(data))
 
-	var articles []models.Article
-	if err := json.Unmarshal(data, &articles); err != nil {
+	// Parse as map first to handle timestamps properly
+	var articlesData []map[string]interface{}
+	if err := json.Unmarshal(data, &articlesData); err != nil {
 		fmt.Printf("[GetArticleBySlug] JSON unmarshal error: %v\n", err)
 		return nil, fmt.Errorf("failed to parse article: %w", err)
 	}
 
-	fmt.Printf("[GetArticleBySlug] Found %d articles\n", len(articles))
+	fmt.Printf("[GetArticleBySlug] Found %d articles\n", len(articlesData))
 
-	if len(articles) == 0 {
+	if len(articlesData) == 0 {
 		return nil, fmt.Errorf("article not found for slug: %s", slugStr)
 	}
 
-	article := &articles[0]
+	// Use custom parser to handle timestamps correctly
+	article, err := r.parseArticleFromMap(articlesData[0])
+	if err != nil {
+		fmt.Printf("[GetArticleBySlug] parseArticleFromMap error: %v\n", err)
+		return nil, fmt.Errorf("failed to parse article: %w", err)
+	}
+
 	tags, _ := r.GetArticleTags(ctx, article.ID)
 	article.Tags = tags
 
