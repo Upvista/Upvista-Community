@@ -16,10 +16,9 @@ export default function ArticlePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const article = post?.article;
-
   // Set SEO metadata dynamically - MUST be before any early returns to follow hooks rules
   useEffect(() => {
+    const article = post?.article;
     if (!article || typeof window === 'undefined') return;
 
     try {
@@ -126,7 +125,7 @@ export default function ArticlePage() {
     } catch (error) {
       console.error('[ArticlePage] Error setting SEO metadata:', error);
     }
-  }, [article, post]);
+  }, [post]);
 
   useEffect(() => {
     if (!slug) return;
