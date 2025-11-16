@@ -54,10 +54,14 @@ export default function PostCard({
           whileHover={{ y: -2 }}
           transition={{ duration: 0.2 }}
         >
-          <Card variant="glass" hoverable={false} className="p-0 overflow-hidden">
+          <Card
+            variant="glass"
+            hoverable={false}
+            className="-mx-4 md:mx-0 p-0 overflow-hidden rounded-none md:rounded-2xl bg-white/5 dark:bg-white/5 backdrop-blur-[5px] border-0 shadow-none"
+          >
             {/* Cover Image - Full Width */}
             {post.article.cover_image_url && (
-              <div className="w-full h-56 md:h-64 -mt-6 -mx-6 mb-6 relative overflow-hidden">
+              <div className="w-full h-56 md:h-64 mb-6 relative overflow-hidden">
                 <img
                   src={post.article.cover_image_url}
                   alt={post.article.title}
@@ -67,7 +71,7 @@ export default function PostCard({
               </div>
             )}
 
-            <div className="px-6 pt-6 pb-6">
+            <div className="px-4 md:px-6 pt-6 pb-6">
               {/* Header */}
               <div className="flex items-start justify-between mb-5 pt-0 md:pt-2">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -241,7 +245,11 @@ export default function PostCard({
       onClick={handlePostClick}
       className="cursor-pointer"
     >
-      <Card variant="glass" hoverable={false} className="p-6 overflow-hidden">
+      <Card
+        variant="glass"
+        hoverable={false}
+        className="-mx-4 md:mx-0 p-4 md:p-6 overflow-hidden rounded-none md:rounded-2xl bg-white/5 dark:bg-white/5 backdrop-blur-[5px] border-0 shadow-none"
+      >
         {/* Header */}
         <div className="flex items-start justify-between mb-4 pt-0 md:pt-2">
           <div className="flex items-center gap-3 flex-1 min-w-0">

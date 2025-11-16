@@ -8,10 +8,11 @@
  * Responsive: Desktop sidebar, mobile top/bottom nav
  */
 
-import { ReactNode } from 'react';
+import { ReactNode, useRef } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { BottomNav } from './BottomNav';
+import { useMessages } from '@/lib/contexts/MessagesContext';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -20,8 +21,51 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, showRightPanel = false, rightPanel }: MainLayoutProps) {
+  const { openMessages } = useMessages();
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchActiveRef = useRef<boolean>(false);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (typeof window === 'undefined') return;
+    // Only enable on mobile widths
+    if (window.innerWidth >= 1024) return;
+    const touch = e.touches[0];
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    touchActiveRef.current = true;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchActiveRef.current) return;
+    touchActiveRef.current = false;
+    if (typeof window === 'undefined') return;
+    if (window.innerWidth >= 1024) return;
+
+    const touch = e.changedTouches[0];
+    const startX = touchStartXRef.current ?? touch.clientX;
+    const startY = touchStartYRef.current ?? touch.clientY;
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+
+    const horizontal = Math.abs(deltaX) > 60 && Math.abs(deltaY) < 80;
+    if (!horizontal) return;
+
+    if (deltaX < -60) {
+      // Swipe right-to-left: open conversations (messages overlay)
+      openMessages();
+    } else if (deltaX > 60) {
+      // Swipe left-to-right: open "more" sidebar drawer
+      window.dispatchEvent(new Event('open_more_menu'));
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+    <div
+      className="min-h-screen bg-neutral-50 dark:bg-neutral-950"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Desktop Sidebar */}
       <Sidebar />
       

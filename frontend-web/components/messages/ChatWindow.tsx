@@ -153,6 +153,10 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
       if (response.success) {
         setConversation(response.conversation);
         console.log('[ChatWindow] Conversation loaded, unread_count:', response.conversation.unread_count);
+        // If there are unread messages, mark as read immediately on open (mobile-first UX)
+        if ((response.conversation.unread_count || 0) > 0) {
+          markAsReadImmediately();
+        }
       }
     } catch (error) {
       console.error('Failed to load conversation:', error);

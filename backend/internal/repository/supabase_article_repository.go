@@ -324,13 +324,33 @@ func (r *SupabaseArticleRepository) GetArticleBySlug(ctx context.Context, slugSt
 	// Log original slug
 	fmt.Printf("[GetArticleBySlug] Original slug: %q\n", slugStr)
 	
-	// Normalize slug: lowercase and trim whitespace
-	slugStr = strings.ToLower(strings.TrimSpace(slugStr))
-	
 	// URL decode the slug in case it's encoded
 	if decoded, err := url.QueryUnescape(slugStr); err == nil {
-		slugStr = strings.ToLower(strings.TrimSpace(decoded))
+		slugStr = strings.TrimSpace(decoded)
 		fmt.Printf("[GetArticleBySlug] After URL decode: %q\n", slugStr)
+	} else {
+		slugStr = strings.TrimSpace(slugStr)
+	}
+	
+	// For slugs with unique IDs (new format: title-uniqueid), preserve the case of the unique ID
+	// The unique ID is always 12 characters and comes after the last hyphen
+	// Format: {title-slug}-{12-char-unique-id}
+	lastHyphenIndex := strings.LastIndex(slugStr, "-")
+	if lastHyphenIndex > 0 {
+		// Check if what comes after the last hyphen looks like a unique ID (12 chars, alphanumeric)
+		potentialID := slugStr[lastHyphenIndex+1:]
+		if len(potentialID) == 12 {
+			// This is likely a unique ID, preserve its case
+			titlePart := strings.ToLower(slugStr[:lastHyphenIndex])
+			slugStr = titlePart + "-" + potentialID
+			fmt.Printf("[GetArticleBySlug] Preserved unique ID case: %q\n", slugStr)
+		} else {
+			// Old format or different structure, lowercase everything
+			slugStr = strings.ToLower(slugStr)
+		}
+	} else {
+		// Old format (no unique ID), lowercase everything
+		slugStr = strings.ToLower(slugStr)
 	}
 	
 	// Try exact match first (for new format with unique ID)

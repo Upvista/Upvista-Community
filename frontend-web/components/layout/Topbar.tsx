@@ -55,6 +55,16 @@ export function Topbar() {
   const { openMessages } = useMessages();
   const { unreadCount } = useUnreadMessages();
 
+  // Listen for global events to control the mobile drawer (for swipe gestures)
+  // Allows other components (e.g., MainLayout) to open/close the menu
+  // without prop-drilling
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('open_more_menu', () => setShowMenu(true));
+    window.removeEventListener('close_more_menu', () => setShowMenu(false));
+    window.addEventListener('open_more_menu', () => setShowMenu(true));
+    window.addEventListener('close_more_menu', () => setShowMenu(false));
+  }
+
   return (
     <>
       <header className="lg:hidden fixed top-0 left-0 right-0 h-14 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-neutral-200/30 dark:border-neutral-800/30 shadow-sm">
@@ -111,7 +121,7 @@ export function Topbar() {
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              transition={{ type: 'spring', damping: 32, stiffness: 260, mass: 0.9 }}
               className="lg:hidden fixed top-0 left-0 bottom-0 w-[85%] max-w-sm bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl z-[70] shadow-2xl"
             >
               <div className="flex flex-col h-full">

@@ -36,6 +36,14 @@ export default function NotificationsPage() {
     fetchNotifications(category);
   }, [activeCategory, fetchNotifications]);
 
+  // Mobile-first: mark all as read when opening the notifications page
+  useEffect(() => {
+    const category = activeCategory === 'all' ? undefined : activeCategory;
+    // Fire and forget; UI will sync via context
+    markAllAsRead(category);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Infinite scroll
   useEffect(() => {
     const scrollContainer = scrollRef.current;

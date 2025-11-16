@@ -290,6 +290,10 @@ async function proxyRequest(
     // Forward important headers from backend (including token refresh)
     const responseHeaders: HeadersInit = {
       'Content-Type': 'application/json',
+      // Ensure no caching at any layer (browser, CDN, proxies)
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
     };
     
     // Forward X-New-Token for sliding window authentication

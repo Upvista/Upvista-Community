@@ -18,6 +18,10 @@ import FeedContainer from '@/components/posts/FeedContainer';
 import PostComposer from '@/components/posts/PostComposer';
 import { Avatar } from '@/components/ui/Avatar';
 
+// Force dynamic rendering and disable revalidation caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'home' | 'following' | 'explore'>('home');
   const [showComposer, setShowComposer] = useState(false);

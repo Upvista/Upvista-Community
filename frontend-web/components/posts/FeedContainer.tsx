@@ -175,18 +175,6 @@ export default function FeedContainer({ feedType = 'home', userId, hashtag }: Fe
 
   return (
     <div className="space-y-6">
-      {/* Refresh Button (Mobile Pull-to-Refresh Alternative) */}
-      <div className="md:hidden flex justify-center">
-        <button
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-full transition-colors text-sm font-medium"
-        >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-      </div>
-
       {/* Posts */}
       {posts.map((post) => (
         <PostCard 

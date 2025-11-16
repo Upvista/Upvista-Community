@@ -62,7 +62,7 @@ export default function ArticleComposer({ onClose, onPostCreated }: ArticleCompo
     ],
     editorProps: {
       attributes: {
-        class: 'prose prose-neutral dark:prose-invert max-w-none focus:outline-none min-h-[400px] px-4 py-3',
+        class: 'prose prose-neutral dark:prose-invert max-w-none focus:outline-none min-h-[180px] md:min-h-[400px] px-3 md:px-4 py-3 text-justify',
       },
     },
   });
@@ -245,7 +245,7 @@ export default function ArticleComposer({ onClose, onPostCreated }: ArticleCompo
 
       {/* Editor Toolbar */}
       {editor && (
-        <div className="flex items-center gap-1 px-6 py-3 border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto">
+        <div className="flex items-center gap-1 px-3 md:px-6 py-2.5 md:py-3 border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto">
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             className={`p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
@@ -354,12 +354,12 @@ export default function ArticleComposer({ onClose, onPostCreated }: ArticleCompo
       )}
 
       {/* Editor Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 bg-neutral-50/50 dark:bg-neutral-900/50">
+      <div className="flex-1 overflow-y-auto px-3 md:px-6 py-3 md:py-4 bg-neutral-50/50 dark:bg-neutral-900/50">
         <EditorContent editor={editor} />
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
+      <div className="px-3 md:px-6 py-3 md:py-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3 md:space-y-4">
         {/* Visibility */}
         <div className="flex items-center justify-between p-4 bg-transparent border-2 border-neutral-200 dark:border-neutral-700 rounded-xl hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
           <div className="flex items-center gap-3">

@@ -120,13 +120,13 @@ export default function CreatePage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen flex items-center justify-center px-4 py-12">
+      <div className="min-h-screen flex items-start md:items-center justify-center px-4 py-4 md:py-12">
         <div className="w-full max-w-3xl">
           {/* Hero Section */}
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-12"
+            className="text-center mb-6 md:mb-12"
           >
             <motion.div
               animate={{ 
@@ -141,16 +141,16 @@ export default function CreatePage() {
             >
               <Sparkles className="w-12 h-12 text-purple-500" />
             </motion.div>
-            <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-white mb-3">
+            <h1 className="text-2xl md:text-5xl font-bold text-black dark:text-white mb-2 md:mb-3">
               What would you like to create?
             </h1>
-            <p className="text-lg text-neutral-700 dark:text-neutral-300">
+            <p className="text-sm md:text-lg text-neutral-700 dark:text-neutral-300">
               Choose a format and start sharing
             </p>
           </motion.div>
 
           {/* Options List */}
-          <div className="space-y-3">
+          <div className="space-y-2 md:space-y-3">
             {contentOptions.map((option, index) => {
               const Icon = option.icon;
               const isHovered = hoveredId === option.id;
@@ -230,12 +230,12 @@ export default function CreatePage() {
                   disabled={!option.available}
                   className={`
                     w-full group relative overflow-hidden
-                    bg-white dark:bg-neutral-800/50
-                    border-2 transition-all duration-300
-                    rounded-2xl p-6 md:p-8
+                    bg-white/60 dark:bg-neutral-800/40 backdrop-blur-[4px]
+                    border transition-all duration-300
+                    rounded-xl md:rounded-2xl p-4 md:p-6
                     ${option.available 
-                      ? `${colors.border} ${colors.borderHover} hover:shadow-xl ${colors.shadow} cursor-pointer active:scale-[0.99]` 
-                      : 'border-neutral-100 dark:border-neutral-800 opacity-60 cursor-not-allowed'
+                      ? `${colors.border} ${colors.borderHover} hover:shadow-md md:hover:shadow-xl ${colors.shadow} cursor-pointer active:scale-[0.99]` 
+                      : 'border-neutral-100 dark:border-neutral-800/70 opacity-60 cursor-not-allowed'
                     }
                   `}
                 >
@@ -254,11 +254,11 @@ export default function CreatePage() {
                   {/* Content */}
                   <div className="relative flex items-center justify-between gap-6">
                     {/* Left: Icon + Text */}
-                    <div className="flex items-center gap-5 flex-1">
+                    <div className="flex items-center gap-4 md:gap-5 flex-1">
                       {/* Colored Icon Container */}
                       <div className={`
-                        w-16 h-16 md:w-20 md:h-20 
-                        rounded-2xl 
+                        w-12 h-12 md:w-16 md:h-16 
+                        rounded-xl md:rounded-2xl 
                         flex items-center justify-center
                         transition-all duration-300
                         ${option.available 
@@ -267,7 +267,7 @@ export default function CreatePage() {
                         }
                       `}>
                         <Icon className={`
-                          w-8 h-8 md:w-10 md:h-10 
+                          w-6 h-6 md:w-8 md:h-8 
                           transition-colors duration-300
                           ${option.available 
                             ? 'text-white' 
@@ -279,7 +279,7 @@ export default function CreatePage() {
                       {/* Text */}
                         <div className="flex-1 text-left">
                           <div className="flex items-center gap-3 mb-1">
-                            <h3 className="text-xl md:text-2xl font-bold text-black dark:text-white">
+                            <h3 className="text-lg md:text-2xl font-bold text-black dark:text-white">
                               {option.label}
                             </h3>
                           {!option.available && (
@@ -288,7 +288,7 @@ export default function CreatePage() {
                             </span>
                           )}
                         </div>
-                          <p className="text-sm md:text-base text-neutral-700 dark:text-neutral-300 mb-1">
+                          <p className="text-xs md:text-base text-neutral-700 dark:text-neutral-300 mb-1">
                             {option.description}
                           </p>
                         <p className={`text-xs md:text-sm font-semibold ${colors.text}`}>
@@ -307,7 +307,7 @@ export default function CreatePage() {
                         className="flex-shrink-0"
                       >
                         <div className={`
-                          w-12 h-12 rounded-xl
+                          w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl
                           flex items-center justify-center
                           transition-all duration-300
                           ${isHovered 

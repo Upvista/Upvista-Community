@@ -130,7 +130,7 @@ export default function TextPostComposer({ onClose, onPostCreated }: TextPostCom
   const isOverLimit = charCount > charLimit;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 md:p-6 space-y-3 md:space-y-4">
       {/* User Info */}
       <div className="flex items-center gap-3">
         <Avatar 
@@ -154,7 +154,7 @@ export default function TextPostComposer({ onClose, onPostCreated }: TextPostCom
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="What do you want to share today? Use #hashtags and @mentions..."
-          className="w-full min-h-[150px] px-4 py-3 bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl text-black dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 resize-none transition-all cursor-text"
+          className="w-full min-h-[120px] md:min-h-[150px] px-3 md:px-4 py-3 bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl text-black dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 resize-none transition-all cursor-text"
           autoFocus
         />
         
@@ -216,7 +216,7 @@ export default function TextPostComposer({ onClose, onPostCreated }: TextPostCom
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center justify-end gap-3 pt-3 md:pt-4 border-t border-neutral-200 dark:border-neutral-800">
         <button
           onClick={onClose}
           className="px-5 py-2.5 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors font-medium"

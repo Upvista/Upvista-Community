@@ -101,7 +101,7 @@ export default function PollComposer({ onClose, onPostCreated }: PollComposerPro
   const questionCharCount = question.length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* User Info */}
       <div className="flex items-center gap-3">
         <Avatar src={null} alt="You" fallback="You" size="md" />
@@ -122,7 +122,7 @@ export default function PollComposer({ onClose, onPostCreated }: PollComposerPro
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Ask a question..."
-          className="w-full min-h-[80px] px-4 py-3 bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl text-black dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-text"
+          className="w-full min-h-[80px] md:min-h-[100px] px-3 md:px-4 py-3 bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-xl text-black dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all cursor-text"
           maxLength={280}
         />
         <div className="flex justify-end">
@@ -203,7 +203,7 @@ export default function PollComposer({ onClose, onPostCreated }: PollComposerPro
       </div>
 
       {/* Poll Settings */}
-      <div className="space-y-3 p-4 bg-transparent border-2 border-neutral-200 dark:border-neutral-700 rounded-xl hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
+      <div className="space-y-3 p-3 md:p-4 bg-transparent border-2 border-neutral-200 dark:border-neutral-700 rounded-xl hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
         <p className="text-sm font-medium text-black dark:text-white mb-3">
           Poll Settings
         </p>
@@ -285,7 +285,7 @@ export default function PollComposer({ onClose, onPostCreated }: PollComposerPro
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center justify-end gap-3 pt-3 md:pt-4 border-t border-neutral-200 dark:border-neutral-800">
         <button
           onClick={onClose}
           className="px-5 py-2.5 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors font-medium"
