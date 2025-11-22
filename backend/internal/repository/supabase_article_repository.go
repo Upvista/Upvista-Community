@@ -427,16 +427,30 @@ func (r *SupabaseArticleRepository) UpdateArticle(ctx context.Context, articleID
 
 // IncrementViews increments the view count
 func (r *SupabaseArticleRepository) IncrementViews(ctx context.Context, articleID uuid.UUID) error {
-	// Would need RPC function for atomic increment
-	// For now, skip
-	return nil
+	// Naive increment: read then write (may have race conditions under heavy load)
+	article, err := r.GetArticle(ctx, articleID)
+	if err != nil {
+		return err
+	}
+	newCount := article.ViewsCount + 1
+	updates := map[string]interface{}{
+		"views_count": newCount,
+	}
+	return r.UpdateArticle(ctx, articleID, updates)
 }
 
 // RecordRead records that a user fully read an article
 func (r *SupabaseArticleRepository) RecordRead(ctx context.Context, articleID, userID uuid.UUID) error {
-	// Would need a separate table for read tracking
-	// For now, just increment reads_count
-	return nil
+	// Naive increment for reads_count
+	article, err := r.GetArticle(ctx, articleID)
+	if err != nil {
+		return err
+	}
+	newCount := article.ReadsCount + 1
+	updates := map[string]interface{}{
+		"reads_count": newCount,
+	}
+	return r.UpdateArticle(ctx, articleID, updates)
 }
 
 // AddTags adds tags to an article

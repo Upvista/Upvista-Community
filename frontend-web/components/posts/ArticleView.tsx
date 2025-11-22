@@ -11,7 +11,7 @@ import PostActions from './PostActions';
 import CommentModal from './CommentModal';
 import TableOfContents from './TableOfContents';
 import ReadingProgress from './ReadingProgress';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 interface ArticleViewProps {
   post: Post;
@@ -31,19 +31,33 @@ export default function ArticleView({
   const router = useRouter();
   const [showCommentModal, setShowCommentModal] = useState(false);
   
-  useEffect(() => {
-    // Add IDs to headings in the content for TOC navigation
-    if (post.article?.content_html && typeof window !== 'undefined') {
+  // Produce HTML with stable heading IDs so TOC anchors work reliably
+  const processedHtml = useMemo(() => {
+    if (!post.article?.content_html) return '';
+    if (typeof window === 'undefined') return post.article.content_html;
+    try {
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = post.article.content_html;
       const headings = tempDiv.querySelectorAll('h1, h2, h3, h4, h5, h6');
-      
+      const seen = new Set<string>();
       headings.forEach((heading) => {
-        if (!heading.id) {
-          const id = heading.textContent?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || '';
-          heading.id = id;
+        const base = (heading.textContent || '')
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9-]/g, '');
+        let candidate = base || 'section';
+        let suffix = 1;
+        while (seen.has(candidate)) {
+          suffix += 1;
+          candidate = `${base}-${suffix}`;
         }
+        heading.id = candidate;
+        seen.add(candidate);
       });
+      return tempDiv.innerHTML;
+    } catch {
+      return post.article.content_html;
     }
   }, [post.article?.content_html]);
   
@@ -223,7 +237,7 @@ export default function ArticleView({
                 prose-li:my-3 prose-li:text-lg prose-li:leading-relaxed
                 prose-li:text-justify
                 prose-hr:my-10 prose-hr:border-neutral-200 dark:prose-hr:border-neutral-800"
-              dangerouslySetInnerHTML={{ __html: article.content_html }}
+              dangerouslySetInnerHTML={{ __html: processedHtml || article.content_html }}
               style={{
                 textAlign: 'justify',
                 textJustify: 'inter-word',

@@ -306,7 +306,7 @@ Response:
     "id": "uuid-here",
     "email": "user@example.com",
     "username": "hamza.hafeez82",
-    "display_name": "Hamza Hafeez",
+    "display_name": "Hamza Hafeez   ",
     "age": 25,
     "is_email_verified": true,
     "last_login_at": "2024-01-01T10:00:00Z",

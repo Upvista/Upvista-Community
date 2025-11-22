@@ -119,3 +119,4 @@ COMMENT ON COLUMN messages.is_forwarded IS 'TRUE if this message was forwarded f
 COMMENT ON TABLE shared_messages IS 'Tracks when messages are shared outside the app';
 COMMENT ON TABLE message_edit_history IS 'History of all message edits for transparency';
 
+

@@ -403,7 +403,7 @@ Built to grow with your platform:
 ### **Source Code:**
 ```
 backend/
-├── internal/          # Business logic
+├── internal/         # Business logic
 │   ├── auth/         # Authentication services
 │   ├── account/      # Account management
 │   ├── models/       # Data models

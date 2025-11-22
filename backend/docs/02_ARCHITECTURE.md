@@ -37,12 +37,12 @@ The system follows a **layered architecture** with clear separation of concerns:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                     Client Layer                         │
-│            (Frontend, Mobile App, API Consumer)          │
+│                     Client Layer                        │
+│            (Frontend, Mobile App, API Consumer)         │
 └─────────────────────┬───────────────────────────────────┘
                       │ HTTP/HTTPS Requests
 ┌─────────────────────▼───────────────────────────────────┐
-│                  HTTP Layer (Gin)                        │
+│                  HTTP Layer (Gin)                       │
 │  ┌────────────────────────────────────────────────────┐ │
 │  │  Middleware: CORS, Rate Limiting, JWT Validation   │ │
 │  └────────────────────────────────────────────────────┘ │
@@ -53,7 +53,7 @@ The system follows a **layered architecture** with clear separation of concerns:
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────┐
-│               Business Logic Layer                       │
+│               Business Logic Layer                      │
 │  ┌────────────────────────────────────────────────────┐ │
 │  │  Services: AuthService, AccountService             │ │
 │  │  (Business rules, validations, orchestration)      │ │
@@ -61,7 +61,7 @@ The system follows a **layered architecture** with clear separation of concerns:
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────┐
-│                Data Access Layer                         │
+│                Data Access Layer                        │
 │  ┌────────────────────────────────────────────────────┐ │
 │  │  Repositories: UserRepository, SessionRepository   │ │
 │  │  (Database operations, CRUD)                       │ │
@@ -69,7 +69,7 @@ The system follows a **layered architecture** with clear separation of concerns:
 └─────────────────────┬───────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────┐
-│              External Services Layer                     │
+│              External Services Layer                    │
 │  ┌──────────────┬──────────────┬──────────────────────┐ │
 │  │  Supabase    │  SMTP        │  Supabase Storage    │ │
 │  │  (Database)  │  (Email)     │  (File Storage)      │ │
@@ -1075,10 +1075,10 @@ Frontend (React/Next.js)
      ↓           ↓            ↓
 ┌──────────────────────────────────────┐
 │     External Services                │
-│  ┌──────────┬──────────┬──────────┐ │
-│  │ Supabase │   SMTP   │ Supabase │ │
-│  │ Database │  Server  │ Storage  │ │
-│  └──────────┴──────────┴──────────┘ │
+│  ┌──────────┬──────────┬──────────┐  │
+│  │ Supabase │   SMTP   │ Supabase │  │
+│  │ Database │  Server  │ Storage  │  │
+│  └──────────┴──────────┴──────────┘  │
 └──────────────────────────────────────┘
 ```
 
