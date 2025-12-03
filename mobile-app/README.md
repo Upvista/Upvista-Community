@@ -1,4 +1,4 @@
-# upvista_mobile
+# asteria
 
 A new Flutter project.
 

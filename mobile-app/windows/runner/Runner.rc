@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.upvista" "\0"
-            VALUE "FileDescription", "upvista_mobile" "\0"
+            VALUE "CompanyName", "com.example" "\0"
+            VALUE "FileDescription", "asteria" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "upvista_mobile" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.upvista. All rights reserved." "\0"
-            VALUE "OriginalFilename", "upvista_mobile.exe" "\0"
-            VALUE "ProductName", "upvista_mobile" "\0"
+            VALUE "InternalName", "asteria" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
+            VALUE "OriginalFilename", "asteria.exe" "\0"
+            VALUE "ProductName", "asteria" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
