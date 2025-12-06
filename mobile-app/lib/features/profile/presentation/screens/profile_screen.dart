@@ -115,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 icon: Icon(Icons.people),
                                 text: 'Communities',
                               ),
-                              Tab(icon: Icon(Icons.work), text: 'Projects'),
+                              Tab(icon: Icon(Icons.work), text: 'Portfolio'),
                               Tab(
                                 icon: Icon(Icons.info_outline),
                                 text: 'About',
@@ -1127,18 +1127,224 @@ class _CommunityCard extends StatelessWidget {
   }
 }
 
-// Projects Tab
-class _ProjectsTab extends StatelessWidget {
+// Portfolio Tab - Professional Portfolio Section
+class _ProjectsTab extends StatefulWidget {
+  @override
+  State<_ProjectsTab> createState() => _ProjectsTabState();
+}
+
+class _ProjectsTabState extends State<_ProjectsTab> {
+  int _selectedSection = 0; // 0: Projects, 1: Case Studies, 2: Achievements
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Portfolio Stats Header - Clickable
+        Container(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _PortfolioStat(
+                value: '24',
+                label: 'Projects',
+                icon: Icons.code_outlined,
+                isSelected: _selectedSection == 0,
+                onTap: () {
+                  setState(() {
+                    _selectedSection = 0;
+                  });
+                },
+              ),
+              _PortfolioStat(
+                value: '12',
+                label: 'Case Studies',
+                icon: Icons.article_outlined,
+                isSelected: _selectedSection == 1,
+                onTap: () {
+                  setState(() {
+                    _selectedSection = 1;
+                  });
+                },
+              ),
+              _PortfolioStat(
+                value: '18',
+                label: 'Achievements',
+                icon: Icons.emoji_events_outlined,
+                isSelected: _selectedSection == 2,
+                onTap: () {
+                  setState(() {
+                    _selectedSection = 2;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        // Content Section
+        Expanded(
+          child: IndexedStack(
+            index: _selectedSection,
+            children: [
+              SizedBox(width: double.infinity, child: _ProjectsSection()),
+              SizedBox(width: double.infinity, child: _CaseStudiesSection()),
+              SizedBox(
+                width: double.infinity,
+                child: _PortfolioAchievementsSection(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PortfolioStat extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _PortfolioStat({
+    required this.value,
+    required this.label,
+    required this.icon,
+    this.isSelected = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [AppColors.accentPrimary, AppColors.accentSecondary],
+                )
+              : LinearGradient(
+                  colors: [
+                    AppColors.accentPrimary.withOpacity(0.2),
+                    AppColors.accentSecondary.withOpacity(0.2),
+                  ],
+                ),
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected
+              ? Border.all(
+                  color: AppColors.accentPrimary.withOpacity(0.5),
+                  width: 2,
+                )
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accentPrimary.withOpacity(0.3),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : AppColors.accentPrimary,
+              size: 24,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: AppTextStyles.headlineSmall(
+                weight: FontWeight.bold,
+                color: isSelected ? Colors.white : null,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: AppTextStyles.bodySmall(
+                color: isSelected
+                    ? Colors.white.withOpacity(0.9)
+                    : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Projects Section
+class _ProjectsSection extends StatelessWidget {
   final List<Map<String, dynamic>> _projects = [
     {
-      'name': 'E-Commerce Platform',
-      'description': 'Full-stack web application',
-      'status': 'Active',
+      'title': 'E-Commerce Platform',
+      'description':
+          'A full-stack e-commerce solution with real-time inventory management, payment integration, and admin dashboard.',
+      'category': 'Web Application',
+      'status': 'Completed',
+      'techStack': ['Flutter', 'Node.js', 'MongoDB', 'Stripe'],
+      'year': '2024',
+      'thumbnail': Icons.shopping_cart_outlined,
+      'links': {
+        'live': 'https://example.com',
+        'github': 'https://github.com/example',
+      },
+      'metrics': {'users': '10K+', 'revenue': '\$50K+'},
     },
     {
-      'name': 'Mobile App',
-      'description': 'Cross-platform mobile app',
+      'title': 'AI-Powered Mobile App',
+      'description':
+          'Cross-platform mobile application with machine learning features for personalized recommendations.',
+      'category': 'Mobile App',
+      'status': 'Active',
+      'techStack': ['Flutter', 'TensorFlow', 'Firebase', 'Python'],
+      'year': '2024',
+      'thumbnail': Icons.smartphone_outlined,
+      'links': {
+        'live': 'https://example.com',
+        'github': 'https://github.com/example',
+      },
+      'metrics': {'downloads': '25K+', 'rating': '4.8'},
+    },
+    {
+      'title': 'Blockchain Analytics Dashboard',
+      'description':
+          'Real-time analytics dashboard for tracking cryptocurrency transactions and market trends.',
+      'category': 'Web Application',
       'status': 'Completed',
+      'techStack': ['React', 'Web3.js', 'Ethereum', 'D3.js'],
+      'year': '2023',
+      'thumbnail': Icons.account_balance_wallet_outlined,
+      'links': {
+        'live': 'https://example.com',
+        'github': 'https://github.com/example',
+      },
+      'metrics': {'transactions': '1M+', 'users': '5K+'},
+    },
+    {
+      'title': 'Social Media Management Tool',
+      'description':
+          'Comprehensive tool for managing multiple social media accounts with scheduling and analytics.',
+      'category': 'Web Application',
+      'status': 'Active',
+      'techStack': ['Vue.js', 'Express', 'PostgreSQL', 'Redis'],
+      'year': '2024',
+      'thumbnail': Icons.share_outlined,
+      'links': {
+        'live': 'https://example.com',
+        'github': 'https://github.com/example',
+      },
+      'metrics': {'accounts': '500+', 'posts': '10K+'},
     },
   ];
 
@@ -1153,9 +1359,15 @@ class _ProjectsTab extends StatelessWidget {
       itemBuilder: (context, index) {
         final project = _projects[index];
         return _ProjectCard(
-          name: project['name'] as String,
+          title: project['title'] as String,
           description: project['description'] as String,
+          category: project['category'] as String,
           status: project['status'] as String,
+          techStack: project['techStack'] as List<String>,
+          year: project['year'] as String,
+          thumbnail: project['thumbnail'] as IconData,
+          links: project['links'] as Map<String, String>,
+          metrics: project['metrics'] as Map<String, String>,
         );
       },
     );
@@ -1163,24 +1375,35 @@ class _ProjectsTab extends StatelessWidget {
 }
 
 class _ProjectCard extends StatelessWidget {
-  final String name;
+  final String title;
   final String description;
+  final String category;
   final String status;
+  final List<String> techStack;
+  final String year;
+  final IconData thumbnail;
+  final Map<String, String> links;
+  final Map<String, String> metrics;
 
   const _ProjectCard({
-    required this.name,
+    required this.title,
     required this.description,
+    required this.category,
     required this.status,
+    required this.techStack,
+    required this.year,
+    required this.thumbnail,
+    required this.links,
+    required this.metrics,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.backgroundSecondary.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AppColors.glassBorder.withOpacity(0.1),
           width: 0.5,
@@ -1189,40 +1412,815 @@ class _ProjectCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  name,
-                  style: AppTextStyles.bodyLarge(weight: FontWeight.w600),
-                ),
+          // Thumbnail Header
+          Container(
+            height: 180,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.accentPrimary.withOpacity(0.6),
+                  AppColors.accentSecondary.withOpacity(0.6),
+                  AppColors.accentTertiary.withOpacity(0.6),
+                ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: status == 'Active'
-                      ? AppColors.success.withOpacity(0.15)
-                      : AppColors.textSecondary.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  status,
-                  style: AppTextStyles.bodySmall(
-                    color: status == 'Active'
-                        ? AppColors.success
-                        : AppColors.textSecondary,
-                    weight: FontWeight.w600,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Stack(
+              children: [
+                Center(child: Icon(thumbnail, size: 64, color: Colors.white)),
+                // Status Badge
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: status == 'Active'
+                          ? AppColors.success.withOpacity(0.9)
+                          : AppColors.textSecondary.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          status,
+                          style: AppTextStyles.bodySmall(
+                            color: Colors.white,
+                            weight: FontWeight.w600,
+                          ).copyWith(fontSize: 11),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                // Year Badge
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      year,
+                      style: AppTextStyles.bodySmall(
+                        color: Colors.white,
+                        weight: FontWeight.w600,
+                      ).copyWith(fontSize: 11),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: AppTextStyles.bodyMedium(color: AppColors.textSecondary),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title and Category
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: AppTextStyles.headlineSmall(
+                              weight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            category,
+                            style: AppTextStyles.bodySmall(
+                              color: AppColors.accentPrimary,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Description
+                Text(
+                  description,
+                  style: AppTextStyles.bodyMedium(
+                    color: AppColors.textSecondary,
+                  ).copyWith(height: 1.5),
+                ),
+                const SizedBox(height: 16),
+                // Tech Stack
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: techStack.map((tech) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentPrimary.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.accentPrimary.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        tech,
+                        style: AppTextStyles.bodySmall(
+                          color: AppColors.accentPrimary,
+                          weight: FontWeight.w500,
+                        ).copyWith(fontSize: 11),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                // Metrics
+                Row(
+                  children: metrics.entries.map((entry) {
+                    return Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.backgroundPrimary.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              entry.value,
+                              style: AppTextStyles.bodyLarge(
+                                weight: FontWeight.bold,
+                                color: AppColors.accentPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              entry.key,
+                              style: AppTextStyles.bodySmall(
+                                color: AppColors.textSecondary,
+                              ).copyWith(fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                // Links
+                Row(
+                  children: [
+                    if (links.containsKey('live'))
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: Icon(
+                            Icons.launch,
+                            size: 16,
+                            color: AppColors.accentPrimary,
+                          ),
+                          label: Text(
+                            'Live Demo',
+                            style: AppTextStyles.bodySmall(
+                              color: AppColors.accentPrimary,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: AppColors.accentPrimary,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                    if (links.containsKey('live') &&
+                        links.containsKey('github')) ...[
+                      const SizedBox(width: 8),
+                    ],
+                    if (links.containsKey('github'))
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: Icon(
+                            Icons.code,
+                            size: 16,
+                            color: AppColors.accentPrimary,
+                          ),
+                          label: Text(
+                            'GitHub',
+                            style: AppTextStyles.bodySmall(
+                              color: AppColors.accentPrimary,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: AppColors.accentPrimary,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Case Studies Section
+class _CaseStudiesSection extends StatelessWidget {
+  final List<Map<String, dynamic>> _caseStudies = [
+    {
+      'title': 'E-Commerce Platform Redesign',
+      'client': 'TechCorp Inc.',
+      'challenge':
+          'Low conversion rates and poor user experience on the existing platform.',
+      'solution':
+          'Redesigned the entire user journey with modern UI/UX, implemented A/B testing, and optimized checkout flow.',
+      'results': {
+        'conversion': '+45%',
+        'revenue': '+120%',
+        'satisfaction': '4.9/5',
+      },
+      'duration': '3 months',
+      'year': '2024',
+      'category': 'Web Design',
+    },
+    {
+      'title': 'Mobile App Performance Optimization',
+      'client': 'StartupXYZ',
+      'challenge':
+          'App crashes and slow loading times affecting user retention.',
+      'solution':
+          'Refactored codebase, implemented caching strategies, and optimized API calls reducing load time by 70%.',
+      'results': {
+        'performance': '+70%',
+        'crashes': '-95%',
+        'retention': '+60%',
+      },
+      'duration': '2 months',
+      'year': '2023',
+      'category': 'Mobile Development',
+    },
+    {
+      'title': 'AI-Powered Recommendation System',
+      'client': 'MediaStream',
+      'challenge': 'Low engagement due to generic content recommendations.',
+      'solution':
+          'Built machine learning model for personalized recommendations using collaborative filtering and deep learning.',
+      'results': {
+        'engagement': '+85%',
+        'watch_time': '+110%',
+        'accuracy': '92%',
+      },
+      'duration': '4 months',
+      'year': '2023',
+      'category': 'AI/ML',
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: const EdgeInsets.all(16),
+      itemCount: _caseStudies.length,
+      itemBuilder: (context, index) {
+        final caseStudy = _caseStudies[index];
+        return _CaseStudyCard(
+          title: caseStudy['title'] as String,
+          client: caseStudy['client'] as String,
+          challenge: caseStudy['challenge'] as String,
+          solution: caseStudy['solution'] as String,
+          results: caseStudy['results'] as Map<String, String>,
+          duration: caseStudy['duration'] as String,
+          year: caseStudy['year'] as String,
+          category: caseStudy['category'] as String,
+        );
+      },
+    );
+  }
+}
+
+class _CaseStudyCard extends StatelessWidget {
+  final String title;
+  final String client;
+  final String challenge;
+  final String solution;
+  final Map<String, String> results;
+  final String duration;
+  final String year;
+  final String category;
+
+  const _CaseStudyCard({
+    required this.title,
+    required this.client,
+    required this.challenge,
+    required this.solution,
+    required this.results,
+    required this.duration,
+    required this.year,
+    required this.category,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.backgroundSecondary.withOpacity(0.4),
+            AppColors.backgroundPrimary.withOpacity(0.2),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.glassBorder.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.accentPrimary,
+                                  AppColors.accentSecondary,
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              category,
+                              style: AppTextStyles.bodySmall(
+                                color: Colors.white,
+                                weight: FontWeight.w600,
+                              ).copyWith(fontSize: 10),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            year,
+                            style: AppTextStyles.bodySmall(
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        title,
+                        style: AppTextStyles.headlineSmall(
+                          weight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.business_outlined,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            client,
+                            style: AppTextStyles.bodyMedium(
+                              color: AppColors.textSecondary,
+                              weight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.schedule_outlined,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            duration,
+                            style: AppTextStyles.bodySmall(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            // Challenge
+            _CaseStudySection(
+              title: 'Challenge',
+              icon: Icons.flag_outlined,
+              content: challenge,
+              color: AppColors.accentQuaternary,
+            ),
+            const SizedBox(height: 16),
+            // Solution
+            _CaseStudySection(
+              title: 'Solution',
+              icon: Icons.lightbulb_outlined,
+              content: solution,
+              color: AppColors.accentTertiary,
+            ),
+            const SizedBox(height: 20),
+            // Results
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.success.withOpacity(0.15),
+                    AppColors.accentPrimary.withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.success.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.trending_up,
+                        color: AppColors.success,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Results',
+                        style: AppTextStyles.bodyLarge(
+                          weight: FontWeight.bold,
+                          color: AppColors.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: results.entries.map((entry) {
+                      return Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.backgroundPrimary.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                entry.value,
+                                style: AppTextStyles.headlineSmall(
+                                  weight: FontWeight.bold,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                entry.key.replaceAll('_', ' ').toUpperCase(),
+                                style: AppTextStyles.bodySmall(
+                                  color: AppColors.textSecondary,
+                                ).copyWith(fontSize: 9),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CaseStudySection extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final String content;
+  final Color color;
+
+  const _CaseStudySection({
+    required this.title,
+    required this.icon,
+    required this.content,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 16),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: AppTextStyles.bodyMedium(
+                weight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 32),
+          child: Text(
+            content,
+            style: AppTextStyles.bodyMedium(
+              color: AppColors.textSecondary,
+            ).copyWith(height: 1.6),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Portfolio Achievements Section
+class _PortfolioAchievementsSection extends StatelessWidget {
+  final List<Map<String, dynamic>> _achievements = [
+    {
+      'title': 'Top Contributor 2024',
+      'organization': 'Open Source Community',
+      'description':
+          'Recognized for outstanding contributions to open source projects with 500+ commits and 20+ repositories.',
+      'date': 'Dec 2024',
+      'badge': Icons.star,
+      'color': AppColors.accentPrimary,
+    },
+    {
+      'title': 'Hackathon Winner',
+      'organization': 'TechFest 2024',
+      'description':
+          'First place at TechFest 2024 - Built an AI-powered mobile app in 48 hours that won the grand prize.',
+      'date': 'Oct 2024',
+      'badge': Icons.emoji_events,
+      'color': AppColors.accentTertiary,
+    },
+    {
+      'title': 'Best Mobile App Award',
+      'organization': 'Mobile Dev Conference',
+      'description':
+          'Awarded Best Mobile App for innovative design and exceptional user experience at Mobile Dev Conference 2024.',
+      'date': 'Aug 2024',
+      'badge': Icons.workspace_premium,
+      'color': AppColors.accentSecondary,
+    },
+    {
+      'title': 'Employee of the Year',
+      'organization': 'TechCorp Inc.',
+      'description':
+          'Awarded for exceptional performance, leadership, and contributions to company growth in 2023.',
+      'date': 'Jan 2024',
+      'badge': Icons.celebration,
+      'color': AppColors.success,
+    },
+    {
+      'title': 'Published Author',
+      'organization': 'Tech Publications',
+      'description':
+          'Published 10+ technical articles on mobile development and software architecture with 50K+ total views.',
+      'date': '2023',
+      'badge': Icons.article,
+      'color': AppColors.accentQuaternary,
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: const EdgeInsets.all(16),
+      itemCount: _achievements.length,
+      itemBuilder: (context, index) {
+        final achievement = _achievements[index];
+        return _AchievementCard(
+          title: achievement['title'] as String,
+          organization: achievement['organization'] as String,
+          description: achievement['description'] as String,
+          date: achievement['date'] as String,
+          badge: achievement['badge'] as IconData,
+          color: achievement['color'] as Color,
+        );
+      },
+    );
+  }
+}
+
+class _AchievementCard extends StatelessWidget {
+  final String title;
+  final String organization;
+  final String description;
+  final String date;
+  final IconData badge;
+  final Color color;
+
+  const _AchievementCard({
+    required this.title,
+    required this.organization,
+    required this.description,
+    required this.date,
+    required this.badge,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSecondary.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Badge Icon
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [color, color.withOpacity(0.7)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Icon(badge, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 16),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: AppTextStyles.bodyLarge(
+                            weight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          date,
+                          style: AppTextStyles.bodySmall(
+                            color: color,
+                            weight: FontWeight.w600,
+                          ).copyWith(fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.business_center_outlined,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        organization,
+                        style: AppTextStyles.bodySmall(
+                          color: AppColors.textSecondary,
+                          weight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    description,
+                    style: AppTextStyles.bodyMedium(
+                      color: AppColors.textSecondary,
+                    ).copyWith(height: 1.5),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

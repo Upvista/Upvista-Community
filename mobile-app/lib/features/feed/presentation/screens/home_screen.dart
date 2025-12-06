@@ -131,17 +131,17 @@ class _ActivityTags extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
           child: Text(
             'Since your last visit',
             style: AppTextStyles.bodySmall(
               color: AppColors.textSecondary,
               weight: FontWeight.w600,
-            ),
+            ).copyWith(fontSize: 11),
           ),
         ),
         SizedBox(
-          height: 38,
+          height: 32,
           child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
               return true;
@@ -161,38 +161,30 @@ class _ActivityTags extends StatelessWidget {
                     // TODO: Filter feed by this content type
                   },
                   child: Container(
-                    margin: const EdgeInsets.only(right: 6),
+                    margin: const EdgeInsets.only(right: 4),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.backgroundSecondary.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: (tag['color'] as Color).withOpacity(0.3),
-                        width: 1,
-                      ),
+                      horizontal: 8,
+                      vertical: 4,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(tag['icon'], size: 12, color: tag['color']),
-                        const SizedBox(width: 4),
+                        Icon(tag['icon'], size: 11, color: tag['color']),
+                        const SizedBox(width: 3),
                         Text(
                           '${tag['count']}',
                           style: AppTextStyles.bodySmall(
                             color: tag['color'],
                             weight: FontWeight.w600,
-                          ).copyWith(fontSize: 11),
+                          ).copyWith(fontSize: 10),
                         ),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: 2),
                         Text(
                           tag['label'],
                           style: AppTextStyles.bodySmall(
                             color: AppColors.textSecondary,
                             weight: FontWeight.w400,
-                          ).copyWith(fontSize: 11),
+                          ).copyWith(fontSize: 10),
                         ),
                       ],
                     ),
