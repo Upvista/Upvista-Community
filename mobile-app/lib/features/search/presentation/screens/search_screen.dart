@@ -52,9 +52,6 @@ class _SearchScreenState extends State<SearchScreen>
                 onNotificationTap: () {
                   context.push('/notifications');
                 },
-                onJobTap: () {
-                  // TODO: Navigate to jobs
-                },
                 onMessageTap: () {
                   context.push('/messages');
                 },
@@ -190,6 +187,10 @@ class _SearchScreenState extends State<SearchScreen>
           onTap: (index) {
             if (index == 0) {
               context.go('/home');
+            } else if (index == 1) {
+              context.push('/communities');
+            } else if (index == 3) {
+              context.push('/jobs');
             } else if (index == 4) {
               context.push('/profile');
             } else {
@@ -433,31 +434,56 @@ class _CommunitiesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const BouncingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.accentPrimary.withOpacity(0.2),
+                    AppColors.accentSecondary.withOpacity(0.2),
+                  ],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.people_outline,
+                size: 40,
+                color: AppColors.accentPrimary,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Communities',
+              style: AppTextStyles.headlineSmall(
+                weight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Scheduled for the next phase',
+              style: AppTextStyles.bodyMedium(
+                color: AppColors.textSecondary,
+                weight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Currently under development',
+              style: AppTextStyles.bodySmall(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: [
-        _CommunityResultItem(
-          name: 'Flutter Developers',
-          members: '12.5K',
-          icon: Icons.code,
-          description: 'A community for Flutter enthusiasts',
-        ),
-        _CommunityResultItem(
-          name: 'UI/UX Designers',
-          members: '8.2K',
-          icon: Icons.design_services,
-          description: 'Design inspiration and resources',
-        ),
-        _CommunityResultItem(
-          name: 'Startup Founders',
-          members: '5.7K',
-          icon: Icons.rocket_launch,
-          description: 'Connect with fellow entrepreneurs',
-        ),
-      ],
     );
   }
 }

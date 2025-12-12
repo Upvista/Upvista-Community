@@ -1,10 +1,10 @@
-# Upvista Authentication System
+# Asteria Backend API
 
-> **Created by:** Hamza Hafeez - Founder & CEO of Upvista  
+> **Created by:** Hamza Hafeez - Founder & CEO  
 > **Version:** 1.0.0  
 > **Status:** Production-Ready ✅
 
-A complete, enterprise-grade authentication and user management system built with Go, featuring JWT authentication, OAuth social login, session management, GDPR compliance, and professional email notifications.
+A complete, enterprise-grade backend API system built with Go, featuring JWT authentication, OAuth social login, session management, GDPR compliance, and professional email notifications.
 
 ## ✨ Features
 
@@ -125,7 +125,7 @@ go run main.go
 
 To build the application:
 ```bash
-go build -o upvista-backend main.go
+go build -o asteria-backend main.go
 ```
 
 ## Deployment
@@ -144,7 +144,7 @@ This application is configured for deployment on Render.com:
 3. **Configure the service**:
    - Connect your GitHub repository
    - Set the following:
-     - **Name**: `upvista-community-backend`
+     - **Name**: `asteria-backend`
      - **Root Directory**: `backend`
      - **Environment**: `Docker`
      - **Dockerfile Path**: `./Dockerfile`
@@ -165,10 +165,10 @@ You can also deploy using Docker:
 
 ```bash
 # Build the Docker image
-docker build -t upvista-backend .
+docker build -t asteria-backend .
 
 # Run the container
-docker run -p 8080:8080 upvista-backend
+docker run -p 8080:8080 asteria-backend
 ```
 
 ## 📚 Documentation
@@ -245,11 +245,11 @@ docker run -p 8080:8080 upvista-backend
 ## 💡 Use Cases
 
 Perfect for:
-- Community platforms (like Upvista)
+- Social networking platforms
 - SaaS applications
 - E-commerce sites
 - Educational platforms
-- Social networks
+- Community platforms
 - Mobile app backends
 - Corporate applications
 
@@ -275,7 +275,7 @@ Perfect for:
 
 ## 🙏 Credits
 
-**Created by:** Hamza Hafeez - Founder & CEO of Upvista
+**Created by:** Hamza Hafeez - Founder & CEO
 
 **Purpose:** Build powerful, reusable systems that developers love
 

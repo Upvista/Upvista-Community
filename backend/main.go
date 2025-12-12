@@ -211,7 +211,7 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "healthy",
-			"service": "upvista-community-backend",
+			"service": "asteria-backend",
 			"version": "1.0.0",
 		})
 	})
@@ -219,8 +219,8 @@ func main() {
 	// Welcome endpoint
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Welcome to UpVista Community Backend API",
-			"service": "upvista-community-backend",
+			"message": "Welcome to Asteria Backend API",
+			"service": "asteria-backend",
 			"version": "1.0.0",
 		})
 	})

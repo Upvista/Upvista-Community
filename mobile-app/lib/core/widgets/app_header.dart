@@ -7,7 +7,6 @@ import '../theme/app_text_styles.dart';
 class AppHeader extends StatelessWidget {
   final VoidCallback? onMenuTap;
   final VoidCallback? onNotificationTap;
-  final VoidCallback? onJobTap;
   final VoidCallback? onMessageTap;
   final int? notificationBadge;
   final int? messageBadge;
@@ -16,7 +15,6 @@ class AppHeader extends StatelessWidget {
     super.key,
     this.onMenuTap,
     this.onNotificationTap,
-    this.onJobTap,
     this.onMessageTap,
     this.notificationBadge,
     this.messageBadge,
@@ -67,23 +65,20 @@ class AppHeader extends StatelessWidget {
               const Spacer(),
               // Header icons
               _HeaderIconButton(
-                icon: Icons.menu,
+                icon: Icons.menu_rounded,
                 onTap: onMenuTap ?? () {},
               ),
               const SizedBox(width: 20),
               _HeaderIconButton(
                 icon: Icons.notifications_outlined,
+                selectedIcon: Icons.notifications,
                 badge: notificationBadge,
+                isSelected: false,
                 onTap: onNotificationTap ?? () => context.push('/notifications'),
               ),
               const SizedBox(width: 20),
               _HeaderIconButton(
-                icon: Icons.work_outline,
-                onTap: onJobTap ?? () {},
-              ),
-              const SizedBox(width: 20),
-              _HeaderIconButton(
-                icon: Icons.send,
+                icon: Icons.send_rounded,
                 badge: messageBadge,
                 onTap: onMessageTap ?? () => context.push('/messages'),
               ),
@@ -97,13 +92,17 @@ class AppHeader extends StatelessWidget {
 
 class _HeaderIconButton extends StatelessWidget {
   final IconData icon;
+  final IconData? selectedIcon;
   final VoidCallback onTap;
   final int? badge;
+  final bool isSelected;
 
   const _HeaderIconButton({
     required this.icon,
+    this.selectedIcon,
     required this.onTap,
     this.badge,
+    this.isSelected = false,
   });
 
   @override
@@ -114,8 +113,12 @@ class _HeaderIconButton extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Container(
-            padding: const EdgeInsets.all(4),
-            child: Icon(icon, color: AppColors.textPrimary, size: 24),
+            padding: const EdgeInsets.all(6),
+            child: Icon(
+              isSelected && selectedIcon != null ? selectedIcon! : icon,
+              color: AppColors.textPrimary,
+              size: 26,
+            ),
           ),
           if (badge != null && badge! > 0)
             Positioned(

@@ -1,4 +1,51 @@
-<!-- b8a14364-b547-4f23-a8ee-c531bc325c38 39ec603d-59c2-4550-a651-823b87252f9f -->
+---
+name: Professional Profile System - Phase 1
+overview: ""
+todos:
+  - id: 268fd6a2-c6fa-439c-a344-ab586f7b1472
+    content: Create and run profile_phase1_migration.sql to add bio, location, gender, website, story, ambition, privacy settings, field visibility, stats, and constraints to users table
+    status: pending
+  - id: 7248f55e-8723-4340-b75a-44bb119b89f8
+    content: Update User model and create request/response models (UpdateBasicProfileRequest, UpdatePrivacySettingsRequest, UpdateStoryRequest, UpdateAmbitionRequest, PublicProfileResponse)
+    status: pending
+  - id: 01177fca-9fd4-4b5b-90cb-e6c18527ad27
+    content: "Update supabase_user_repository.go to parse new fields and add methods: UpdateBasicProfile, UpdatePrivacySettings, UpdateStory, UpdateAmbition, GetPublicProfile"
+    status: pending
+  - id: c161a012-d857-42aa-aa3d-763a8f0aeaad
+    content: Create profile_service.go with privacy filtering logic (GetPublicProfile with access control, filterProfileFields)
+    status: pending
+  - id: 17f17ea7-136a-4f6b-a93f-114ab715bde8
+    content: "Add account handlers for: UpdateBasicProfile, UpdatePrivacySettings, UpdateStory, UpdateAmbition, GetPublicProfile with validation"
+    status: pending
+  - id: d1c402f8-3804-4a42-815b-0cc22e6dd16d
+    content: "Register new routes in main.go: PATCH /account/profile/basic, /privacy, /story, /ambition and GET /profile/:username"
+    status: pending
+  - id: d2e29f3a-7cb5-4a58-b173-082cb8b36ed2
+    content: Add Basic Profile section to settings page with bio, location, gender dropdown, website fields and connect to backend
+    status: pending
+  - id: 6de95b88-2233-48e3-ae70-deaac4baa3ff
+    content: Add Privacy Settings section to settings page with profile visibility radio and field visibility checkboxes
+    status: pending
+  - id: 48100e4a-6e82-4529-85aa-9d53e915e51f
+    content: Create GenderSelect.tsx reusable component with dropdown and custom text input
+    status: pending
+  - id: f4cd6203-f8f3-4fa9-b2da-38f3def3413c
+    content: Refactor profile page to fetch real data, display header with avatar/bio/metadata/stats, implement tabs (Feed/Communities/Projects/About)
+    status: pending
+  - id: d2efe1c1-a55a-45eb-a0db-b3497bae5bbd
+    content: Create InlineEditor.tsx component for editing Story and Ambition sections with character counters
+    status: pending
+  - id: 5557db5b-3214-41ee-83cf-7979f00e990e
+    content: Create ProfilePrivacyGuard.tsx component to handle loading, 404, 403, and private profile messages
+    status: pending
+  - id: b06f9881-aaa3-49fb-a984-8bbce308cd4d
+    content: Test all endpoints, settings page updates, profile viewing with different privacy levels, field visibility toggling, and inline editing
+    status: pending
+  - id: f28c2482-3a5b-4ff2-8c22-d4f109e6350f
+    content: "Polish UI/UX: proper spacing, iOS-inspired animations, glassmorphism effects, proper error states, loading skeletons"
+    status: pending
+---
+
 # Professional Profile System - Phase 1
 
 ## Overview
@@ -372,20 +419,3 @@ After Phase 1 is tested and working:
 ---
 
 **Attribution:** Designed and architected by Hamza Hafeez - Founder and CEO of Upvista
-
-### To-dos
-
-- [ ] Create and run profile_phase1_migration.sql to add bio, location, gender, website, story, ambition, privacy settings, field visibility, stats, and constraints to users table
-- [ ] Update User model and create request/response models (UpdateBasicProfileRequest, UpdatePrivacySettingsRequest, UpdateStoryRequest, UpdateAmbitionRequest, PublicProfileResponse)
-- [ ] Update supabase_user_repository.go to parse new fields and add methods: UpdateBasicProfile, UpdatePrivacySettings, UpdateStory, UpdateAmbition, GetPublicProfile
-- [ ] Create profile_service.go with privacy filtering logic (GetPublicProfile with access control, filterProfileFields)
-- [ ] Add account handlers for: UpdateBasicProfile, UpdatePrivacySettings, UpdateStory, UpdateAmbition, GetPublicProfile with validation
-- [ ] Register new routes in main.go: PATCH /account/profile/basic, /privacy, /story, /ambition and GET /profile/:username
-- [ ] Add Basic Profile section to settings page with bio, location, gender dropdown, website fields and connect to backend
-- [ ] Add Privacy Settings section to settings page with profile visibility radio and field visibility checkboxes
-- [ ] Create GenderSelect.tsx reusable component with dropdown and custom text input
-- [ ] Refactor profile page to fetch real data, display header with avatar/bio/metadata/stats, implement tabs (Feed/Communities/Projects/About)
-- [ ] Create InlineEditor.tsx component for editing Story and Ambition sections with character counters
-- [ ] Create ProfilePrivacyGuard.tsx component to handle loading, 404, 403, and private profile messages
-- [ ] Test all endpoints, settings page updates, profile viewing with different privacy levels, field visibility toggling, and inline editing
-- [ ] Polish UI/UX: proper spacing, iOS-inspired animations, glassmorphism effects, proper error states, loading skeletons

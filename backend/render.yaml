@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: upvista-community-backend
+    name: asteria-backend
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -30,12 +30,12 @@ services:
       - key: SMTP_PASSWORD
         sync: false
       - key: SMTP_FROM_NAME
-        value: Upvista Community
+        value: Asteria
       - key: SMTP_FROM_EMAIL
-        value: noreply@upvista.com
+        value: noreply@asteria.app
       - key: CORS_ALLOWED_ORIGINS
-        value: https://upvista-community.vercel.app
+        value: https://asteria.app
       - key: FRONTEND_URL
-        value: https://upvista-community.vercel.app
+        value: https://asteria.app
     healthCheckPath: /health
     autoDeploy: true

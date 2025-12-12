@@ -77,27 +77,27 @@ func (s *EmailService) buildEmailContent(notification *models.Notification) (sub
 	case models.NotificationFollow:
 		subject = fmt.Sprintf("%s started following you", actorName)
 		htmlBody = s.renderFollowEmail(actorName, actionURL)
-		textBody = fmt.Sprintf("%s started following you on Upvista Community.\n\nView profile: %s", actorName, actionURL)
+		textBody = fmt.Sprintf("%s started following you on Asteria.\n\nView profile: %s", actorName, actionURL)
 
 	case models.NotificationConnectionRequest:
 		subject = fmt.Sprintf("%s wants to connect with you", actorName)
 		htmlBody = s.renderConnectionRequestEmail(actorName, actionURL)
-		textBody = fmt.Sprintf("%s wants to connect with you on Upvista Community.\n\nRespond: %s", actorName, actionURL)
+		textBody = fmt.Sprintf("%s wants to connect with you on Asteria.\n\nRespond: %s", actorName, actionURL)
 
 	case models.NotificationConnectionAccepted:
 		subject = fmt.Sprintf("%s accepted your connection request", actorName)
 		htmlBody = s.renderConnectionAcceptedEmail(actorName, actionURL)
-		textBody = fmt.Sprintf("%s accepted your connection request on Upvista Community.\n\nView profile: %s", actorName, actionURL)
+		textBody = fmt.Sprintf("%s accepted your connection request on Asteria.\n\nView profile: %s", actorName, actionURL)
 
 	case models.NotificationCollaborationRequest:
 		subject = fmt.Sprintf("%s wants to collaborate with you", actorName)
 		htmlBody = s.renderCollaborationRequestEmail(actorName, actionURL)
-		textBody = fmt.Sprintf("%s wants to collaborate with you on Upvista Community.\n\nRespond: %s", actorName, actionURL)
+		textBody = fmt.Sprintf("%s wants to collaborate with you on Asteria.\n\nRespond: %s", actorName, actionURL)
 
 	case models.NotificationCollaborationAccepted:
 		subject = fmt.Sprintf("%s accepted your collaboration request", actorName)
 		htmlBody = s.renderCollaborationAcceptedEmail(actorName, actionURL)
-		textBody = fmt.Sprintf("%s accepted your collaboration request on Upvista Community.\n\nView profile: %s", actorName, actionURL)
+		textBody = fmt.Sprintf("%s accepted your collaboration request on Asteria.\n\nView profile: %s", actorName, actionURL)
 
 	default:
 		subject = notification.Title
@@ -121,11 +121,11 @@ func (s *EmailService) buildDigestEmailContent(notifications []*models.Notificat
 		period = "Weekly"
 	}
 
-	subject = fmt.Sprintf("Your %s Upvista Digest - %d new notifications", period, len(notifications))
+	subject = fmt.Sprintf("Your %s Asteria Digest - %d new notifications", period, len(notifications))
 	htmlBody = s.renderDigestEmail(notifications, period)
 
 	// Build text version
-	textBuffer := bytes.NewBufferString(fmt.Sprintf("Your %s Upvista Digest\n\nYou have %d new notifications:\n\n", period, len(notifications)))
+	textBuffer := bytes.NewBufferString(fmt.Sprintf("Your %s Asteria Digest\n\nYou have %d new notifications:\n\n", period, len(notifications)))
 	for _, notif := range notifications {
 		textBuffer.WriteString(fmt.Sprintf("• %s\n", notif.Title))
 		if notif.Message != nil {
@@ -163,14 +163,14 @@ func (s *EmailService) renderFollowEmail(actorName, actionURL string) string {
 			<h1>🎉 New Follower</h1>
 		</div>
 		<div class="content">
-			<p><strong>{{.ActorName}}</strong> started following you on Upvista Community!</p>
+			<p><strong>{{.ActorName}}</strong> started following you on Asteria!</p>
 			<p>Connect with them and grow your professional network.</p>
 			<p style="text-align: center; margin-top: 30px;">
 				<a href="{{.ActionURL}}" class="button">View Profile</a>
 			</p>
 		</div>
 		<div class="footer">
-			<p>Upvista Community • Building connections that matter</p>
+			<p>Asteria • Building connections that matter</p>
 		</div>
 	</div>
 </body>
@@ -205,14 +205,14 @@ func (s *EmailService) renderConnectionRequestEmail(actorName, actionURL string)
 			<h1>🤝 Connection Request</h1>
 		</div>
 		<div class="content">
-			<p><strong>{{.ActorName}}</strong> wants to connect with you on Upvista Community!</p>
+			<p><strong>{{.ActorName}}</strong> wants to connect with you on Asteria!</p>
 			<p>Accept this request to build your professional network and unlock messaging.</p>
 			<p style="text-align: center; margin-top: 30px;">
 				<a href="{{.ActionURL}}" class="button">View Request</a>
 			</p>
 		</div>
 		<div class="footer">
-			<p>Upvista Community • Building connections that matter</p>
+			<p>Asteria • Building connections that matter</p>
 		</div>
 	</div>
 </body>
@@ -253,7 +253,7 @@ func (s *EmailService) renderConnectionAcceptedEmail(actorName, actionURL string
 			</p>
 		</div>
 		<div class="footer">
-			<p>Upvista Community • Building connections that matter</p>
+			<p>Asteria • Building connections that matter</p>
 		</div>
 	</div>
 </body>
@@ -294,7 +294,7 @@ func (s *EmailService) renderCollaborationRequestEmail(actorName, actionURL stri
 			</p>
 		</div>
 		<div class="footer">
-			<p>Upvista Community • Building connections that matter</p>
+			<p>Asteria • Building connections that matter</p>
 		</div>
 	</div>
 </body>
@@ -335,7 +335,7 @@ func (s *EmailService) renderCollaborationAcceptedEmail(actorName, actionURL str
 			</p>
 		</div>
 		<div class="footer">
-			<p>Upvista Community • Building connections that matter</p>
+			<p>Asteria • Building connections that matter</p>
 		</div>
 	</div>
 </body>
@@ -381,7 +381,7 @@ func (s *EmailService) renderGenericEmail(title string, message *string, actionU
 			</p>
 		</div>
 		<div class="footer">
-			<p>Upvista Community • Building connections that matter</p>
+			<p>Asteria • Building connections that matter</p>
 		</div>
 	</div>
 </body>
@@ -430,7 +430,7 @@ func (s *EmailService) renderDigestEmail(notifications []*models.Notification, p
 			</p>
 		</div>
 		<div class="footer">
-			<p>Upvista Community • Building connections that matter</p>
+			<p>Asteria • Building connections that matter</p>
 			<p style="margin-top: 10px;"><a href="{{.BaseURL}}/settings" style="color: #7c3aed;">Manage email preferences</a></p>
 		</div>
 	</div>

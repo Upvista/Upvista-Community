@@ -49,9 +49,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 onNotificationTap: () {
                   // Already on notifications
                 },
-                onJobTap: () {
-                  // TODO: Navigate to jobs
-                },
                 onMessageTap: () {
                   context.push('/messages');
                 },
@@ -134,6 +131,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           onTap: (index) {
             if (index == 0) {
               context.go('/home');
+            } else if (index == 1) {
+              context.push('/communities');
+            } else if (index == 3) {
+              context.push('/jobs');
             } else if (index == 4) {
               context.push('/profile');
             } else {

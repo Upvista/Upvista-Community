@@ -32,7 +32,7 @@ func (e *EmailService) GenerateVerificationCode() string {
 
 // SendVerificationEmail sends an email verification code
 func (e *EmailService) SendVerificationEmail(to, code string) error {
-	subject := "Verify Your Email Address - Upvista Community"
+	subject := "Verify Your Email Address - Asteria"
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 	<html>
@@ -48,14 +48,14 @@ func (e *EmailService) SendVerificationEmail(to, code string) error {
 					<!-- Header -->
 					<tr>
 							<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
-								<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+								<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 						</td>
 					</tr>
 					<!-- Content -->
 					<tr>
 							<td style="padding: 50px 50px 40px;">
 								<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Email Verification Required</h2>
-								<p style="margin: 0 0 30px; color: #4a5568; font-size: 16px; line-height: 1.7;">Thank you for registering with UpVista Community. To complete your account setup, please verify your email address using the verification code below.</p>
+								<p style="margin: 0 0 30px; color: #4a5568; font-size: 16px; line-height: 1.7;">Thank you for registering with Asteria. To complete your account setup, please verify your email address using the verification code below.</p>
 							
 							<!-- Verification Code Box -->
 								<table width="100%%" cellpadding="0" cellspacing="0" style="margin: 35px 0;">
@@ -69,14 +69,14 @@ func (e *EmailService) SendVerificationEmail(to, code string) error {
 								<p style="margin: 25px 0 0; color: #718096; font-size: 14px; line-height: 1.6;">This verification code will expire in <strong style="color: #1a1f3a;">10 minutes</strong>.</p>
 								
 								<div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #e2e8f0;">
-									<p style="margin: 0 0 15px; color: #718096; font-size: 13px; line-height: 1.6;">If you did not create an account with UpVista Community, please disregard this email. No further action is required.</p>
+									<p style="margin: 0 0 15px; color: #718096; font-size: 13px; line-height: 1.6;">If you did not create an account with Asteria, please disregard this email. No further action is required.</p>
 							</div>
 						</td>
 					</tr>
 					<!-- Footer -->
 					<tr>
 							<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-								<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+								<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
 								<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
 									</td>
 								</tr>
@@ -85,7 +85,7 @@ func (e *EmailService) SendVerificationEmail(to, code string) error {
 					<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
 						<tr>
 							<td align="center">
-								<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+								<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d Asteria. All rights reserved.</p>
 						</td>
 					</tr>
 				</table>
@@ -101,7 +101,7 @@ func (e *EmailService) SendVerificationEmail(to, code string) error {
 
 // SendPasswordResetEmail sends a password reset email
 func (e *EmailService) SendPasswordResetEmail(to, resetToken string) error {
-	subject := "Password Reset Request - Upvista Community"
+	subject := "Password Reset Request - Asteria"
 	resetURL := fmt.Sprintf("%s/auth/reset-password?token=%s", e.config.FrontendURL, resetToken)
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
@@ -118,14 +118,14 @@ func (e *EmailService) SendPasswordResetEmail(to, resetToken string) error {
 					<!-- Header -->
 					<tr>
 							<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
-								<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+								<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 						</td>
 					</tr>
 					<!-- Content -->
 					<tr>
 							<td style="padding: 50px 50px 40px;">
 								<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Password Reset Request</h2>
-								<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">We received a request to reset the password for your UpVista Community account. Click the button below to proceed with resetting your password.</p>
+								<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">We received a request to reset the password for your Asteria account. Click the button below to proceed with resetting your password.</p>
 							
 							<!-- Reset Button -->
 								<table width="100%%" cellpadding="0" cellspacing="0" style="margin: 35px 0;">
@@ -149,7 +149,7 @@ func (e *EmailService) SendPasswordResetEmail(to, resetToken string) error {
 					<!-- Footer -->
 					<tr>
 							<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-								<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+								<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
 								<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
 									</td>
 								</tr>
@@ -158,7 +158,7 @@ func (e *EmailService) SendPasswordResetEmail(to, resetToken string) error {
 					<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
 						<tr>
 							<td align="center">
-								<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+								<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d Asteria. All rights reserved.</p>
 						</td>
 					</tr>
 				</table>
@@ -174,7 +174,7 @@ func (e *EmailService) SendPasswordResetEmail(to, resetToken string) error {
 
 // SendWelcomeEmail sends a welcome email after successful verification
 func (e *EmailService) SendWelcomeEmail(to, displayName string) error {
-	subject := "Welcome to UpVista Community"
+	subject := "Welcome to Asteria"
 	body := fmt.Sprintf(`
 	<!DOCTYPE html>
 		<html>
@@ -190,18 +190,18 @@ func (e *EmailService) SendWelcomeEmail(to, displayName string) error {
 						<!-- Header -->
 						<tr>
 							<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
-								<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+								<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 							</td>
 						</tr>
 						<!-- Content -->
 						<tr>
 							<td style="padding: 50px 50px 40px;">
 								<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Welcome, %s</h2>
-								<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Your email address has been successfully verified. Your UpVista Community account is now active and ready to use.</p>
+								<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Your email address has been successfully verified. Your Asteria account is now active and ready to use.</p>
 								
 								<!-- Features Section -->
 								<div style="margin: 35px 0; padding: 30px; background-color: #f7f9fc; border-radius: 6px; border-left: 4px solid #1a1f3a;">
-									<p style="margin: 0 0 20px; color: #1a1f3a; font-size: 16px; font-weight: 600;">Get started with UpVista Community:</p>
+									<p style="margin: 0 0 20px; color: #1a1f3a; font-size: 16px; font-weight: 600;">Get started with Asteria:</p>
 									<table width="100%%" cellpadding="0" cellspacing="0">
 										<tr>
 											<td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
@@ -228,15 +228,15 @@ func (e *EmailService) SendWelcomeEmail(to, displayName string) error {
 								
 								<div style="margin-top: 35px; padding: 25px; background-color: #f7f9fc; border-radius: 6px;">
 									<p style="margin: 0 0 10px; color: #1a1f3a; font-size: 15px; font-weight: 600;">Need assistance?</p>
-									<p style="margin: 0; color: #718096; font-size: 14px; line-height: 1.6;">Our support team is available to help you get the most out of your UpVista Community experience.</p>
+									<p style="margin: 0; color: #718096; font-size: 14px; line-height: 1.6;">Our support team is available to help you get the most out of your Asteria experience.</p>
 								</div>
 							</td>
 						</tr>
 						<!-- Footer -->
 						<tr>
 							<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-								<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
-								<p style="margin: 0; color: #a0aec0; font-size: 12px;">Thank you for joining our community of professionals.</p>
+								<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
+								<p style="margin: 0; color: #a0aec0; font-size: 12px;">Thank you for joining our community.</p>
 							</td>
 						</tr>
 					</table>
@@ -244,7 +244,7 @@ func (e *EmailService) SendWelcomeEmail(to, displayName string) error {
 					<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
 						<tr>
 							<td align="center">
-								<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+								<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d Asteria. All rights reserved.</p>
 							</td>
 						</tr>
 					</table>
@@ -340,7 +340,7 @@ func (e *EmailService) SendPasswordChangedEmail(to, displayName string) error {
 					<!-- Header -->
 					<tr>
 						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
-							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 						</td>
 					</tr>
 					<!-- Content -->
@@ -361,7 +361,7 @@ func (e *EmailService) SendPasswordChangedEmail(to, displayName string) error {
 					<!-- Footer -->
 					<tr>
 						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
 							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated security notification. Please do not reply to this email.</p>
 						</td>
 					</tr>
@@ -370,7 +370,7 @@ func (e *EmailService) SendPasswordChangedEmail(to, displayName string) error {
 				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
 					<tr>
 						<td align="center">
-							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d Asteria. All rights reserved.</p>
 						</td>
 					</tr>
 				</table>
@@ -386,7 +386,7 @@ func (e *EmailService) SendPasswordChangedEmail(to, displayName string) error {
 
 // SendAccountDeletedEmail sends notification when account is deleted
 func (e *EmailService) SendAccountDeletedEmail(to, displayName string) error {
-	subject := "Account Deleted - Upvista Community"
+	subject := "Account Deleted - Asteria"
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -402,7 +402,7 @@ func (e *EmailService) SendAccountDeletedEmail(to, displayName string) error {
 					<!-- Header -->
 					<tr>
 						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
-							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 						</td>
 					</tr>
 					<!-- Content -->
@@ -410,7 +410,7 @@ func (e *EmailService) SendAccountDeletedEmail(to, displayName string) error {
 						<td style="padding: 50px 50px 40px;">
 							<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Account Deletion Confirmation</h2>
 							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Hello %s,</p>
-							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Your UpVista Community account has been permanently deleted as requested. All your data has been removed from our systems.</p>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Your Asteria account has been permanently deleted as requested. All your data has been removed from our systems.</p>
 							
 							<div style="margin: 35px 0; padding: 20px; background-color: #fef5e7; border-left: 4px solid: #f39c12; border-radius: 4px;">
 								<p style="margin: 0; color: #1a1f3a; font-size: 14px; font-weight: 600;">Important</p>
@@ -424,7 +424,7 @@ func (e *EmailService) SendAccountDeletedEmail(to, displayName string) error {
 					<!-- Footer -->
 					<tr>
 						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
 							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated notification. Please do not reply to this email.</p>
 						</td>
 					</tr>
@@ -433,7 +433,7 @@ func (e *EmailService) SendAccountDeletedEmail(to, displayName string) error {
 				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
 					<tr>
 						<td align="center">
-							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d Asteria. All rights reserved.</p>
 						</td>
 					</tr>
 				</table>
@@ -449,7 +449,7 @@ func (e *EmailService) SendAccountDeletedEmail(to, displayName string) error {
 
 // SendEmailChangeVerificationEmail sends verification code for email change
 func (e *EmailService) SendEmailChangeVerificationEmail(to, code string) error {
-	subject := "Verify New Email Address - Upvista Community"
+	subject := "Verify New Email Address - Asteria"
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -465,7 +465,7 @@ func (e *EmailService) SendEmailChangeVerificationEmail(to, code string) error {
 					<!-- Header -->
 					<tr>
 						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
-							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 						</td>
 					</tr>
 					<!-- Content -->
@@ -495,7 +495,7 @@ func (e *EmailService) SendEmailChangeVerificationEmail(to, code string) error {
 					<!-- Footer -->
 					<tr>
 						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
 							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
 						</td>
 					</tr>
@@ -504,7 +504,7 @@ func (e *EmailService) SendEmailChangeVerificationEmail(to, code string) error {
 				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
 					<tr>
 						<td align="center">
-							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d Asteria. All rights reserved.</p>
 						</td>
 					</tr>
 				</table>
@@ -520,7 +520,7 @@ func (e *EmailService) SendEmailChangeVerificationEmail(to, code string) error {
 
 // SendUsernameChangedEmail sends notification when username is changed
 func (e *EmailService) SendUsernameChangedEmail(to, displayName, oldUsername, newUsername string) error {
-	subject := "Username Changed - Upvista Community"
+	subject := "Username Changed - Asteria"
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -536,7 +536,7 @@ func (e *EmailService) SendUsernameChangedEmail(to, displayName, oldUsername, ne
 					<!-- Header -->
 					<tr>
 						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
-							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 						</td>
 					</tr>
 					<!-- Content -->
@@ -562,7 +562,7 @@ func (e *EmailService) SendUsernameChangedEmail(to, displayName, oldUsername, ne
 					<!-- Footer -->
 					<tr>
 						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
 							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated security notification. Please do not reply to this email.</p>
 						</td>
 					</tr>
@@ -571,7 +571,7 @@ func (e *EmailService) SendUsernameChangedEmail(to, displayName, oldUsername, ne
 				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
 					<tr>
 						<td align="center">
-							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d Asteria. All rights reserved.</p>
 						</td>
 					</tr>
 				</table>
@@ -587,7 +587,7 @@ func (e *EmailService) SendUsernameChangedEmail(to, displayName, oldUsername, ne
 
 // SendEmailChangeNotificationToOldEmail notifies the old email address about email change request
 func (e *EmailService) SendEmailChangeNotificationToOldEmail(oldEmail, displayName, newEmail string) error {
-	subject := "Email Change Request - Upvista Community"
+	subject := "Email Change Request - Asteria"
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -603,7 +603,7 @@ func (e *EmailService) SendEmailChangeNotificationToOldEmail(oldEmail, displayNa
 					<!-- Header -->
 					<tr>
 						<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
-							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">UpVista Community</h1>
+							<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 						</td>
 					</tr>
 					<!-- Content -->
@@ -611,7 +611,7 @@ func (e *EmailService) SendEmailChangeNotificationToOldEmail(oldEmail, displayNa
 						<td style="padding: 50px 50px 40px;">
 							<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Email Change Request</h2>
 							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Hello %s,</p>
-							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">A request was made to change the email address associated with your UpVista Community account.</p>
+							<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">A request was made to change the email address associated with your Asteria account.</p>
 							
 							<div style="margin: 35px 0; padding: 20px; background-color: #f7f9fc; border-left: 4px solid #1a1f3a; border-radius: 4px;">
 								<p style="margin: 0 0 10px; color: #718096; font-size: 13px;">Current Email (this address):</p>
@@ -633,7 +633,7 @@ func (e *EmailService) SendEmailChangeNotificationToOldEmail(oldEmail, displayNa
 					<!-- Footer -->
 					<tr>
 						<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">UpVista Community</p>
+							<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
 							<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated security notification. Please do not reply to this email.</p>
 						</td>
 					</tr>
@@ -642,7 +642,7 @@ func (e *EmailService) SendEmailChangeNotificationToOldEmail(oldEmail, displayNa
 				<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
 					<tr>
 						<td align="center">
-							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d UpVista Community. All rights reserved.</p>
+							<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d Asteria. All rights reserved.</p>
 						</td>
 					</tr>
 				</table>

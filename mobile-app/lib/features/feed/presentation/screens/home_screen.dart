@@ -40,9 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 onNotificationTap: () {
                   context.push('/notifications');
                 },
-                onJobTap: () {
-                  // TODO: Navigate to jobs
-                },
                 onMessageTap: () {
                   context.push('/messages');
                 },
@@ -53,7 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
               AppBottomNavigation(
                 selectedIndex: _selectedBottomNavIndex,
                 onTap: (index) {
-                  if (index == 4) {
+                  if (index == 1) {
+                    // Navigate to communities screen
+                    context.push('/communities');
+                  } else if (index == 3) {
+                    // Navigate to jobs screen
+                    context.push('/jobs');
+                  } else if (index == 4) {
                     // Navigate to profile screen
                     context.push('/profile');
                   } else {
