@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/gradient_background.dart';
+import '../../data/providers/signup_state_provider.dart';
+import '../../data/services/auth_service.dart';
 
 class SignUpEmailScreen extends StatefulWidget {
   const SignUpEmailScreen({super.key});
@@ -15,6 +18,8 @@ class _SignUpEmailScreenState extends State<SignUpEmailScreen> {
   final _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isEmailValid = false;
+  bool _isSendingOTP = false;
+  final AuthService _authService = AuthService();
 
   @override
   void dispose() {
@@ -30,9 +35,57 @@ class _SignUpEmailScreenState extends State<SignUpEmailScreen> {
     });
   }
 
-  void _handleContinue() {
-    if (_formKey.currentState!.validate()) {
-      context.push('/otp-verification', extra: _emailController.text);
+  Future<void> _handleContinue() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_isSendingOTP) return;
+
+    setState(() {
+      _isSendingOTP = true;
+    });
+
+    try {
+      final email = _emailController.text.trim();
+      final signupProvider = context.read<SignupStateProvider>();
+
+      // Store email in signup state
+      signupProvider.setEmail(email);
+
+      // Send OTP for signup
+      final response = await _authService.sendSignupOTP(email);
+
+      if (response.success) {
+        // Navigate to OTP verification screen
+        if (mounted) {
+          context.push('/otp-verification', extra: email);
+        }
+      } else {
+        // Show error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                response.message ?? response.error ?? 'Failed to send OTP',
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingOTP = false;
+        });
+      }
     }
   }
 
@@ -146,7 +199,9 @@ class _SignUpEmailScreenState extends State<SignUpEmailScreen> {
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: _isEmailValid ? _handleContinue : null,
+                            onPressed: (_isEmailValid && !_isSendingOTP)
+                                ? _handleContinue
+                                : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.accentPrimary,
                               disabledBackgroundColor: AppColors.surface
@@ -156,13 +211,24 @@ class _SignUpEmailScreenState extends State<SignUpEmailScreen> {
                               ),
                               elevation: 0,
                             ),
-                            child: Text(
-                              'Continue',
-                              style: AppTextStyles.labelLarge(
-                                color: AppColors.textPrimary,
-                                weight: FontWeight.w600,
-                              ),
-                            ),
+                            child: _isSendingOTP
+                                ? SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.textPrimary,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    'Continue',
+                                    style: AppTextStyles.labelLarge(
+                                      color: AppColors.textPrimary,
+                                      weight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],

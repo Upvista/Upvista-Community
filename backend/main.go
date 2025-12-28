@@ -10,6 +10,8 @@ import (
 	"upvista-community-backend/internal/auth"
 	"upvista-community-backend/internal/cache"
 	"upvista-community-backend/internal/config"
+	"upvista-community-backend/internal/courses"
+	"upvista-community-backend/internal/events"
 	"upvista-community-backend/internal/jobs"
 	"upvista-community-backend/internal/messaging"
 	"upvista-community-backend/internal/notifications"
@@ -51,6 +53,16 @@ func main() {
 	expRepo := repository.NewSupabaseExperienceRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
 	eduRepo := repository.NewSupabaseEducationRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
 
+	// Initialize advanced profile repositories
+	companyRepo := repository.NewSupabaseCompanyRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	certRepo := repository.NewSupabaseCertificationRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	skillRepo := repository.NewSupabaseSkillRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	languageRepo := repository.NewSupabaseLanguageRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	volunteeringRepo := repository.NewSupabaseVolunteeringRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	publicationRepo := repository.NewSupabasePublicationRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	interestRepo := repository.NewSupabaseInterestRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+	achievementRepo := repository.NewSupabaseAchievementRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey)
+
 	// Initialize services
 	emailSvc := utils.NewEmailService(&cfg.Email)
 	// JWT tokens valid for 30 days with sliding window refresh
@@ -68,6 +80,9 @@ func main() {
 	// Initialize authentication service
 	authSvc := auth.NewAuthService(userRepo, emailSvc, jwtSvc, tokenBlacklist)
 
+	// Set Redis client for OTP caching (if available)
+	// Redis is initialized later, so we'll set it after initialization
+
 	// Initialize OAuth services
 	googleOAuth := auth.NewGoogleOAuthService(&cfg.Google, userRepo, jwtSvc)
 	githubOAuth := auth.NewGitHubOAuthService(&cfg.GitHub, userRepo, jwtSvc)
@@ -84,6 +99,19 @@ func main() {
 
 	// Initialize experience and education service
 	expEduSvc := account.NewExperienceEducationService(expRepo, eduRepo)
+
+	// Initialize advanced profile service
+	advancedProfileSvc := account.NewAdvancedProfileService(
+		companyRepo,
+		certRepo,
+		skillRepo,
+		languageRepo,
+		volunteeringRepo,
+		publicationRepo,
+		interestRepo,
+		achievementRepo,
+		expRepo,
+	)
 
 	// Initialize relationship repository
 	relationshipRepo, err := repository.NewRelationshipRepository(cfg)
@@ -119,13 +147,15 @@ func main() {
 	// MESSAGING SYSTEM INITIALIZATION
 	// ============================================
 
-	// Initialize Redis client for messaging cache
+	// Initialize Redis client for messaging cache and OTP storage
 	redisClient, err := cache.InitializeRedis(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
-		log.Printf("[Warning] Failed to connect to Redis: %v (messaging cache disabled)", err)
+		log.Printf("[Warning] Failed to connect to Redis: %v (messaging cache and OTP storage disabled)", err)
 		redisClient = nil
 	} else {
 		log.Println("[Redis] Connected successfully")
+		// Set Redis client for auth service OTP caching
+		authSvc.SetRedis(redisClient)
 	}
 
 	// Initialize message cache service (only if Redis is available)
@@ -170,6 +200,36 @@ func main() {
 
 	log.Println("[Posts] Post & feed system initialized")
 
+	// ============================================
+	// EVENTS SYSTEM INITIALIZATION
+	// ============================================
+
+	// Initialize event repository
+	eventRepo, err := repository.NewEventRepository(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize event repository: %v", err)
+	}
+
+	// Initialize event service
+	eventSvc := events.NewService(eventRepo, userRepo, emailSvc)
+
+	log.Println("[Events] Events system initialized")
+
+	// ============================================
+	// COURSES SYSTEM INITIALIZATION
+	// ============================================
+
+	// Initialize course repository
+	courseRepo, err := repository.NewCourseRepository(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize course repository: %v", err)
+	}
+
+	// Initialize course service
+	courseSvc := courses.NewService(courseRepo, userRepo)
+
+	log.Println("[Courses] Courses system initialized")
+
 	// Initialize background jobs
 	cleanupJob := jobs.NewNotificationCleanupJob(notificationRepo)
 	digestJob := jobs.NewNotificationDigestJob(notificationRepo, userRepo, notificationEmailSvc)
@@ -186,12 +246,13 @@ func main() {
 
 	// Initialize handlers
 	authHandlers := auth.NewAuthHandlers(authSvc, jwtSvc, rateLimiter, cfg, googleOAuth, githubOAuth, linkedinOAuth, sessionRepo)
-	accountHandlers := account.NewAccountHandlers(accountSvc, profileSvc)
+	accountHandlers := account.NewAccountHandlers(accountSvc, profileSvc, advancedProfileSvc)
 	expEduHandlers := account.NewExperienceEducationHandlers(expEduSvc)
 	relationshipHandlers := social.NewRelationshipHandlers(relationshipSvc)
 	searchHandlers := search.NewSearchHandlers(searchSvc)
 	wsHandlers := websocket.NewHandlers(wsManager, jwtSvc)
 	notificationHandlers := notifications.NewHandlers(notificationSvc)
+	eventHandlers := events.NewHandlers(eventSvc, storageSvc)
 
 	// Create Gin router with middleware
 	r := gin.Default()
@@ -425,6 +486,77 @@ func main() {
 		}
 
 		log.Println("[Routes] Post & feed routes registered")
+
+		// ============================================
+		// EVENTS ROUTES
+		// ============================================
+
+		// Events (mixed public/protected)
+		eventsGroup := api.Group("/events")
+		{
+			// Public routes
+			eventsGroup.GET("", eventHandlers.ListEvents)               // List events (public)
+			eventsGroup.GET("/:id", eventHandlers.GetEvent)             // Get event details (public)
+			eventsGroup.GET("/categories", eventHandlers.GetCategories) // Get categories (public)
+
+			// Protected routes
+			eventsProtected := eventsGroup.Group("")
+			eventsProtected.Use(auth.JWTAuthMiddleware(jwtSvc))
+			{
+				eventsProtected.POST("", eventHandlers.CreateEvent)                              // Create event
+				eventsProtected.POST("/upload-cover-image", eventHandlers.UploadEventCoverImage) // Upload cover image
+				eventsProtected.PUT("/:id", eventHandlers.UpdateEvent)                           // Update event
+				eventsProtected.DELETE("/:id", eventHandlers.DeleteEvent)                        // Delete event
+				eventsProtected.POST("/:id/apply", eventHandlers.ApplyToEvent)                   // Apply to event
+				eventsProtected.GET("/:id/application", eventHandlers.GetApplication)            // Get user's application
+				eventsProtected.GET("/:id/ticket", eventHandlers.GetTicket)                      // Get ticket
+			}
+
+			// Admin routes (should add admin middleware)
+			eventsAdmin := eventsGroup.Group("/approve")
+			eventsAdmin.Use(auth.JWTAuthMiddleware(jwtSvc))
+			{
+				eventsAdmin.POST("", eventHandlers.ApproveEvent) // Approve/reject event
+			}
+
+			eventsAdminGroup := eventsGroup.Group("/approvals")
+			eventsAdminGroup.Use(auth.JWTAuthMiddleware(jwtSvc))
+			{
+				eventsAdminGroup.GET("/pending", eventHandlers.GetPendingApprovals) // Get pending approvals
+			}
+		}
+
+		log.Println("[Routes] Events routes registered")
+
+		// ============================================
+		// COURSES ROUTES
+		// ============================================
+
+		// Courses (mixed public/protected)
+		coursesGroup := api.Group("/courses")
+		{
+			// Public routes
+			coursesGroup.GET("", courseHandlers.GetCourses)                 // List courses (public)
+			coursesGroup.GET("/:id", courseHandlers.GetCourse)              // Get course details (public)
+			coursesGroup.GET("/slug/:slug", courseHandlers.GetCourseBySlug) // Get course by slug (public)
+
+			// Protected routes
+			coursesProtected := coursesGroup.Group("")
+			coursesProtected.Use(auth.JWTAuthMiddleware(jwtSvc))
+			{
+				coursesProtected.POST("", courseHandlers.CreateCourse)              // Create course
+				coursesProtected.POST("/:id/enroll", courseHandlers.EnrollInCourse) // Enroll in course
+			}
+		}
+
+		// Learning Materials (mixed public/protected)
+		materialsGroup := api.Group("/learning-materials")
+		{
+			// Public routes
+			materialsGroup.GET("", courseHandlers.GetMaterials) // List materials (public)
+		}
+
+		log.Println("[Routes] Courses routes registered")
 
 		// WebSocket route (protected - JWT in query param or header)
 		wsHandlers.SetupRoutes(api)

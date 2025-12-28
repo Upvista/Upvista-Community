@@ -2,12 +2,24 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/gradient_background.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/app_bottom_navigation.dart';
 import '../../../../core/widgets/app_side_menu.dart';
+import '../../../../features/auth/data/providers/auth_provider.dart';
+import '../../data/providers/profile_provider.dart';
+import '../../data/models/skill.dart';
+import '../../data/models/certification.dart';
+import '../../data/models/language.dart';
+import '../../data/models/volunteering.dart';
+import '../../data/models/publication.dart';
+import '../../data/models/interest.dart';
+import '../../data/models/achievement.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -32,6 +44,14 @@ class _ProfileScreenState extends State<ProfileScreen>
       initialIndex: 3,
       animationDuration: const Duration(milliseconds: 300),
     ); // Start with About tab
+
+    // Refresh user data and profile data when profile screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      final profileProvider = context.read<ProfileProvider>();
+      authProvider.refreshUser();
+      profileProvider.loadAllProfileData();
+    });
   }
 
   @override
@@ -177,6 +197,19 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.currentUser;
+
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+
+    final profilePicture = user.profilePicture;
+    final displayName = user.displayName;
+    final username = user.username;
+    final isVerified = user.isVerified;
+    final bio = user.bio;
+
     return Container(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -190,36 +223,84 @@ class _ProfileHeader extends StatelessWidget {
                 height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.accentPrimary,
-                      AppColors.accentSecondary,
-                    ],
-                  ),
+                  gradient: profilePicture == null || profilePicture.isEmpty
+                      ? LinearGradient(
+                          colors: [
+                            AppColors.accentPrimary,
+                            AppColors.accentSecondary,
+                          ],
+                        )
+                      : null,
                   border: Border.all(
                     color: AppColors.accentPrimary.withOpacity(0.3),
                     width: 3,
                   ),
                 ),
-                child: Icon(Icons.person, color: Colors.white, size: 50),
+                child: profilePicture != null && profilePicture.isNotEmpty
+                    ? ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: profilePicture,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: AppColors.surface,
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 50,
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: AppColors.surface,
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 50,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Icon(Icons.person, color: Colors.white, size: 50),
               ),
-              // Verified badge
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.success,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.backgroundPrimary,
-                      width: 2,
+              // Verified badge (only show if verified)
+              if (isVerified)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.backgroundPrimary,
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(Icons.verified, color: Colors.white, size: 16),
+                  ),
+                )
+              else
+                // Grey verification icon for non-verified accounts
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.textSecondary.withOpacity(0.3),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.backgroundPrimary,
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.verified,
+                      color: AppColors.textSecondary,
+                      size: 16,
                     ),
                   ),
-                  child: Icon(Icons.verified, color: Colors.white, size: 16),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -227,18 +308,25 @@ class _ProfileHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'John Doe',
-                style: AppTextStyles.headlineMedium(weight: FontWeight.bold),
+              Flexible(
+                child: Text(
+                  displayName,
+                  style: AppTextStyles.headlineMedium(weight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const SizedBox(width: 6),
-              Icon(Icons.verified, color: AppColors.success, size: 20),
+              Icon(
+                Icons.verified,
+                color: isVerified ? AppColors.success : AppColors.textSecondary,
+                size: 20,
+              ),
             ],
           ),
           const SizedBox(height: 4),
           // Username
           Text(
-            '@johndoe',
+            '@$username',
             style: AppTextStyles.bodyMedium(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 8),
@@ -326,7 +414,7 @@ class _ProfileHeader extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () {
-                    // TODO: Navigate to edit profile
+                    context.push('/edit-profile');
                   },
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(
@@ -381,13 +469,14 @@ class _ProfileHeader extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           // Bio
-          Text(
-            'Passionate developer | Tech enthusiast | Building the future one line of code at a time 🚀',
-            style: AppTextStyles.bodyMedium(),
-            textAlign: TextAlign.center,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
+          if (bio != null && bio.isNotEmpty)
+            Text(
+              bio,
+              style: AppTextStyles.bodyMedium(),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
         ],
       ),
     );
@@ -397,15 +486,38 @@ class _ProfileHeader extends StatelessWidget {
 class _StatsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.currentUser;
+
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Format numbers (e.g., 2500 -> 2.5K, 1000000 -> 1M)
+    String formatCount(int count) {
+      if (count >= 1000000) {
+        return '${(count / 1000000).toStringAsFixed(1)}M';
+      } else if (count >= 1000) {
+        return '${(count / 1000).toStringAsFixed(1)}K';
+      }
+      return count.toString();
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _StatItem(label: 'Posts', value: '124'),
-          _StatItem(label: 'Followers', value: '2.5K'),
-          _StatItem(label: 'Following', value: '342'),
-          _StatItem(label: 'Projects', value: '18'),
+          _StatItem(label: 'Posts', value: formatCount(user.postsCount)),
+          _StatItem(
+            label: 'Followers',
+            value: formatCount(user.followersCount),
+          ),
+          _StatItem(
+            label: 'Following',
+            value: formatCount(user.followingCount),
+          ),
+          _StatItem(label: 'Projects', value: formatCount(user.projectsCount)),
         ],
       ),
     );
@@ -439,6 +551,35 @@ class _StatItem extends StatelessWidget {
 class _DetailsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.currentUser;
+
+    if (user == null) {
+      return const SizedBox.shrink();
+    }
+
+    final age = user.age;
+    final gender = user.gender;
+    final genderCustom = user.genderCustom;
+    final location = user.location;
+    final website = user.website;
+    final socialLinks = user.socialLinks;
+
+    // Format gender display
+    String getGenderDisplay() {
+      if (gender == null) return '';
+      if (gender == 'custom' && genderCustom != null) {
+        return genderCustom;
+      }
+      return gender.substring(0, 1).toUpperCase() + gender.substring(1);
+    }
+
+    // Get social link URL
+    String? getSocialLink(String platform) {
+      if (socialLinks == null) return null;
+      return socialLinks[platform];
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       padding: const EdgeInsets.all(16),
@@ -453,99 +594,125 @@ class _DetailsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Age and Gender in one row
-          Row(
-            children: [
-              Icon(
-                Icons.cake_outlined,
-                color: AppColors.textSecondary,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '18 years old',
-                style: AppTextStyles.bodyMedium(color: AppColors.textPrimary),
-              ),
-              const SizedBox(width: 16),
-              Container(
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiary,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Icon(
-                Icons.person_outline,
-                color: AppColors.textSecondary,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Male',
-                style: AppTextStyles.bodyMedium(color: AppColors.textPrimary),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          // Age and Gender in one row (only show if available)
+          if (age != null || gender != null)
+            Row(
+              children: [
+                if (age != null) ...[
+                  Icon(
+                    Icons.cake_outlined,
+                    color: AppColors.textSecondary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$age years old',
+                    style: AppTextStyles.bodyMedium(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+                if (age != null && gender != null) ...[
+                  const SizedBox(width: 16),
+                  Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.textTertiary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+                if (gender != null) ...[
+                  Icon(
+                    Icons.person_outline,
+                    color: AppColors.textSecondary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    getGenderDisplay(),
+                    style: AppTextStyles.bodyMedium(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          if (age != null || gender != null) const SizedBox(height: 12),
           // Location
-          _DetailRow(
-            icon: Icons.location_on_outlined,
-            text: 'San Francisco, CA',
-          ),
-          const SizedBox(height: 12),
+          if (location != null && location.isNotEmpty)
+            _DetailRow(icon: Icons.location_on_outlined, text: location),
+          if (location != null && location.isNotEmpty)
+            const SizedBox(height: 12),
           // Website
-          _DetailRow(icon: Icons.language, text: 'johndoe.com', isLink: true),
-          const SizedBox(height: 16),
-          // Social Links - Official platform icons
-          Row(
-            children: [
-              Icon(
-                Icons.share_outlined,
-                color: AppColors.textSecondary,
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Social:',
-                style: AppTextStyles.bodySmall(
+          if (website != null && website.isNotEmpty)
+            _DetailRow(icon: Icons.language, text: website, isLink: true),
+          if (website != null && website.isNotEmpty) const SizedBox(height: 16),
+          // Social Links - Only show if there are social links
+          if (socialLinks != null && socialLinks.isNotEmpty)
+            Row(
+              children: [
+                Icon(
+                  Icons.share_outlined,
                   color: AppColors.textSecondary,
-                  weight: FontWeight.w500,
+                  size: 18,
                 ),
-              ),
-              const SizedBox(width: 10),
-              _SocialIconButton(
-                icon: FontAwesomeIcons.linkedin,
-                label: 'LinkedIn',
-                color: const Color(0xFF2D9CDB),
-              ),
-              const SizedBox(width: 6),
-              _SocialIconButton(
-                icon: FontAwesomeIcons.github,
-                label: 'GitHub',
-                color: const Color(0xFFBBBBBB),
-              ),
-              const SizedBox(width: 6),
-              _SocialIconButton(
-                icon: FontAwesomeIcons.xTwitter,
-                label: 'Twitter',
-                color: const Color(0xFFE8E8E8),
-              ),
-              const SizedBox(width: 6),
-              _SocialIconButton(
-                icon: FontAwesomeIcons.instagram,
-                label: 'Instagram',
-                color: const Color(0xFFFF6B9D),
-              ),
-              const SizedBox(width: 6),
-              _SocialIconButton(
-                icon: FontAwesomeIcons.facebook,
-                label: 'Facebook',
-                color: const Color(0xFF4A9FF5),
-              ),
-            ],
-          ),
+                const SizedBox(width: 8),
+                Text(
+                  'Social:',
+                  style: AppTextStyles.bodySmall(
+                    color: AppColors.textSecondary,
+                    weight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                if (getSocialLink('linkedin') != null)
+                  _SocialIconButton(
+                    icon: FontAwesomeIcons.linkedin,
+                    label: 'LinkedIn',
+                    color: const Color(0xFF2D9CDB),
+                    url: getSocialLink('linkedin'),
+                  ),
+                if (getSocialLink('linkedin') != null) const SizedBox(width: 6),
+                if (getSocialLink('github') != null)
+                  _SocialIconButton(
+                    icon: FontAwesomeIcons.github,
+                    label: 'GitHub',
+                    color: const Color(0xFFBBBBBB),
+                    url: getSocialLink('github'),
+                  ),
+                if (getSocialLink('github') != null) const SizedBox(width: 6),
+                if (getSocialLink('twitter') != null ||
+                    getSocialLink('x') != null)
+                  _SocialIconButton(
+                    icon: FontAwesomeIcons.xTwitter,
+                    label: 'Twitter',
+                    color: const Color(0xFFE8E8E8),
+                    url: getSocialLink('twitter') ?? getSocialLink('x'),
+                  ),
+                if (getSocialLink('twitter') != null ||
+                    getSocialLink('x') != null)
+                  const SizedBox(width: 6),
+                if (getSocialLink('instagram') != null)
+                  _SocialIconButton(
+                    icon: FontAwesomeIcons.instagram,
+                    label: 'Instagram',
+                    color: const Color(0xFFFF6B9D),
+                    url: getSocialLink('instagram'),
+                  ),
+                if (getSocialLink('instagram') != null)
+                  const SizedBox(width: 6),
+                if (getSocialLink('facebook') != null)
+                  _SocialIconButton(
+                    icon: FontAwesomeIcons.facebook,
+                    label: 'Facebook',
+                    color: const Color(0xFF4A9FF5),
+                    url: getSocialLink('facebook'),
+                  ),
+              ],
+            ),
         ],
       ),
     );
@@ -586,18 +753,23 @@ class _SocialIconButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final String? url;
 
   const _SocialIconButton({
     required this.icon,
     required this.label,
     required this.color,
+    this.url,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // TODO: Open social link
+        if (url != null && url!.isNotEmpty) {
+          // TODO: Open social link using url_launcher
+          // You can add url_launcher package and implement this
+        }
       },
       child: Container(
         width: 36,
@@ -2268,6 +2440,14 @@ class _AchievementCard extends StatelessWidget {
 class _AboutTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    final profileProvider = context.watch<ProfileProvider>();
+    final user = authProvider.currentUser;
+
+    if (user == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return ListView(
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
@@ -2275,12 +2455,18 @@ class _AboutTab extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       children: [
         // Story Section
-        _AboutSection(
-          title: 'Story',
-          icon: Icons.auto_stories_outlined,
-          content:
-              'I\'m a passionate software developer with expertise in mobile and web development. I love creating beautiful and functional applications that solve real-world problems. My journey started 5 years ago when I built my first app, and I haven\'t looked back since.',
-        ),
+        user.story != null && user.story!.isNotEmpty
+            ? _AboutSection(
+                title: 'Story',
+                icon: Icons.auto_stories_outlined,
+                content: user.story!,
+              )
+            : _AddPlaceholder(
+                title: 'Story',
+                icon: Icons.auto_stories_outlined,
+                placeholderText: 'Add a story',
+                onTap: () => context.push('/edit-profile/story'),
+              ),
         _SectionDivider(),
         // Experience Section
         _ExperienceSection(),
@@ -2289,25 +2475,76 @@ class _AboutTab extends StatelessWidget {
         _EducationSection(),
         _SectionDivider(),
         // Skills Section
-        _SkillsSection(),
+        profileProvider.skills.isNotEmpty
+            ? _SkillsSection(skills: profileProvider.skills)
+            : _AddPlaceholder(
+                title: 'Skills',
+                icon: Icons.stars_outlined,
+                placeholderText: 'Add your skills',
+                onTap: () => context.push('/edit-profile/skills/add'),
+              ),
         _SectionDivider(),
         // Certifications Section
-        _CertificationsSection(),
+        profileProvider.certifications.isNotEmpty
+            ? _CertificationsSection(
+                certifications: profileProvider.certifications,
+              )
+            : _AddPlaceholder(
+                title: 'Certifications',
+                icon: Icons.workspace_premium_outlined,
+                placeholderText: 'Add your certifications',
+                onTap: () => context.push('/edit-profile/certifications/add'),
+              ),
         _SectionDivider(),
         // Languages Section
-        _LanguagesSection(),
+        profileProvider.languages.isNotEmpty
+            ? _LanguagesSection(languages: profileProvider.languages)
+            : _AddPlaceholder(
+                title: 'Languages',
+                icon: Icons.translate,
+                placeholderText: 'Add languages you speak',
+                onTap: () => context.push('/edit-profile/languages/add'),
+              ),
         _SectionDivider(),
         // Volunteering Section
-        _VolunteeringSection(),
+        profileProvider.volunteering.isNotEmpty
+            ? _VolunteeringSection(volunteering: profileProvider.volunteering)
+            : _AddPlaceholder(
+                title: 'Volunteering',
+                icon: Icons.volunteer_activism_outlined,
+                placeholderText: 'Add your volunteer work',
+                onTap: () => context.push('/edit-profile/volunteering/add'),
+              ),
         _SectionDivider(),
         // Publications Section
-        _PublicationsSection(),
+        profileProvider.publications.isNotEmpty
+            ? _PublicationsSection(publications: profileProvider.publications)
+            : _AddPlaceholder(
+                title: 'Publications',
+                icon: Icons.article_outlined,
+                placeholderText: 'Add your publications',
+                onTap: () => context.push('/edit-profile/publications/add'),
+              ),
         _SectionDivider(),
         // Interests Section
-        _InterestsSection(),
+        profileProvider.interests.isNotEmpty
+            ? _InterestsSection(interests: profileProvider.interests)
+            : _AddPlaceholder(
+                title: 'Interests',
+                icon: Icons.favorite_border,
+                placeholderText: 'Add your interests',
+                onTap: () => context.push('/edit-profile/interests/add'),
+              ),
         _SectionDivider(),
         // Achievements Section
-        _AchievementsSection(),
+        profileProvider.achievements.isNotEmpty
+            ? _AchievementsSection(achievements: profileProvider.achievements)
+            : _AddPlaceholder(
+                title: 'Achievements',
+                icon: Icons.emoji_events_outlined,
+                placeholderText: 'Add your achievements',
+                onTap: () => context.push('/edit-profile/achievements/add'),
+              ),
         const SizedBox(height: 20),
       ],
     );
@@ -2480,6 +2717,77 @@ class _ExperienceCard extends StatelessWidget {
   }
 }
 
+/// Add Placeholder - Dotted border box for missing info
+class _AddPlaceholder extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final String placeholderText;
+  final VoidCallback onTap;
+
+  const _AddPlaceholder({
+    required this.title,
+    required this.icon,
+    required this.placeholderText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: AppColors.accentPrimary.withOpacity(0.3),
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          color: AppColors.surface.withOpacity(0.1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.accentPrimary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: AppColors.accentPrimary, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.bodyMedium(weight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    placeholderText,
+                    style: AppTextStyles.bodySmall(
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.add_circle_outline_rounded,
+              color: AppColors.accentPrimary,
+              size: 24,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _EducationSection extends StatelessWidget {
   final List<Map<String, String>> _education = [
     {
@@ -2587,27 +2895,35 @@ class _EducationCard extends StatelessWidget {
 }
 
 class _SkillsSection extends StatelessWidget {
-  final Map<String, List<String>> _skillCategories = {
-    'Technical': ['Flutter', 'React', 'Node.js', 'Python', 'Firebase', 'AWS'],
-    'Design': ['UI/UX Design', 'Figma', 'Adobe XD', 'Prototyping'],
-    'Soft Skills': ['Leadership', 'Communication', 'Agile', 'Problem Solving'],
-  };
+  final List<Skill> skills;
+
+  const _SkillsSection({required this.skills});
 
   @override
   Widget build(BuildContext context) {
+    // Group skills by category
+    final Map<String, List<Skill>> skillCategories = {};
+    for (final skill in skills) {
+      final category = skill.category ?? 'Other';
+      if (!skillCategories.containsKey(category)) {
+        skillCategories[category] = [];
+      }
+      skillCategories[category]!.add(skill);
+    }
+
     return _AboutSection(
       title: 'Skills',
       icon: Icons.stars_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: _skillCategories.entries.map((category) {
+        children: skillCategories.entries.map((entry) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  category.key,
+                  entry.key[0].toUpperCase() + entry.key.substring(1),
                   style: AppTextStyles.bodyMedium(
                     weight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -2617,7 +2933,7 @@ class _SkillsSection extends StatelessWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: category.value.map((skill) {
+                  children: entry.value.map((skill) {
                     return Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -2636,12 +2952,26 @@ class _SkillsSection extends StatelessWidget {
                           width: 1,
                         ),
                       ),
-                      child: Text(
-                        skill,
-                        style: AppTextStyles.bodySmall(
-                          color: AppColors.accentPrimary,
-                          weight: FontWeight.w500,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            skill.skillName,
+                            style: AppTextStyles.bodySmall(
+                              color: AppColors.accentPrimary,
+                              weight: FontWeight.w500,
+                            ),
+                          ),
+                          if (skill.proficiencyLevel != null) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '• ${skill.proficiencyLevel}',
+                              style: AppTextStyles.bodySmall(
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     );
                   }).toList(),
@@ -2656,23 +2986,9 @@ class _SkillsSection extends StatelessWidget {
 }
 
 class _CertificationsSection extends StatelessWidget {
-  final List<Map<String, String>> _certifications = [
-    {
-      'name': 'AWS Certified Solutions Architect',
-      'issuer': 'Amazon Web Services',
-      'date': 'Jan 2023',
-    },
-    {
-      'name': 'Google Cloud Professional',
-      'issuer': 'Google Cloud',
-      'date': 'Mar 2022',
-    },
-    {
-      'name': 'Flutter Development Bootcamp',
-      'issuer': 'Udemy',
-      'date': 'Sep 2021',
-    },
-  ];
+  final List<Certification> certifications;
+
+  const _CertificationsSection({required this.certifications});
 
   @override
   Widget build(BuildContext context) {
@@ -2680,7 +2996,7 @@ class _CertificationsSection extends StatelessWidget {
       title: 'Certifications',
       icon: Icons.workspace_premium_outlined,
       child: Column(
-        children: _certifications.map((cert) {
+        children: certifications.map((cert) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Row(
@@ -2709,16 +3025,18 @@ class _CertificationsSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        cert['name']!,
+                        cert.name,
                         style: AppTextStyles.bodyLarge(weight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        cert['issuer']!,
-                        style: AppTextStyles.bodyMedium(
-                          color: AppColors.textSecondary,
+                      if (cert.issuingOrganization != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          cert.issuingOrganization!,
+                          style: AppTextStyles.bodyMedium(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
+                      ],
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -2729,7 +3047,7 @@ class _CertificationsSection extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            cert['date']!,
+                            DateFormat('MMM yyyy').format(cert.issueDate),
                             style: AppTextStyles.bodySmall(
                               color: AppColors.textTertiary,
                             ),
@@ -2749,12 +3067,24 @@ class _CertificationsSection extends StatelessWidget {
 }
 
 class _LanguagesSection extends StatelessWidget {
-  final List<Map<String, dynamic>> _languages = [
-    {'name': 'English', 'proficiency': 'Native', 'level': 1.0},
-    {'name': 'Spanish', 'proficiency': 'Professional', 'level': 0.8},
-    {'name': 'French', 'proficiency': 'Intermediate', 'level': 0.6},
-    {'name': 'German', 'proficiency': 'Basic', 'level': 0.3},
-  ];
+  final List<Language> languages;
+
+  const _LanguagesSection({required this.languages});
+
+  double _getProficiencyLevel(String? proficiency) {
+    switch (proficiency?.toLowerCase()) {
+      case 'native':
+        return 1.0;
+      case 'fluent':
+        return 0.9;
+      case 'conversational':
+        return 0.7;
+      case 'basic':
+        return 0.4;
+      default:
+        return 0.5;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2762,7 +3092,7 @@ class _LanguagesSection extends StatelessWidget {
       title: 'Languages',
       icon: Icons.translate,
       child: Column(
-        children: _languages.map((lang) {
+        children: languages.map((lang) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Column(
@@ -2772,31 +3102,34 @@ class _LanguagesSection extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      lang['name']!,
+                      lang.languageName,
                       style: AppTextStyles.bodyMedium(weight: FontWeight.w600),
                     ),
-                    Text(
-                      lang['proficiency']!,
-                      style: AppTextStyles.bodySmall(
-                        color: AppColors.textSecondary,
+                    if (lang.proficiencyLevel != null)
+                      Text(
+                        lang.proficiencyLevel![0].toUpperCase() +
+                            lang.proficiencyLevel!.substring(1),
+                        style: AppTextStyles.bodySmall(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: LinearProgressIndicator(
-                    value: lang['level'],
-                    backgroundColor: AppColors.backgroundSecondary.withOpacity(
-                      0.3,
+                if (lang.proficiencyLevel != null) ...[
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: _getProficiencyLevel(lang.proficiencyLevel),
+                      backgroundColor: AppColors.backgroundSecondary
+                          .withOpacity(0.3),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.accentPrimary,
+                      ),
+                      minHeight: 6,
                     ),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.accentPrimary,
-                    ),
-                    minHeight: 6,
                   ),
-                ),
+                ],
               ],
             ),
           );
@@ -2807,20 +3140,9 @@ class _LanguagesSection extends StatelessWidget {
 }
 
 class _VolunteeringSection extends StatelessWidget {
-  final List<Map<String, String>> _volunteering = [
-    {
-      'role': 'Coding Mentor',
-      'organization': 'Code for Good',
-      'duration': '2022 - Present',
-      'description': 'Teaching underprivileged students programming basics',
-    },
-    {
-      'role': 'Tech Volunteer',
-      'organization': 'Local Community Center',
-      'duration': '2021 - 2022',
-      'description': 'Helping seniors learn to use smartphones and computers',
-    },
-  ];
+  final List<Volunteering> volunteering;
+
+  const _VolunteeringSection({required this.volunteering});
 
   @override
   Widget build(BuildContext context) {
@@ -2828,7 +3150,12 @@ class _VolunteeringSection extends StatelessWidget {
       title: 'Volunteering',
       icon: Icons.volunteer_activism_outlined,
       child: Column(
-        children: _volunteering.map((vol) {
+        children: volunteering.map((vol) {
+          final duration = vol.isCurrent
+              ? '${vol.startDate.year} - Present'
+              : vol.endDate != null
+              ? '${vol.startDate.year} - ${vol.endDate!.year}'
+              : '${vol.startDate.year}';
           return Padding(
             padding: const EdgeInsets.only(bottom: 20),
             child: Row(
@@ -2852,12 +3179,12 @@ class _VolunteeringSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        vol['role']!,
+                        vol.role,
                         style: AppTextStyles.bodyLarge(weight: FontWeight.w600),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        vol['organization']!,
+                        vol.organizationName,
                         style: AppTextStyles.bodyMedium(
                           color: AppColors.textSecondary,
                         ),
@@ -2872,20 +3199,23 @@ class _VolunteeringSection extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            vol['duration']!,
+                            duration,
                             style: AppTextStyles.bodySmall(
                               color: AppColors.textTertiary,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        vol['description']!,
-                        style: AppTextStyles.bodyMedium(
-                          color: AppColors.textSecondary,
-                        ).copyWith(height: 1.5),
-                      ),
+                      if (vol.description != null &&
+                          vol.description!.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          vol.description!,
+                          style: AppTextStyles.bodyMedium(
+                            color: AppColors.textSecondary,
+                          ).copyWith(height: 1.5),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -2899,20 +3229,9 @@ class _VolunteeringSection extends StatelessWidget {
 }
 
 class _PublicationsSection extends StatelessWidget {
-  final List<Map<String, String>> _publications = [
-    {
-      'title': 'Building Scalable Mobile Apps with Flutter',
-      'publisher': 'Medium',
-      'date': 'Dec 2023',
-      'link': 'medium.com/@johndoe',
-    },
-    {
-      'title': 'The Future of Cross-Platform Development',
-      'publisher': 'Dev.to',
-      'date': 'Aug 2023',
-      'link': 'dev.to/johndoe',
-    },
-  ];
+  final List<Publication> publications;
+
+  const _PublicationsSection({required this.publications});
 
   @override
   Widget build(BuildContext context) {
@@ -2920,7 +3239,7 @@ class _PublicationsSection extends StatelessWidget {
       title: 'Publications',
       icon: Icons.article_outlined,
       child: Column(
-        children: _publications.map((pub) {
+        children: publications.map((pub) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 20),
             child: Row(
@@ -2949,51 +3268,63 @@ class _PublicationsSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        pub['title']!,
+                        pub.title,
                         style: AppTextStyles.bodyLarge(weight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        pub['publisher']!,
-                        style: AppTextStyles.bodyMedium(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 14,
-                            color: AppColors.textTertiary,
+                      if (pub.publisher != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          pub.publisher!,
+                          style: AppTextStyles.bodyMedium(
+                            color: AppColors.textSecondary,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            pub['date']!,
-                            style: AppTextStyles.bodySmall(
+                        ),
+                      ],
+                      if (pub.publicationDate != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_outlined,
+                              size: 14,
                               color: AppColors.textTertiary,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.link,
-                            size: 14,
-                            color: AppColors.accentPrimary,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            pub['link']!,
-                            style: AppTextStyles.bodySmall(
-                              color: AppColors.accentPrimary,
-                              weight: FontWeight.w500,
+                            const SizedBox(width: 6),
+                            Text(
+                              DateFormat(
+                                'MMM yyyy',
+                              ).format(pub.publicationDate!),
+                              style: AppTextStyles.bodySmall(
+                                color: AppColors.textTertiary,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
+                      if (pub.publicationUrl != null &&
+                          pub.publicationUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.link,
+                              size: 14,
+                              color: AppColors.accentPrimary,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                pub.publicationUrl!,
+                                style: AppTextStyles.bodySmall(
+                                  color: AppColors.accentPrimary,
+                                  weight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -3007,14 +3338,26 @@ class _PublicationsSection extends StatelessWidget {
 }
 
 class _InterestsSection extends StatelessWidget {
-  final List<Map<String, dynamic>> _interests = [
-    {'name': 'Artificial Intelligence', 'icon': Icons.psychology_outlined},
-    {'name': 'Mobile Development', 'icon': Icons.phone_android_outlined},
-    {'name': 'Cloud Computing', 'icon': Icons.cloud_outlined},
-    {'name': 'Open Source', 'icon': Icons.code_outlined},
-    {'name': 'Entrepreneurship', 'icon': Icons.business_center_outlined},
-    {'name': 'Photography', 'icon': Icons.camera_alt_outlined},
-  ];
+  final List<Interest> interests;
+
+  const _InterestsSection({required this.interests});
+
+  IconData _getInterestIcon(String? category) {
+    switch (category?.toLowerCase()) {
+      case 'hobby':
+        return Icons.sports_soccer_outlined;
+      case 'professional':
+        return Icons.business_center_outlined;
+      case 'academic':
+        return Icons.school_outlined;
+      case 'sports':
+        return Icons.sports_soccer_outlined;
+      case 'arts':
+        return Icons.palette_outlined;
+      default:
+        return Icons.favorite_outline;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3024,7 +3367,7 @@ class _InterestsSection extends StatelessWidget {
       child: Wrap(
         spacing: 10,
         runSpacing: 10,
-        children: _interests.map((interest) {
+        children: interests.map((interest) {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -3039,13 +3382,13 @@ class _InterestsSection extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  interest['icon'],
+                  _getInterestIcon(interest.category),
                   size: 16,
                   color: AppColors.accentPrimary,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  interest['name'],
+                  interest.interestName,
                   style: AppTextStyles.bodySmall(
                     color: AppColors.textSecondary,
                     weight: FontWeight.w500,
@@ -3061,25 +3404,9 @@ class _InterestsSection extends StatelessWidget {
 }
 
 class _AchievementsSection extends StatelessWidget {
-  final List<Map<String, String>> _achievements = [
-    {
-      'title': 'Top Contributor 2023',
-      'description':
-          'Recognized for outstanding contributions to open source projects',
-      'date': 'Dec 2023',
-    },
-    {
-      'title': 'Hackathon Winner',
-      'description':
-          'First place at TechFest 2022 - Built an AI-powered mobile app',
-      'date': 'Oct 2022',
-    },
-    {
-      'title': 'Employee of the Year',
-      'description': 'Awarded for exceptional performance and leadership',
-      'date': 'Jan 2022',
-    },
-  ];
+  final List<Achievement> achievements;
+
+  const _AchievementsSection({required this.achievements});
 
   @override
   Widget build(BuildContext context) {
@@ -3087,7 +3414,7 @@ class _AchievementsSection extends StatelessWidget {
       title: 'Achievements',
       icon: Icons.emoji_events_outlined,
       child: Column(
-        children: _achievements.map((achievement) {
+        children: achievements.map((achievement) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 20),
             child: Row(
@@ -3123,33 +3450,49 @@ class _AchievementsSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        achievement['title']!,
+                        achievement.title,
                         style: AppTextStyles.bodyLarge(weight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        achievement['description']!,
-                        style: AppTextStyles.bodyMedium(
-                          color: AppColors.textSecondary,
-                        ).copyWith(height: 1.5),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 14,
-                            color: AppColors.textTertiary,
+                      if (achievement.issuingOrganization != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          achievement.issuingOrganization!,
+                          style: AppTextStyles.bodyMedium(
+                            color: AppColors.textSecondary,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            achievement['date']!,
-                            style: AppTextStyles.bodySmall(
+                        ),
+                      ],
+                      if (achievement.achievementDate != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_outlined,
+                              size: 14,
                               color: AppColors.textTertiary,
                             ),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 6),
+                            Text(
+                              DateFormat(
+                                'yyyy',
+                              ).format(achievement.achievementDate!),
+                              style: AppTextStyles.bodySmall(
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (achievement.description != null &&
+                          achievement.description!.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          achievement.description!,
+                          style: AppTextStyles.bodyMedium(
+                            color: AppColors.textSecondary,
+                          ).copyWith(height: 1.5),
+                        ),
+                      ],
                     ],
                   ),
                 ),

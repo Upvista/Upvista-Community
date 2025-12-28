@@ -20,13 +20,22 @@ class ConnectivityService {
   /// Initialize connectivity monitoring
   Future<void> initialize() async {
     // Check initial status
-    final result = await _connectivity.checkConnectivity();
-    _isConnected = result != ConnectivityResult.none;
-    _connectionController.add(_isConnected);
+    try {
+      // connectivity_plus v5.0.2 returns ConnectivityResult (single value)
+      final ConnectivityResult result = await _connectivity.checkConnectivity();
+      _isConnected = result != ConnectivityResult.none;
+      _connectionController.add(_isConnected);
+    } catch (e) {
+      // Assume connected if check fails
+      _isConnected = true;
+      _connectionController.add(_isConnected);
+    }
 
     // Listen for connectivity changes
+    // v5.0.2 uses ConnectivityResult (single value)
     _connectivity.onConnectivityChanged.listen((ConnectivityResult result) {
       final isConnected = result != ConnectivityResult.none;
+
       if (_isConnected != isConnected) {
         _isConnected = isConnected;
         _connectionController.add(_isConnected);
@@ -37,11 +46,12 @@ class ConnectivityService {
   /// Check current connectivity status
   Future<bool> checkConnectivity() async {
     try {
-      final result = await _connectivity.checkConnectivity();
+      // connectivity_plus v5.0.2 returns ConnectivityResult (single value)
+      final ConnectivityResult result = await _connectivity.checkConnectivity();
       _isConnected = result != ConnectivityResult.none;
       return _isConnected;
     } catch (e) {
-      // Assume connected if check fails
+      // Assume connected if check fails (let actual requests handle errors)
       return true;
     }
   }

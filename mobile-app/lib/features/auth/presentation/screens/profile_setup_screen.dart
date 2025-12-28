@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/gradient_background.dart';
+import '../../data/providers/signup_state_provider.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -43,10 +45,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   void _handleNext() {
+    // Store bio and profile picture in signup state
+    final signupProvider = context.read<SignupStateProvider>();
+    if (_bioController.text.isNotEmpty) {
+      signupProvider.setBio(_bioController.text.trim());
+    }
+    if (_profileImage != null) {
+      signupProvider.setProfilePicture(_profileImage);
+    }
     context.push('/password-setup');
   }
 
   void _handleSkip() {
+    // Bio and picture are optional, skip is fine
     context.push('/password-setup');
   }
 
@@ -130,10 +141,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Bio',
-                      style: AppTextStyles.labelLarge(),
-                    ),
+                    Text('Bio', style: AppTextStyles.labelLarge()),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _bioController,
@@ -181,10 +189,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        child: Text(
-                          'Back',
-                          style: AppTextStyles.labelLarge(),
-                        ),
+                        child: Text('Back', style: AppTextStyles.labelLarge()),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -238,4 +243,3 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 }
-

@@ -303,30 +303,36 @@ export default function CommentModal({ post, isOpen, onClose }: CommentModalProp
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[300] flex items-end md:items-center justify-center">
+      <div className="fixed inset-0 z-[300] flex items-end justify-center">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="absolute inset-0 bg-black/50"
+          className="absolute inset-0 bg-black/60"
           onClick={onClose}
         />
 
-        {/* Modal Content */}
+        {/* Modal Content - Instagram Style Bottom Sheet */}
         <motion.div
-          initial={{ opacity: 0, y: '100%' }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: '100%' }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           className="relative
-            w-full h-[90vh] md:h-[80vh] md:max-w-2xl md:rounded-t-2xl
-            bg-white dark:bg-neutral-900
+            w-full h-[85vh] md:h-[90vh] md:max-w-2xl
+            bg-white dark:bg-neutral-950
             flex flex-col overflow-hidden
+            rounded-t-3xl md:rounded-t-3xl
           "
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Drag Handle */}
+          <div className="flex justify-center pt-2 pb-1 flex-shrink-0">
+            <div className="w-12 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full" />
+          </div>
+
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 flex-shrink-0">
             <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-50">
@@ -334,30 +340,31 @@ export default function CommentModal({ post, isOpen, onClose }: CommentModalProp
             </h2>
             <button
               onClick={onClose}
-              className="p-1 hover:opacity-70 transition-opacity"
+              className="p-1 transition-opacity"
             >
-              <X className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
+              <X className="w-5 h-5 text-neutral-900 dark:text-neutral-50" />
             </button>
           </div>
 
-          {/* Post Preview (Mobile) */}
-          <div className="md:hidden px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center gap-3 flex-shrink-0">
+          {/* Post Preview */}
+          <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center gap-3 flex-shrink-0">
             <Avatar
               src={post.author?.profile_picture}
               alt={post.author?.display_name || post.author?.username || 'User'}
               fallback={post.author?.display_name || post.author?.username || 'U'}
               size="sm"
+              className="flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-50 truncate">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
                   {post.author?.display_name || post.author?.username}
                 </span>
                 {post.author?.is_verified && (
                   <VerifiedBadge size="sm" variant="badge" showText={false} />
                 )}
               </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
+              <p className="text-sm text-neutral-900 dark:text-neutral-50 line-clamp-2">
                 {post.content}
               </p>
             </div>
@@ -367,30 +374,21 @@ export default function CommentModal({ post, isOpen, onClose }: CommentModalProp
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+            className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
           >
             {comments.length === 0 && !loading ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center justify-center h-full text-center py-12"
-              >
-                <p className="text-neutral-500 dark:text-neutral-400 mb-2 font-medium">No comments yet</p>
+              <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                <p className="text-neutral-500 dark:text-neutral-400 mb-1 font-medium">No comments yet</p>
                 <p className="text-sm text-neutral-400 dark:text-neutral-500">
                   Be the first to comment!
                 </p>
-              </motion.div>
+              </div>
             ) : (
               <>
                 {comments
                   .filter(c => !c.parent_comment_id) // Only show top-level comments
-                  .map((comment, index) => (
-                    <motion.div
-                      key={comment.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05, duration: 0.3 }}
-                    >
+                  .map((comment) => (
+                    <div key={comment.id}>
                       <CommentItem
                         comment={comment}
                         currentUserId={user?.id}
@@ -403,49 +401,35 @@ export default function CommentModal({ post, isOpen, onClose }: CommentModalProp
                         onToggleMenu={(commentId) => setShowMenu(showMenu === commentId ? null : commentId)}
                         depth={0}
                       />
-                    </motion.div>
+                    </div>
                   ))}
                 {loading && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-6"
-                  >
-                    <div className="inline-block w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
-                  </motion.div>
+                  <div className="text-center py-6">
+                    <div className="inline-block w-5 h-5 border-2 border-neutral-300 dark:border-neutral-600 border-t-transparent rounded-full animate-spin" />
+                  </div>
                 )}
                 <div ref={commentsEndRef} />
               </>
             )}
           </div>
 
-          {/* Comment Input Footer */}
-          <div className="border-t border-neutral-200 dark:border-neutral-800 flex-shrink-0">
+          {/* Comment Input Footer - Fixed at Bottom */}
+          <div className="border-t border-neutral-200 dark:border-neutral-800 flex-shrink-0 bg-white dark:bg-neutral-950">
             {replyingTo && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="px-4 py-2
-                  bg-neutral-50 dark:bg-neutral-800/50
-                  border-b border-neutral-200 dark:border-neutral-800
-                  flex items-center justify-between
-                "
-              >
+              <div className="px-4 py-2 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <Reply className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                  <span className="text-sm text-neutral-700 dark:text-neutral-300 truncate">
-                    Replying to <span className="font-semibold text-purple-600 dark:text-purple-400">{replyingTo.author?.display_name || replyingTo.author?.username}</span>
+                  <Reply className="w-4 h-4 text-neutral-500 dark:text-neutral-400 flex-shrink-0" />
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                    Replying to <span className="font-semibold text-neutral-900 dark:text-neutral-50">{replyingTo.author?.display_name || replyingTo.author?.username}</span>
                   </span>
                 </div>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
+                <button
                   onClick={() => setReplyingTo(null)}
-                  className="p-1 rounded-full hover:bg-white/50 dark:hover:bg-neutral-800/50 transition-colors"
+                  className="p-1 transition-opacity"
                 >
-                  <X className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
-                </motion.button>
-              </motion.div>
+                  <X className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                </button>
+              </div>
             )}
             <div className="relative">
               <CommentInput

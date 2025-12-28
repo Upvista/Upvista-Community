@@ -67,11 +67,15 @@ type UserSession struct {
 
 // RegisterRequest represents the request payload for user registration
 type RegisterRequest struct {
-	Email       string `json:"email" validate:"required,email"`
-	Password    string `json:"password" validate:"required,min=6"`
-	DisplayName string `json:"display_name" validate:"required,min=2,max=50"`
-	Username    string `json:"username" validate:"required,min=3,max=20,alphanum"`
-	Age         int    `json:"age" validate:"required,min=13,max=120"`
+	Email            string  `json:"email" validate:"required,email"`
+	Password         string  `json:"password" validate:"required,min=6"`
+	DisplayName      string  `json:"display_name" validate:"required,min=2,max=50"`
+	Username         string  `json:"username" validate:"required,min=3,max=20,alphanum"`
+	Age              *int    `json:"age,omitempty" validate:"omitempty,min=13,max=120"`
+	Gender           *string `json:"gender,omitempty" validate:"omitempty,oneof=male female non-binary prefer-not-to-say custom"`
+	Bio              *string `json:"bio,omitempty" validate:"omitempty,max=200"`
+	ProfilePicture   *string `json:"profile_picture,omitempty" validate:"omitempty,url"`
+	VerificationCode *string `json:"verification_code,omitempty" validate:"omitempty,len=6"` // Optional: if provided, verify immediately
 }
 
 // LoginRequest represents the request payload for user login
@@ -208,7 +212,7 @@ type UpdatePrivacySettingsRequest struct {
 
 // UpdateStoryRequest represents the request payload for updating story section
 type UpdateStoryRequest struct {
-	Story *string `json:"story" validate:"omitempty,max=800"`
+	Story *string `json:"story" validate:"omitempty,max=1000"`
 }
 
 // UpdateAmbitionRequest represents the request payload for updating ambition section
@@ -257,6 +261,7 @@ type UserExperience struct {
 	ID             uuid.UUID  `json:"id" db:"id"`
 	UserID         uuid.UUID  `json:"user_id" db:"user_id"`
 	CompanyName    string     `json:"company_name" db:"company_name"`
+	CompanyID      *uuid.UUID `json:"company_id,omitempty" db:"company_id"`
 	Title          string     `json:"title" db:"title"`
 	EmploymentType *string    `json:"employment_type,omitempty" db:"employment_type"`
 	StartDate      time.Time  `json:"start_date" db:"start_date"`
@@ -267,6 +272,108 @@ type UserExperience struct {
 	DisplayOrder   int        `json:"display_order" db:"display_order"`
 	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// Company represents a company for experience entries
+type Company struct {
+	ID        uuid.UUID `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	LogoURL   *string   `json:"logo_url,omitempty" db:"logo_url"`
+	Website   *string   `json:"website,omitempty" db:"website"`
+	Industry  *string   `json:"industry,omitempty" db:"industry"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// UserCertification represents a user's certification
+type UserCertification struct {
+	ID                  uuid.UUID  `json:"id" db:"id"`
+	UserID              uuid.UUID  `json:"user_id" db:"user_id"`
+	Name                string     `json:"name" db:"name"`
+	IssuingOrganization *string    `json:"issuing_organization,omitempty" db:"issuing_organization"`
+	IssueDate           time.Time  `json:"issue_date" db:"issue_date"`
+	ExpirationDate      *time.Time `json:"expiration_date,omitempty" db:"expiration_date"`
+	CredentialID        *string    `json:"credential_id,omitempty" db:"credential_id"`
+	CredentialURL       *string    `json:"credential_url,omitempty" db:"credential_url"`
+	Description         *string    `json:"description,omitempty" db:"description"`
+	DisplayOrder        int        `json:"display_order" db:"display_order"`
+	CreatedAt           time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// UserSkill represents a user's skill
+type UserSkill struct {
+	ID               uuid.UUID `json:"id" db:"id"`
+	UserID           uuid.UUID `json:"user_id" db:"user_id"`
+	SkillName        string    `json:"skill_name" db:"skill_name"`
+	ProficiencyLevel *string   `json:"proficiency_level,omitempty" db:"proficiency_level"`
+	Category         *string   `json:"category,omitempty" db:"category"`
+	DisplayOrder     int       `json:"display_order" db:"display_order"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+}
+
+// UserLanguage represents a user's language
+type UserLanguage struct {
+	ID               uuid.UUID `json:"id" db:"id"`
+	UserID           uuid.UUID `json:"user_id" db:"user_id"`
+	LanguageName     string    `json:"language_name" db:"language_name"`
+	ProficiencyLevel *string   `json:"proficiency_level,omitempty" db:"proficiency_level"`
+	DisplayOrder     int       `json:"display_order" db:"display_order"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+}
+
+// UserVolunteering represents a user's volunteering experience
+type UserVolunteering struct {
+	ID               uuid.UUID  `json:"id" db:"id"`
+	UserID           uuid.UUID  `json:"user_id" db:"user_id"`
+	OrganizationName string     `json:"organization_name" db:"organization_name"`
+	Role             string     `json:"role" db:"role"`
+	StartDate        time.Time  `json:"start_date" db:"start_date"`
+	EndDate          *time.Time `json:"end_date,omitempty" db:"end_date"`
+	IsCurrent        bool       `json:"is_current" db:"is_current"`
+	Description      *string    `json:"description,omitempty" db:"description"`
+	DisplayOrder     int        `json:"display_order" db:"display_order"`
+	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// UserPublication represents a user's publication
+type UserPublication struct {
+	ID              uuid.UUID  `json:"id" db:"id"`
+	UserID          uuid.UUID  `json:"user_id" db:"user_id"`
+	Title           string     `json:"title" db:"title"`
+	PublicationType *string    `json:"publication_type,omitempty" db:"publication_type"`
+	Publisher       *string    `json:"publisher,omitempty" db:"publisher"`
+	PublicationDate *time.Time `json:"publication_date,omitempty" db:"publication_date"`
+	PublicationURL  *string    `json:"publication_url,omitempty" db:"publication_url"`
+	Description     *string    `json:"description,omitempty" db:"description"`
+	DisplayOrder    int        `json:"display_order" db:"display_order"`
+	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+}
+
+// UserInterest represents a user's interest
+type UserInterest struct {
+	ID           uuid.UUID `json:"id" db:"id"`
+	UserID       uuid.UUID `json:"user_id" db:"user_id"`
+	InterestName string    `json:"interest_name" db:"interest_name"`
+	Category     *string   `json:"category,omitempty" db:"category"`
+	DisplayOrder int       `json:"display_order" db:"display_order"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+}
+
+// UserAchievement represents a user's achievement
+type UserAchievement struct {
+	ID                  uuid.UUID  `json:"id" db:"id"`
+	UserID              uuid.UUID  `json:"user_id" db:"user_id"`
+	Title               string     `json:"title" db:"title"`
+	AchievementType     *string    `json:"achievement_type,omitempty" db:"achievement_type"`
+	IssuingOrganization *string    `json:"issuing_organization,omitempty" db:"issuing_organization"`
+	AchievementDate     *time.Time `json:"achievement_date,omitempty" db:"achievement_date"`
+	Description         *string    `json:"description,omitempty" db:"description"`
+	DisplayOrder        int        `json:"display_order" db:"display_order"`
+	CreatedAt           time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 // UserEducation represents a user's education entry
@@ -363,4 +470,158 @@ func (u *User) ToSafeUser() *User {
 		FollowingCount:  u.FollowingCount,
 		SocialLinks:     u.SocialLinks,
 	}
+}
+
+// Request/Response models for advanced profile features
+
+// CreateCertificationRequest represents request to add certification
+type CreateCertificationRequest struct {
+	Name                string  `json:"name" validate:"required,max=200"`
+	IssuingOrganization *string `json:"issuing_organization,omitempty" validate:"omitempty,max=150"`
+	IssueDate           string  `json:"issue_date" validate:"required"` // YYYY-MM-DD
+	ExpirationDate      *string `json:"expiration_date,omitempty"`      // YYYY-MM-DD
+	CredentialID        *string `json:"credential_id,omitempty" validate:"omitempty,max=100"`
+	CredentialURL       *string `json:"credential_url,omitempty" validate:"omitempty,url"`
+	Description         *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
+// UpdateCertificationRequest represents request to update certification
+type UpdateCertificationRequest struct {
+	Name                *string `json:"name,omitempty" validate:"omitempty,max=200"`
+	IssuingOrganization *string `json:"issuing_organization,omitempty" validate:"omitempty,max=150"`
+	IssueDate           *string `json:"issue_date,omitempty"`
+	ExpirationDate      *string `json:"expiration_date,omitempty"`
+	CredentialID        *string `json:"credential_id,omitempty" validate:"omitempty,max=100"`
+	CredentialURL       *string `json:"credential_url,omitempty" validate:"omitempty,url"`
+	Description         *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
+// CreateSkillRequest represents request to add skill
+type CreateSkillRequest struct {
+	SkillName        string  `json:"skill_name" validate:"required,max=100"`
+	ProficiencyLevel *string `json:"proficiency_level,omitempty" validate:"omitempty,oneof=beginner intermediate advanced expert"`
+	Category         *string `json:"category,omitempty" validate:"omitempty,max=50"`
+}
+
+// UpdateSkillRequest represents request to update skill
+type UpdateSkillRequest struct {
+	SkillName        *string `json:"skill_name,omitempty" validate:"omitempty,max=100"`
+	ProficiencyLevel *string `json:"proficiency_level,omitempty" validate:"omitempty,oneof=beginner intermediate advanced expert"`
+	Category         *string `json:"category,omitempty" validate:"omitempty,max=50"`
+}
+
+// CreateLanguageRequest represents request to add language
+type CreateLanguageRequest struct {
+	LanguageName     string  `json:"language_name" validate:"required,max=100"`
+	ProficiencyLevel *string `json:"proficiency_level,omitempty" validate:"omitempty,oneof=basic conversational fluent native"`
+}
+
+// UpdateLanguageRequest represents request to update language
+type UpdateLanguageRequest struct {
+	LanguageName     *string `json:"language_name,omitempty" validate:"omitempty,max=100"`
+	ProficiencyLevel *string `json:"proficiency_level,omitempty" validate:"omitempty,oneof=basic conversational fluent native"`
+}
+
+// CreateVolunteeringRequest represents request to add volunteering
+type CreateVolunteeringRequest struct {
+	OrganizationName string  `json:"organization_name" validate:"required,max=150"`
+	Role             string  `json:"role" validate:"required,max=150"`
+	StartDate        string  `json:"start_date" validate:"required"` // YYYY-MM-DD
+	EndDate          *string `json:"end_date,omitempty"`
+	IsCurrent        bool    `json:"is_current"`
+	Description      *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
+// UpdateVolunteeringRequest represents request to update volunteering
+type UpdateVolunteeringRequest struct {
+	OrganizationName *string `json:"organization_name,omitempty" validate:"omitempty,max=150"`
+	Role             *string `json:"role,omitempty" validate:"omitempty,max=150"`
+	StartDate        *string `json:"start_date,omitempty"`
+	EndDate          *string `json:"end_date,omitempty"`
+	IsCurrent        *bool   `json:"is_current,omitempty"`
+	Description      *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
+// CreatePublicationRequest represents request to add publication
+type CreatePublicationRequest struct {
+	Title           string  `json:"title" validate:"required,max=300"`
+	PublicationType *string `json:"publication_type,omitempty" validate:"omitempty,max=50"`
+	Publisher       *string `json:"publisher,omitempty" validate:"omitempty,max=150"`
+	PublicationDate *string `json:"publication_date,omitempty"` // YYYY-MM-DD
+	PublicationURL  *string `json:"publication_url,omitempty" validate:"omitempty,url"`
+	Description     *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
+// UpdatePublicationRequest represents request to update publication
+type UpdatePublicationRequest struct {
+	Title           *string `json:"title,omitempty" validate:"omitempty,max=300"`
+	PublicationType *string `json:"publication_type,omitempty" validate:"omitempty,max=50"`
+	Publisher       *string `json:"publisher,omitempty" validate:"omitempty,max=150"`
+	PublicationDate *string `json:"publication_date,omitempty"`
+	PublicationURL  *string `json:"publication_url,omitempty" validate:"omitempty,url"`
+	Description     *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
+// CreateInterestRequest represents request to add interest
+type CreateInterestRequest struct {
+	InterestName string  `json:"interest_name" validate:"required,max=100"`
+	Category     *string `json:"category,omitempty" validate:"omitempty,max=50"`
+}
+
+// UpdateInterestRequest represents request to update interest
+type UpdateInterestRequest struct {
+	InterestName *string `json:"interest_name,omitempty" validate:"omitempty,max=100"`
+	Category     *string `json:"category,omitempty" validate:"omitempty,max=50"`
+}
+
+// CreateAchievementRequest represents request to add achievement
+type CreateAchievementRequest struct {
+	Title               string  `json:"title" validate:"required,max=200"`
+	AchievementType     *string `json:"achievement_type,omitempty" validate:"omitempty,max=50"`
+	IssuingOrganization *string `json:"issuing_organization,omitempty" validate:"omitempty,max=150"`
+	AchievementDate     *string `json:"achievement_date,omitempty"` // YYYY-MM-DD
+	Description         *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
+// UpdateAchievementRequest represents request to update achievement
+type UpdateAchievementRequest struct {
+	Title               *string `json:"title,omitempty" validate:"omitempty,max=200"`
+	AchievementType     *string `json:"achievement_type,omitempty" validate:"omitempty,max=50"`
+	IssuingOrganization *string `json:"issuing_organization,omitempty" validate:"omitempty,max=150"`
+	AchievementDate     *string `json:"achievement_date,omitempty"`
+	Description         *string `json:"description,omitempty" validate:"omitempty,max=200"`
+}
+
+// CreateCompanyRequest represents request to create/find company
+type CreateCompanyRequest struct {
+	Name     string  `json:"name" validate:"required,max=150"`
+	LogoURL  *string `json:"logo_url,omitempty" validate:"omitempty,url"`
+	Website  *string `json:"website,omitempty" validate:"omitempty,url"`
+	Industry *string `json:"industry,omitempty" validate:"omitempty,max=100"`
+}
+
+// UpdateExperienceRequest - Add CompanyID
+type UpdateExperienceRequestWithCompany struct {
+	CompanyName    *string    `json:"company_name,omitempty" validate:"omitempty,max=150"`
+	CompanyID      *uuid.UUID `json:"company_id,omitempty"`
+	Title          *string    `json:"title,omitempty" validate:"omitempty,max=150"`
+	EmploymentType *string    `json:"employment_type,omitempty" validate:"omitempty,oneof=full-time part-time contract internship freelance self-employed"`
+	StartDate      *string    `json:"start_date,omitempty"`
+	EndDate        *string    `json:"end_date,omitempty"`
+	IsCurrent      *bool      `json:"is_current,omitempty"`
+	Description    *string    `json:"description,omitempty" validate:"omitempty,max=200"`
+	IsPublic       *bool      `json:"is_public,omitempty"`
+}
+
+// CreateExperienceRequest - Add CompanyID
+type CreateExperienceRequestWithCompany struct {
+	CompanyName    string     `json:"company_name" validate:"required,max=150"`
+	CompanyID      *uuid.UUID `json:"company_id,omitempty"`
+	Title          string     `json:"title" validate:"required,max=150"`
+	EmploymentType *string    `json:"employment_type,omitempty" validate:"omitempty,oneof=full-time part-time contract internship freelance self-employed"`
+	StartDate      string     `json:"start_date" validate:"required"`
+	EndDate        *string    `json:"end_date,omitempty"`
+	IsCurrent      bool       `json:"is_current"`
+	Description    *string    `json:"description,omitempty" validate:"omitempty,max=200"`
+	IsPublic       bool       `json:"is_public"`
 }

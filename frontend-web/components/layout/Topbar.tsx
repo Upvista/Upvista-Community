@@ -2,17 +2,17 @@
 
 /**
  * Topbar Component
- * Created by: Hamza Hafeez - Founder & CEO of Upvista
+ * Created by: Hamza Hafeez - Founder & CEO of Asteria
  * 
  * Mobile top bar with logo, burger menu, and action icons
- * Glassmorphic styling with slide-out menu drawer
+ * Minimal transparent design
  */
 
 import Link from 'next/link';
 import { useState } from 'react';
 import { 
   Bell, 
-  Briefcase, 
+  Trophy, 
   MessageCircle, 
   Menu, 
   X,
@@ -67,19 +67,14 @@ export function Topbar() {
 
   return (
     <>
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-14 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-neutral-200/30 dark:border-neutral-800/30 shadow-sm">
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-14 z-50 border-b border-neutral-200/50 dark:border-neutral-800/50">
         <div className="h-full px-3 flex items-center justify-between">
-          {/* Logo with Stacked Text */}
+          {/* Logo - Redesigned Brand */}
           <Link href="/home" className="flex items-center gap-2">
             <img src="/assets/u.png" alt="Upvista" className="w-8 h-8" />
-            <div className="flex flex-col leading-none">
-              <span className="text-base font-bold text-neutral-900 dark:text-white">
-                Upvista
-              </span>
-              <span className="text-[10px] font-semibold text-brand-purple-600 dark:text-brand-purple-400 -mt-0.5">
-                Community
-              </span>
-            </div>
+            <span className="text-lg font-bold bg-gradient-to-r from-brand-purple-600 via-brand-purple-500 to-brand-purple-400 bg-clip-text text-transparent tracking-tight">
+              Upvista
+            </span>
           </Link>
 
           {/* Action Icons */}
@@ -88,9 +83,11 @@ export function Topbar() {
               <Menu className="w-5 h-5" />
             </IconButton>
             <NotificationBell />
-            <IconButton className="w-10 h-10">
-              <Briefcase className="w-5 h-5" />
-            </IconButton>
+            <Link href="/leaderboard">
+              <IconButton className="w-10 h-10">
+                <Trophy className="w-5 h-5" />
+              </IconButton>
+            </Link>
             <IconButton 
               badge={unreadCount > 0 ? unreadCount : undefined} 
               className="w-10 h-10" 
@@ -196,5 +193,3 @@ export function Topbar() {
     </>
   );
 }
-
-

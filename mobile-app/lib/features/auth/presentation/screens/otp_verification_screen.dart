@@ -1,26 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/gradient_background.dart';
+import '../../../../core/api/exceptions/api_exception.dart';
+import '../../data/providers/signup_state_provider.dart';
+import '../../data/providers/auth_provider.dart';
+import '../../data/services/auth_service.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
   
-  const OTPVerificationScreen({
-    super.key,
-    required this.email,
-  });
+  const OTPVerificationScreen({super.key, required this.email});
 
   @override
   State<OTPVerificationScreen> createState() => _OTPVerificationScreenState();
 }
 
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isComplete = false;
+  bool _isVerifying = false;
+  bool _isVerified = false;
+  String? _errorMessage;
+  final AuthService _authService = AuthService();
 
   @override
   void dispose() {
@@ -44,10 +52,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       setState(() {
         _isComplete = true;
       });
-      // Auto verify after a short delay
-      Future.delayed(const Duration(milliseconds: 500), () {
+      // Auto verify immediately (no delay for speed)
         _verifyOTP();
-      });
     } else {
       setState(() {
         _isComplete = false;
@@ -55,10 +61,149 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     }
   }
 
-  void _verifyOTP() {
-    // TODO: Implement OTP verification
-    // For now, navigate to next screen
+  Future<void> _verifyOTP() async {
+    if (_isVerifying || _isVerified) return;
+
+    // Get OTP code from controllers
+    final code = _controllers.map((c) => c.text).join();
+    if (code.length != 6) return;
+
+    setState(() {
+      _isVerifying = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final signupProvider = context.read<SignupStateProvider>();
+
+      // Store email in signup state if not already set
+      if (signupProvider.state.email != widget.email) {
+        signupProvider.setEmail(widget.email);
+      }
+
+      // First, try to verify email (this will work if user exists - login flow)
+      final verifyEmailResponse = await _authService.verifyEmail(
+        widget.email,
+        code,
+      );
+
+      if (verifyEmailResponse.success && verifyEmailResponse.data != null) {
+        // User exists - this is a login flow
+        setState(() {
+          _isVerified = true;
+          _isVerifying = false;
+        });
+
+        // Store verification code in state
+        signupProvider.setVerificationCode(code);
+
+        // Check if user is fully verified
+        if (verifyEmailResponse.data!.user != null &&
+            verifyEmailResponse.data!.user!.isEmailVerified) {
+          // User is fully registered and verified - this is a login
+          if (mounted) {
+            final authProvider = context.read<AuthProvider>();
+            authProvider.setUser(verifyEmailResponse.data!.user!);
+
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                context.go('/home');
+              }
+            });
+          }
+          return;
+        }
+      }
+
+      // User doesn't exist yet - this is a new signup
+      // Verify the OTP against the signup OTP stored in Redis
+      final verifySignupResponse = await _authService.verifySignupOTP(
+        widget.email,
+        code,
+      );
+
+      if (verifySignupResponse.success) {
+        // OTP is valid for signup
+        setState(() {
+          _isVerified = true;
+          _isVerifying = false;
+        });
+
+        // Store verification code in state
+        signupProvider.setVerificationCode(code);
+
+        // Continue to account name screen immediately (no delay for speed)
+        if (mounted) {
     context.push('/account-name');
+        }
+      } else {
+        // OTP verification failed - show user-friendly error
+        String errorMessage = 'Invalid verification code. Please try again.';
+
+        if (verifySignupResponse.error != null &&
+            verifySignupResponse.error!.isNotEmpty) {
+          errorMessage = verifySignupResponse.error!;
+        } else if (verifySignupResponse.message != null &&
+            verifySignupResponse.message!.isNotEmpty) {
+          errorMessage = verifySignupResponse.message!;
+        }
+
+        setState(() {
+          _isVerifying = false;
+          _isComplete = false;
+          _errorMessage = errorMessage;
+        });
+
+        // Clear OTP fields on error
+        for (var controller in _controllers) {
+          controller.clear();
+        }
+        _focusNodes[0].requestFocus();
+      }
+    } catch (e) {
+      // Extract user-friendly error message
+      String errorMessage = 'Failed to verify code. Please try again.';
+
+      if (e is ApiException) {
+        if (e is ValidationException) {
+          errorMessage = e.message.isNotEmpty
+              ? e.message
+              : 'Invalid verification code. Please check and try again.';
+        } else if (e is NetworkException) {
+          errorMessage =
+              'Network error. Please check your connection and try again.';
+        } else if (e.message.isNotEmpty) {
+          errorMessage = e.message;
+        }
+      } else if (e.toString().contains('Invalid') ||
+          e.toString().contains('invalid')) {
+        errorMessage = 'Invalid verification code. Please try again.';
+      } else if (e.toString().contains('expired') ||
+          e.toString().contains('Expired')) {
+        errorMessage =
+            'Verification code has expired. Please request a new one.';
+      }
+
+      setState(() {
+        _isVerifying = false;
+        _isComplete = false;
+        _errorMessage = errorMessage;
+      });
+
+      // Clear OTP fields on error
+      for (var controller in _controllers) {
+        controller.clear();
+      }
+      _focusNodes[0].requestFocus();
+    }
+  }
+
+  Future<void> _resendOTP() async {
+    // TODO: Implement resend OTP functionality
+    // This would require a backend endpoint to resend the verification code
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Resend OTP functionality coming soon')),
+    );
   }
 
   @override
@@ -82,10 +227,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 40),
-                Text(
-                  'Almost there!',
-                  style: AppTextStyles.displayMedium(),
-                ),
+                Text('Almost there!', style: AppTextStyles.displayMedium()),
                 const SizedBox(height: 8),
                 Text(
                   'We\'ve sent a verification code to',
@@ -123,7 +265,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                         builder: (context, constraints) {
                           final availableWidth = constraints.maxWidth;
                           final spacing = 8.0;
-                          final fieldWidth = ((availableWidth - (5 * spacing)) / 6).clamp(40.0, 48.0);
+                          final fieldWidth =
+                              ((availableWidth - (5 * spacing)) / 6).clamp(
+                                40.0,
+                                48.0,
+                              );
                           
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -133,9 +279,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                                 child: _OTPInputField(
                                   controller: _controllers[index],
                                   focusNode: _focusNodes[index],
-                                  onChanged: (value) => _onOTPChanged(index, value),
+                                  onChanged: (value) =>
+                                      _onOTPChanged(index, value),
                                   onBackspace: index > 0
-                                      ? () => _focusNodes[index - 1].requestFocus()
+                                      ? () => _focusNodes[index - 1]
+                                            .requestFocus()
                                       : null,
                                 ),
                               );
@@ -143,7 +291,39 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                           );
                         },
                       ),
-                      if (_isComplete) ...[
+                      if (_isVerifying) ...[
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentPrimary.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.accentPrimary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Verifying...',
+                                style: AppTextStyles.bodyMedium(
+                                  color: AppColors.accentPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (_isVerified) ...[
                         const SizedBox(height: 24),
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -161,9 +341,41 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Verifying...',
+                                'Verified!',
                                 style: AppTextStyles.bodyMedium(
                                   color: AppColors.success,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.error.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: AppColors.error,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: AppTextStyles.bodySmall(
+                                    color: AppColors.error,
+                                  ),
                                 ),
                               ),
                             ],
@@ -177,13 +389,13 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 // Resend code
                 Center(
                   child: TextButton(
-                    onPressed: () {
-                      // TODO: Implement resend OTP
-                    },
+                    onPressed: _isVerifying ? null : _resendOTP,
                     child: Text(
                       'Didn\'t receive the code? Resend',
                       style: AppTextStyles.bodyMedium(
-                        color: AppColors.accentPrimary,
+                        color: _isVerifying
+                            ? AppColors.textTertiary
+                            : AppColors.accentPrimary,
                       ),
                     ),
                   ),
@@ -253,4 +465,3 @@ class _OTPInputField extends StatelessWidget {
     );
   }
 }
-

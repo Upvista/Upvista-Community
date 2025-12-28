@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'solid';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   children: ReactNode;
@@ -31,6 +31,8 @@ export function Button({
   const variants = {
     primary: 'bg-brand-purple-600 hover:bg-brand-purple-700 active:bg-brand-purple-800 text-white shadow-md shadow-brand-purple-500/20 hover:shadow-lg hover:shadow-brand-purple-500/25',
     secondary: 'border-2 border-brand-purple-600 hover:border-brand-purple-700 text-brand-purple-600 dark:text-brand-purple-400 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-950/30',
+    outline: 'border border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800',
+    solid: 'bg-brand-purple-600 hover:bg-brand-purple-700 active:bg-brand-purple-800 text-white shadow-md shadow-brand-purple-500/20 hover:shadow-lg hover:shadow-brand-purple-500/25',
     ghost: 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800',
     danger: 'bg-error hover:bg-red-600 active:bg-red-700 text-white shadow-md shadow-error/20 hover:shadow-lg hover:shadow-error/25',
   };

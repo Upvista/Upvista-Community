@@ -24,14 +24,17 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void _validateEmail(String value) {
     setState(() {
-      _isEmailValid = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-          .hasMatch(value);
+      _isEmailValid = RegExp(
+        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+      ).hasMatch(value);
     });
   }
 
   void _handleEmailSignIn() {
     if (_formKey.currentState!.validate()) {
-      context.push('/otp-verification', extra: _emailController.text);
+      // Navigate to confirmation screen (will check for cached user)
+      // If no cached user, it will redirect to email/password screen
+      context.push('/signin-confirmation');
     }
   }
 
@@ -56,10 +59,7 @@ class _SignInScreenState extends State<SignInScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 40),
-                Text(
-                  'Welcome back!',
-                  style: AppTextStyles.displayMedium(),
-                ),
+                Text('Welcome back!', style: AppTextStyles.displayMedium()),
                 const SizedBox(height: 8),
                 Text(
                   'Sign in to continue your journey',
@@ -83,10 +83,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Email',
-                          style: AppTextStyles.labelLarge(),
-                        ),
+                        Text('Email', style: AppTextStyles.labelLarge()),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _emailController,
@@ -131,8 +128,9 @@ class _SignInScreenState extends State<SignInScreen> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your email';
                             }
-                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                .hasMatch(value)) {
+                            if (!RegExp(
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                            ).hasMatch(value)) {
                               return 'Please enter a valid email';
                             }
                             return null;
@@ -144,11 +142,13 @@ class _SignInScreenState extends State<SignInScreen> {
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: _isEmailValid ? _handleEmailSignIn : null,
+                            onPressed: _isEmailValid
+                                ? _handleEmailSignIn
+                                : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.accentPrimary,
-                              disabledBackgroundColor:
-                                  AppColors.surface.withOpacity(0.3),
+                              disabledBackgroundColor: AppColors.surface
+                                  .withOpacity(0.3),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -172,23 +172,14 @@ class _SignInScreenState extends State<SignInScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Container(
-                        height: 1,
-                        color: AppColors.glassBorder,
-                      ),
+                      child: Container(height: 1, color: AppColors.glassBorder),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'or',
-                        style: AppTextStyles.bodyMedium(),
-                      ),
+                      child: Text('or', style: AppTextStyles.bodyMedium()),
                     ),
                     Expanded(
-                      child: Container(
-                        height: 1,
-                        color: AppColors.glassBorder,
-                      ),
+                      child: Container(height: 1, color: AppColors.glassBorder),
                     ),
                   ],
                 ),
@@ -267,24 +258,12 @@ class _SocialSignInButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: color.withOpacity(0.3),
-                    width: 1,
-                  ),
+                  border: Border.all(color: color.withOpacity(0.3), width: 1),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
+                child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppTextStyles.labelLarge(),
-                ),
-              ),
+              Expanded(child: Text(label, style: AppTextStyles.labelLarge())),
               Icon(
                 Icons.arrow_forward_ios,
                 size: 18,
@@ -297,4 +276,3 @@ class _SocialSignInButton extends StatelessWidget {
     );
   }
 }
-

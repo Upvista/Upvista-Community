@@ -2,7 +2,7 @@
 
 /**
  * Sidebar Component
- * Created by: Hamza Hafeez - Founder & CEO of Upvista
+ * Created by: Hamza Hafeez - Founder & CEO of Asteria
  * 
  * Desktop left sidebar with navigation
  * Glassmorphic styling with iOS-inspired design
@@ -16,11 +16,12 @@ import {
   Home,
   Search,
   Users,
+  Calendar,
   Compass,
   MessageCircle,
   Bell,
   PlusSquare,
-  Briefcase,
+  Trophy,
   User,
   Menu,
   Settings,
@@ -44,13 +45,13 @@ import { Badge } from '@/components/ui/Badge';
 const navigationBase = [
   { name: 'Home', href: '/home', icon: Home },
   { name: 'Search', href: '/search', icon: Search },
-  { name: 'Communities', href: '/communities', icon: Users },
-  { name: 'Explore', href: '/explore', icon: Compass },
+  { name: 'Events', href: '/events', icon: Calendar },
+  { name: 'Learning', href: '/explore', icon: Compass },
   { name: 'Messages', href: '/messages', icon: MessageCircle, badge: 3 },
   { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Create', href: '/create', icon: PlusSquare },
   { name: 'Collaborate', href: '/collaborate', icon: Users },
-  { name: 'Jobs', href: '/jobs', icon: Briefcase },
+  { name: 'Leaderboard', href: '/leaderboard', icon: Trophy },
   { name: 'Profile', href: '/profile', icon: User },
 ];
 
@@ -89,22 +90,16 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex w-60 h-screen fixed top-0 left-0 z-40">
       <nav className="w-full h-full bg-white/80 dark:bg-gray-900/60 backdrop-blur-2xl border-r border-neutral-200/50 dark:border-neutral-800/50 flex flex-col py-6 px-4">
-        {/* Logo */}
-        <Link href="/home" className="flex items-center gap-3 px-4 mb-8 group">
+        {/* Logo - Redesigned Brand */}
+        <Link href="/home" className="flex items-center gap-2.5 px-4 mb-8 group">
           <img 
             src="/assets/u.png" 
             alt="Upvista" 
-            className="w-10 h-10 transition-transform group-hover:scale-110" 
+            className="w-9 h-9 transition-transform group-hover:scale-110" 
           />
-          <h1 className="text-xl font-bold">
-            <span className="bg-gradient-to-r from-brand-purple-600 to-brand-purple-400 bg-clip-text text-transparent">
-              Upvista
-            </span>
-            {' '}
-            <span className="text-neutral-900 dark:text-neutral-100">
-              Community
-            </span>
-          </h1>
+          <span className="text-2xl font-bold bg-gradient-to-r from-brand-purple-600 via-brand-purple-500 to-brand-purple-400 bg-clip-text text-transparent tracking-tight">
+            Upvista
+          </span>
         </Link>
 
         {/* Navigation Items */}
@@ -218,4 +213,3 @@ export function Sidebar() {
     </aside>
   );
 }
-

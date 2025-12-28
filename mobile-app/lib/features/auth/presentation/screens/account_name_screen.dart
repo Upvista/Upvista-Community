@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/gradient_background.dart';
+import '../../data/providers/signup_state_provider.dart';
+import '../../data/services/auth_service.dart';
 
 class AccountNameScreen extends StatefulWidget {
   const AccountNameScreen({super.key});
@@ -34,14 +37,7 @@ class _AccountNameScreenState extends State<AccountNameScreen>
     'Prefer not to say',
   ];
 
-  // Mock taken usernames - replace with actual API call
-  final Set<String> _takenUsernames = {
-    'admin',
-    'test',
-    'user',
-    'john',
-    'johndoe',
-  };
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
@@ -88,7 +84,8 @@ class _AccountNameScreenState extends State<AccountNameScreen>
     }
 
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+    // Reduced debounce for faster username checking (optimized for speed)
+    _debounceTimer = Timer(const Duration(milliseconds: 400), () {
       if (mounted && _usernameController.text.trim() == username) {
         _checkUsernameAvailability(username);
       }
@@ -115,12 +112,8 @@ class _AccountNameScreenState extends State<AccountNameScreen>
       });
     }
 
-    // Simulate API call delay
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    // TODO: Replace with actual API call
-    // final isAvailable = await authService.checkUsernameAvailability(username);
-    final isAvailable = !_takenUsernames.contains(username.toLowerCase());
+    // Call actual API to check username availability
+    final isAvailable = await _authService.checkUsernameAvailability(username);
 
     if (mounted) {
       setState(() {
@@ -148,8 +141,15 @@ class _AccountNameScreenState extends State<AccountNameScreen>
 
   void _handleNext() {
     if (_formKey.currentState!.validate()) {
-      // Allow navigation even if username check hasn't completed
-      // This is frontend-only, backend will validate on submission
+      // Store data in signup state
+      final signupProvider = context.read<SignupStateProvider>();
+      signupProvider.setUsername(_usernameController.text.trim());
+      signupProvider.setDisplayName(_displayNameController.text.trim());
+      if (_selectedGender != null) {
+        signupProvider.setGender(_selectedGender);
+      }
+
+      // Navigate to next screen
       context.push('/age');
     }
   }

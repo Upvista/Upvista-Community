@@ -82,3 +82,33 @@ func NewMessageRepository(cfg *config.Config) (MessageRepository, error) {
 
 	return nil, fmt.Errorf("unsupported data provider: %s", provider)
 }
+
+// NewEventRepository creates a concrete EventRepository based on config
+func NewEventRepository(cfg *config.Config) (EventRepository, error) {
+	provider := strings.ToLower(strings.TrimSpace(cfg.Server.DataProvider))
+	if provider == "" {
+		provider = "supabase" // default
+	}
+
+	// Supabase via PostgREST
+	if provider == "supabase" {
+		return NewSupabaseEventRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey), nil
+	}
+
+	return nil, fmt.Errorf("unsupported data provider: %s", provider)
+}
+
+// NewCourseRepository creates a concrete CourseRepository based on config
+func NewCourseRepository(cfg *config.Config) (CourseRepository, error) {
+	provider := strings.ToLower(strings.TrimSpace(cfg.Server.DataProvider))
+	if provider == "" {
+		provider = "supabase" // default
+	}
+
+	// Supabase via PostgREST
+	if provider == "supabase" {
+		return NewSupabaseCourseRepository(cfg.Database.SupabaseURL, cfg.Database.SupabaseServiceKey), nil
+	}
+
+	return nil, fmt.Errorf("unsupported data provider: %s", provider)
+}

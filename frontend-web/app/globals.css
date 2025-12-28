@@ -2,9 +2,9 @@
 @import "tailwindcss";
 
 /* ========================================
-   UPVISTA COMMUNITY DESIGN SYSTEM
+   ASTERIA DESIGN SYSTEM
    Created by: Hamza Hafeez - Founder & CEO
-   iOS-inspired minimal professional design
+   Dark theme with animated gradient mist
    ======================================== */
 
 :root {
@@ -155,6 +155,21 @@ html.ios {
   /* iOS Theme Variables */
   --background: #EDE7F6;
   --foreground: #1A1A2E;
+}
+
+/* Asteria Theme - Dark with Animated Gradient Mist */
+body.asteria {
+  background: #0A0A0A;
+  color: #FFFFFF;
+  position: relative;
+  overflow-x: hidden;
+}
+
+html.asteria {
+  /* Asteria Theme Variables */
+  --background: #0A0A0A;
+  --foreground: #FFFFFF;
+  background-color: #0A0A0A;
 }
 
 html {
@@ -443,6 +458,10 @@ html {
 }
 
 html.dark {
+  background-color: #0A0A0A;
+}
+
+html.asteria {
   background-color: #0A0A0A;
 }
 

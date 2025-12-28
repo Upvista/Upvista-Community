@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"fmt"
+	"log"
 	"mime/multipart"
 	"time"
 
@@ -449,13 +450,13 @@ func (s *AccountService) UploadProfilePicture(ctx context.Context, userID uuid.U
 	// Get current user
 	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get user: %w", err)
 	}
 
 	// Upload new picture
 	pictureURL, err := s.storageSvc.UploadProfilePicture(ctx, userID, file, header)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to upload profile picture: %w", err)
 	}
 
 	// Delete old picture if it exists and is from our storage
@@ -469,10 +470,13 @@ func (s *AccountService) UploadProfilePicture(ctx context.Context, userID uuid.U
 		"profile_picture": pictureURL,
 	}
 	if err := s.userRepo.UpdateProfile(ctx, userID, updates); err != nil {
+		log.Printf("[AccountService] Failed to update profile with picture URL: %v", err)
 		// If profile update fails, try to clean up uploaded file
 		go s.storageSvc.DeleteProfilePicture(context.Background(), pictureURL)
-		return "", err
+		return "", fmt.Errorf("failed to update profile: %w", err)
 	}
+
+	log.Printf("[AccountService] Profile picture uploaded successfully for user %s: %s", userID, pictureURL)
 
 	return pictureURL, nil
 }

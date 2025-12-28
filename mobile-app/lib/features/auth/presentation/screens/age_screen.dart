@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/gradient_background.dart';
+import '../../data/providers/signup_state_provider.dart';
 
 class AgeScreen extends StatefulWidget {
   const AgeScreen({super.key});
@@ -35,18 +37,20 @@ class _AgeScreenState extends State<AgeScreen> {
 
   void _handleNext() {
     if (_selectedAge != null) {
+      // Store age in signup state
+      final signupProvider = context.read<SignupStateProvider>();
+      signupProvider.setAge(_selectedAge);
       context.push('/profile-setup');
     }
   }
 
   void _handleSkip() {
+    // Age is optional, so skip is fine
     context.push('/profile-setup');
   }
 
-  List<int> get _ages => List.generate(
-        _maxAge - _minAge + 1,
-        (index) => _minAge + index,
-      );
+  List<int> get _ages =>
+      List.generate(_maxAge - _minAge + 1, (index) => _minAge + index);
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +73,7 @@ class _AgeScreenState extends State<AgeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 40),
-                Text(
-                  'How old are you?',
-                  style: AppTextStyles.displayMedium(),
-                ),
+                Text('How old are you?', style: AppTextStyles.displayMedium()),
                 const SizedBox(height: 8),
                 Text(
                   'This helps us show you age-appropriate content and connect you with peers. (Optional)',
@@ -127,7 +128,7 @@ class _AgeScreenState extends State<AgeScreen> {
                             }
                             final age = _ages[index];
                             final isSelected = age == _selectedAge;
-                            
+
                             return _AgeWheelItem(
                               age: age,
                               isSelected: isSelected,
@@ -190,10 +191,7 @@ class _AgeScreenState extends State<AgeScreen> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        child: Text(
-                          'Back',
-                          style: AppTextStyles.labelLarge(),
-                        ),
+                        child: Text('Back', style: AppTextStyles.labelLarge()),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -221,8 +219,8 @@ class _AgeScreenState extends State<AgeScreen> {
                         onPressed: _selectedAge != null ? _handleNext : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentPrimary,
-                          disabledBackgroundColor:
-                              AppColors.surface.withOpacity(0.3),
+                          disabledBackgroundColor: AppColors.surface
+                              .withOpacity(0.3),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -254,10 +252,7 @@ class _AgeWheelItem extends StatelessWidget {
   final int age;
   final bool isSelected;
 
-  const _AgeWheelItem({
-    required this.age,
-    required this.isSelected,
-  });
+  const _AgeWheelItem({required this.age, required this.isSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -276,12 +271,8 @@ class _AgeWheelItem extends StatelessWidget {
             : AppTextStyles.headlineSmall(
                 color: AppColors.textSecondary.withOpacity(0.5),
               ),
-        child: Text(
-          '$age',
-          textAlign: TextAlign.center,
-        ),
+        child: Text('$age', textAlign: TextAlign.center),
       ),
     );
   }
 }
-

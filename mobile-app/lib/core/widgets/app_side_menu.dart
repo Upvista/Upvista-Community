@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../../features/auth/data/providers/auth_provider.dart';
+import '../../core/services/token_storage_service.dart';
 
 class AppSideMenu extends StatefulWidget {
   final VoidCallback onClose;
 
-  const AppSideMenu({
-    super.key,
-    required this.onClose,
-  });
+  const AppSideMenu({super.key, required this.onClose});
 
   @override
   State<AppSideMenu> createState() => _AppSideMenuState();
@@ -31,10 +31,7 @@ class _AppSideMenuState extends State<AppSideMenu>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(-1.0, 0.0),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutQuart,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
 
     _controller.forward();
   }
@@ -49,6 +46,89 @@ class _AppSideMenuState extends State<AppSideMenu>
     _controller.reverse().then((_) {
       widget.onClose();
     });
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    // Show confirmation dialog
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout != true) {
+      debugPrint('[Logout] User cancelled logout');
+      return;
+    }
+
+    debugPrint('[Logout] User confirmed logout');
+
+    // Show loading indicator first (before closing drawer)
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (loadingContext) =>
+            const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Close the drawer after showing loading
+    _handleClose();
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final tokenStorage = TokenStorageService();
+
+      // Clear tokens immediately (don't wait - speed optimization)
+      tokenStorage.clearAll().catchError((_) {
+        // Ignore errors
+      });
+
+      // Clear auth state immediately (for instant UI response)
+      authProvider.logout();
+
+      // Close loading dialog
+      if (context.mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      // Navigate immediately (don't wait for API - speed optimization)
+      if (context.mounted) {
+        context.go('/welcome');
+      }
+    } catch (e) {
+      // Even if logout fails, clear local state and navigate immediately
+      final tokenStorage = TokenStorageService();
+      final authProvider = context.read<AuthProvider>();
+
+      // Clear everything immediately (speed optimization)
+      tokenStorage.clearAll().catchError((_) {});
+      authProvider.logout();
+
+      // Close loading dialog if still open
+      if (context.mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+
+      // Navigate immediately
+      if (context.mounted) {
+        context.go('/welcome');
+      }
+    }
   }
 
   @override
@@ -76,7 +156,9 @@ class _AppSideMenuState extends State<AppSideMenu>
                 // Compact Header - same color as sidebar
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 16),
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.backgroundSecondary,
                     border: Border(
@@ -225,8 +307,8 @@ class _AppSideMenuState extends State<AppSideMenu>
                         title: 'Logout',
                         isLogout: true,
                         onTap: () {
-                          _handleClose();
-                          // TODO: Handle logout
+                          // Don't close drawer here - let logout handler manage it
+                          _handleLogout(context);
                         },
                       ),
                     ],
@@ -277,4 +359,3 @@ class _MenuTile extends StatelessWidget {
     );
   }
 }
-

@@ -13,7 +13,10 @@ class ErrorHandler {
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
         return TimeoutException(
-          'Request timeout. Please check your connection and try again.',
+          'Connection timeout. The server may be unreachable. Please verify:\n'
+          '• Backend server is running on port 8081\n'
+          '• Correct IP address in API configuration\n'
+          '• Device and server are on the same network',
           statusCode: error.response?.statusCode,
           originalError: error,
         );
@@ -30,7 +33,10 @@ class ErrorHandler {
 
       case DioExceptionType.connectionError:
         return NetworkException(
-          'No internet connection. Please check your network settings.',
+          'Cannot connect to server. Please verify:\n'
+          '• Backend server is running\n'
+          '• Correct API base URL in configuration\n'
+          '• Network connectivity is available',
           statusCode: error.response?.statusCode,
           originalError: error,
         );

@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/welcome_screen.dart';
 import '../../features/auth/presentation/screens/signin_screen.dart';
+import '../../features/auth/presentation/screens/signin_confirmation_screen.dart';
+import '../../features/auth/presentation/screens/signin_options_screen.dart';
+import '../../features/auth/presentation/screens/signin_email_password_screen.dart';
+import '../../features/auth/presentation/screens/signin_password_screen.dart';
 import '../../features/auth/presentation/screens/signup_options_screen.dart';
 import '../../features/auth/presentation/screens/signup_email_screen.dart';
 import '../../features/auth/presentation/screens/otp_verification_screen.dart';
@@ -26,11 +30,14 @@ import '../../features/settings/presentation/screens/personal_info/change_phone_
 import '../../features/settings/presentation/screens/personal_info/change_gender_screen.dart';
 import '../../features/settings/presentation/screens/personal_info/change_birthday_screen.dart';
 import '../../features/settings/presentation/screens/personal_info/change_username_screen.dart';
-import '../../features/settings/presentation/screens/personal_info/change_password_screen.dart' as personal_info;
+import '../../features/settings/presentation/screens/personal_info/change_password_screen.dart'
+    as personal_info;
 import '../../features/settings/presentation/screens/account_management/linked_accounts_screen.dart';
 import '../../features/settings/presentation/screens/account_management/connected_apps_screen.dart';
-import '../../features/settings/presentation/screens/account_management/login_activity_screen.dart' as account_management;
-import '../../features/settings/presentation/screens/account_management/download_data_screen.dart' as account_management_download;
+import '../../features/settings/presentation/screens/account_management/login_activity_screen.dart'
+    as account_management;
+import '../../features/settings/presentation/screens/account_management/download_data_screen.dart'
+    as account_management_download;
 import '../../features/settings/presentation/screens/account_management/memorialization_screen.dart';
 import '../../features/settings/presentation/screens/earnings/earnings_overview_screen.dart';
 import '../../features/settings/presentation/screens/earnings/monetization_settings_screen.dart';
@@ -57,10 +64,12 @@ import '../../features/settings/presentation/screens/profile/basic_info/social_l
 import '../../features/settings/presentation/screens/profile/sharing/qr_code_screen.dart';
 import '../../features/settings/presentation/screens/profile/coming_soon_screen.dart';
 import '../../features/settings/presentation/screens/security/security_settings_screen.dart';
-import '../../features/settings/presentation/screens/security/change_password_screen.dart' as security;
+import '../../features/settings/presentation/screens/security/change_password_screen.dart'
+    as security;
 import '../../features/settings/presentation/screens/security/two_factor_auth_screen.dart';
 import '../../features/settings/presentation/screens/security/active_sessions_screen.dart';
-import '../../features/settings/presentation/screens/security/login_activity_screen.dart' as security_login;
+import '../../features/settings/presentation/screens/security/login_activity_screen.dart'
+    as security_login;
 import '../../features/settings/presentation/screens/notifications/notification_settings_screen.dart';
 import '../../features/settings/presentation/screens/notifications/do_not_disturb_screen.dart';
 import '../../features/settings/presentation/screens/notifications/advanced_notifications_screen.dart';
@@ -69,7 +78,8 @@ import '../../features/settings/presentation/screens/messages/auto_download_scre
 import '../../features/settings/presentation/screens/messages/storage_usage_screen.dart';
 import '../../features/settings/presentation/screens/messages/chat_backup_screen.dart';
 import '../../features/settings/presentation/screens/privacy/data_privacy_screen.dart';
-import '../../features/settings/presentation/screens/privacy/download_data_screen.dart' as privacy_download;
+import '../../features/settings/presentation/screens/privacy/download_data_screen.dart'
+    as privacy_download;
 import '../../features/settings/presentation/screens/privacy/permissions_screen.dart';
 import '../../features/settings/presentation/screens/privacy/activity_log_screen.dart';
 import '../../features/create/presentation/screens/create_post_screen.dart';
@@ -77,6 +87,17 @@ import '../../features/create/presentation/screens/create_poll_screen.dart';
 import '../../features/create/presentation/screens/create_article_screen.dart';
 import '../../features/create/presentation/screens/create_reel_screen.dart';
 import '../../features/create/presentation/screens/create_story_screen.dart';
+import '../../features/profile/presentation/screens/edit_profile_screen.dart';
+import '../../features/profile/presentation/screens/add_edit/add_edit_story_screen.dart';
+import '../../features/profile/presentation/screens/add_edit/add_edit_skill_screen.dart';
+import '../../features/profile/presentation/screens/add_edit/add_edit_certification_screen.dart';
+import '../../features/profile/presentation/screens/add_edit/add_edit_language_screen.dart';
+import '../../features/profile/presentation/screens/add_edit/add_edit_volunteering_screen.dart';
+import '../../features/profile/presentation/screens/add_edit/add_edit_publication_screen.dart';
+import '../../features/profile/presentation/screens/add_edit/add_edit_interest_screen.dart';
+import '../../features/profile/presentation/screens/add_edit/add_edit_achievement_screen.dart';
+import 'package:provider/provider.dart';
+import '../../features/profile/data/providers/profile_provider.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -102,17 +123,30 @@ final appRouter = GoRouter(
     ),
   ),
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const SplashScreen(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(
       path: '/welcome',
       builder: (context, state) => const WelcomeScreen(),
     ),
+    GoRoute(path: '/signin', builder: (context, state) => const SignInScreen()),
     GoRoute(
-      path: '/signin',
-      builder: (context, state) => const SignInScreen(),
+      path: '/signin-options',
+      builder: (context, state) => const SignInOptionsScreen(),
+    ),
+    GoRoute(
+      path: '/signin-confirmation',
+      builder: (context, state) => const SignInConfirmationScreen(),
+    ),
+    GoRoute(
+      path: '/signin-email-password',
+      builder: (context, state) => const SignInEmailPasswordScreen(),
+    ),
+    GoRoute(
+      path: '/signin-password',
+      builder: (context, state) {
+        final email = state.extra as String? ?? '';
+        return SignInPasswordScreen(email: email);
+      },
     ),
     GoRoute(
       path: '/signup-options',
@@ -133,10 +167,7 @@ final appRouter = GoRouter(
       path: '/account-name',
       builder: (context, state) => const AccountNameScreen(),
     ),
-    GoRoute(
-      path: '/age',
-      builder: (context, state) => const AgeScreen(),
-    ),
+    GoRoute(path: '/age', builder: (context, state) => const AgeScreen()),
     GoRoute(
       path: '/profile-setup',
       builder: (context, state) => const ProfileSetupScreen(),
@@ -149,20 +180,14 @@ final appRouter = GoRouter(
       path: '/welcome-complete',
       builder: (context, state) => const WelcomeCompleteScreen(),
     ),
-    GoRoute(
-      path: '/home',
-      builder: (context, state) => const HomeScreen(),
-    ),
+    GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     GoRoute(
       path: '/communities',
       pageBuilder: (context, state) => CustomTransitionPage<void>(
         key: state.pageKey,
         child: const CommunitiesScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -173,10 +198,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const JobsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -247,13 +269,391 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const ProfileScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
+    ),
+    GoRoute(
+      path: '/edit-profile',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const EditProfileScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.1),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+    // Story
+    GoRoute(
+      path: '/edit-profile/story',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const AddEditStoryScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+    // Skills
+    GoRoute(
+      path: '/edit-profile/skills/add',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const AddEditSkillScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+    GoRoute(
+      path: '/edit-profile/skills/:id',
+      pageBuilder: (context, state) {
+        final id = state.pathParameters['id']!;
+        final profileProvider = Provider.of<ProfileProvider>(
+          context,
+          listen: false,
+        );
+        final skill = profileProvider.skills.firstWhere(
+          (s) => s.id == id,
+          orElse: () => throw Exception('Skill not found'),
+        );
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: AddEditSkillScreen(skill: skill),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        );
+      },
+    ),
+    // Certifications
+    GoRoute(
+      path: '/edit-profile/certifications/add',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const AddEditCertificationScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+    GoRoute(
+      path: '/edit-profile/certifications/:id',
+      pageBuilder: (context, state) {
+        final id = state.pathParameters['id']!;
+        final profileProvider = Provider.of<ProfileProvider>(
+          context,
+          listen: false,
+        );
+        final cert = profileProvider.certifications.firstWhere(
+          (c) => c.id == id,
+          orElse: () => throw Exception('Certification not found'),
+        );
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: AddEditCertificationScreen(certification: cert),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        );
+      },
+    ),
+    // Languages
+    GoRoute(
+      path: '/edit-profile/languages/add',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const AddEditLanguageScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+    GoRoute(
+      path: '/edit-profile/languages/:id',
+      pageBuilder: (context, state) {
+        final id = state.pathParameters['id']!;
+        final profileProvider = Provider.of<ProfileProvider>(
+          context,
+          listen: false,
+        );
+        final lang = profileProvider.languages.firstWhere(
+          (l) => l.id == id,
+          orElse: () => throw Exception('Language not found'),
+        );
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: AddEditLanguageScreen(language: lang),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        );
+      },
+    ),
+    // Volunteering
+    GoRoute(
+      path: '/edit-profile/volunteering/add',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const AddEditVolunteeringScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+    GoRoute(
+      path: '/edit-profile/volunteering/:id',
+      pageBuilder: (context, state) {
+        final id = state.pathParameters['id']!;
+        final profileProvider = Provider.of<ProfileProvider>(
+          context,
+          listen: false,
+        );
+        final vol = profileProvider.volunteering.firstWhere(
+          (v) => v.id == id,
+          orElse: () => throw Exception('Volunteering not found'),
+        );
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: AddEditVolunteeringScreen(volunteering: vol),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        );
+      },
+    ),
+    // Publications
+    GoRoute(
+      path: '/edit-profile/publications/add',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const AddEditPublicationScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+    GoRoute(
+      path: '/edit-profile/publications/:id',
+      pageBuilder: (context, state) {
+        final id = state.pathParameters['id']!;
+        final profileProvider = Provider.of<ProfileProvider>(
+          context,
+          listen: false,
+        );
+        final pub = profileProvider.publications.firstWhere(
+          (p) => p.id == id,
+          orElse: () => throw Exception('Publication not found'),
+        );
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: AddEditPublicationScreen(publication: pub),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        );
+      },
+    ),
+    // Interests
+    GoRoute(
+      path: '/edit-profile/interests/add',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const AddEditInterestScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+    GoRoute(
+      path: '/edit-profile/interests/:id',
+      pageBuilder: (context, state) {
+        final id = state.pathParameters['id']!;
+        final profileProvider = Provider.of<ProfileProvider>(
+          context,
+          listen: false,
+        );
+        final interest = profileProvider.interests.firstWhere(
+          (i) => i.id == id,
+          orElse: () => throw Exception('Interest not found'),
+        );
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: AddEditInterestScreen(interest: interest),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        );
+      },
+    ),
+    // Achievements
+    GoRoute(
+      path: '/edit-profile/achievements/add',
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        child: const AddEditAchievementScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    ),
+    GoRoute(
+      path: '/edit-profile/achievements/:id',
+      pageBuilder: (context, state) {
+        final id = state.pathParameters['id']!;
+        final profileProvider = Provider.of<ProfileProvider>(
+          context,
+          listen: false,
+        );
+        final achievement = profileProvider.achievements.firstWhere(
+          (a) => a.id == id,
+          orElse: () => throw Exception('Achievement not found'),
+        );
+        return CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: AddEditAchievementScreen(achievement: achievement),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        );
+      },
     ),
     GoRoute(
       path: '/notifications',
@@ -261,10 +661,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const NotificationsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -275,10 +672,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const SearchScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -289,10 +683,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const SettingsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -303,10 +694,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const AccountSettingsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -317,10 +705,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const ChangeEmailScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -331,10 +716,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const ChangePhoneScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -345,10 +727,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const ChangeGenderScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -359,10 +738,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const ChangeBirthdayScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -373,10 +749,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const ChangeUsernameScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -387,10 +760,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const personal_info.ChangePasswordScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -401,10 +771,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const LinkedAccountsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -415,10 +782,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const ConnectedAppsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -429,10 +793,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const account_management.LoginActivityScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -443,10 +804,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const account_management_download.DownloadDataScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -457,10 +815,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const MemorializationScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -471,10 +826,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const EarningsOverviewScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -485,10 +837,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const MonetizationSettingsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -499,10 +848,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const PayoutMethodsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -513,10 +859,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const TransactionHistoryScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -527,10 +870,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const RevenueAnalyticsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -541,10 +881,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const JobPreferencesScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -555,10 +892,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const MyApplicationsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -569,10 +903,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const ProjectPortfolioScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -583,10 +914,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const CompanyProfileScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -597,10 +925,7 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const ProfileSettingsScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 200),
       ),
@@ -1902,13 +2227,10 @@ final appRouter = GoRouter(
         child: const CreatePostScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 1),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            )),
+            position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
             child: child,
           );
         },
@@ -1922,13 +2244,10 @@ final appRouter = GoRouter(
         child: const CreatePollScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 1),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            )),
+            position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
             child: child,
           );
         },
@@ -1942,13 +2261,10 @@ final appRouter = GoRouter(
         child: const CreateArticleScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 1),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            )),
+            position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
             child: child,
           );
         },
@@ -1962,13 +2278,10 @@ final appRouter = GoRouter(
         child: const CreateReelScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 1),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            )),
+            position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
             child: child,
           );
         },
@@ -1982,13 +2295,10 @@ final appRouter = GoRouter(
         child: const CreateStoryScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 1),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            )),
+            position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
             child: child,
           );
         },
@@ -1997,5 +2307,3 @@ final appRouter = GoRouter(
     ),
   ],
 );
-
-

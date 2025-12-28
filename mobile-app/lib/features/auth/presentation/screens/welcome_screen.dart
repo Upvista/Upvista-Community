@@ -104,7 +104,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             _WelcomeButton(
                               text: 'Already have an account',
                               onPressed: () {
-                                context.push('/signin');
+                                context.push('/signin-options');
                               },
                               isPrimary: false,
                             ),

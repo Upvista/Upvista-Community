@@ -160,7 +160,7 @@ export default function FeedContainer({ feedType = 'home', userId, hashtag }: Fe
   if (posts.length === 0) {
     return (
       <div className="text-center py-20">
-        <div className="w-20 h-20 mx-auto mb-4 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+        <div className="w-20 h-20 mx-auto mb-4 border border-neutral-200 dark:border-neutral-800 rounded-full flex items-center justify-center">
           <span className="text-4xl">📝</span>
         </div>
         <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
@@ -174,7 +174,7 @@ export default function FeedContainer({ feedType = 'home', userId, hashtag }: Fe
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-0">
       {/* Posts */}
       {posts.map((post) => (
         <PostCard 

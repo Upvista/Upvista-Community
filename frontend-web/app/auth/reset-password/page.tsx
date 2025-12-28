@@ -144,7 +144,7 @@ function ResetPasswordContent() {
                 disabled={!token}
                 className="peer w-full rounded-2xl border-2 border-blue-500 px-5 py-4 pr-12 text-base text-gray-900 transition-all focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               />
-              <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-medium text-blue-600 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-600 transition-all">
+              <label className="pointer-events-none absolute -top-3 left-4 bg-white px-2 text-sm font-medium text-blue-600 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-600 transition-all">
                 New password
               </label>
               <button
@@ -177,7 +177,7 @@ function ResetPasswordContent() {
                 disabled={!token}
                 className="peer w-full rounded-2xl border-2 border-blue-500 px-5 py-4 text-base text-gray-900 transition-all focus:border-blue-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               />
-              <label className="absolute -top-3 left-4 bg-white px-2 text-sm font-medium text-blue-600 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-600 transition-all">
+              <label className="pointer-events-none absolute -top-3 left-4 bg-white px-2 text-sm font-medium text-blue-600 peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-600 transition-all">
                 Confirm new password
               </label>
             </div>

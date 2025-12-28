@@ -159,8 +159,18 @@ func (r *SupabaseUserRepository) CreateUser(ctx context.Context, user *models.Us
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		log.Printf("[Supabase] CreateUser failed: HTTP %d - %s", resp.StatusCode, string(bodyBytes))
-		return fmt.Errorf("%w: HTTP %d - %s", apperr.ErrDatabaseError, resp.StatusCode, string(bodyBytes))
+		errorBody := string(bodyBytes)
+		log.Printf("[Supabase] CreateUser failed: HTTP %d - %s", resp.StatusCode, errorBody)
+
+		// Check for unique constraint violations (username or email)
+		if strings.Contains(errorBody, "username") && strings.Contains(errorBody, "unique") {
+			return apperr.ErrUsernameExists
+		}
+		if strings.Contains(errorBody, "email") && strings.Contains(errorBody, "unique") {
+			return apperr.ErrEmailAlreadyExists
+		}
+
+		return fmt.Errorf("%w: HTTP %d - %s", apperr.ErrDatabaseError, resp.StatusCode, errorBody)
 	}
 	return nil
 }

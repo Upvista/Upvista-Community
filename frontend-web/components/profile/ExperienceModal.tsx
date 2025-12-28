@@ -123,6 +123,7 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
             onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
             placeholder="e.g., Upvista"
             disabled={isLoading}
+            labelBg="bg-white dark:bg-neutral-900"
           />
 
           <Input
@@ -131,6 +132,7 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             placeholder="e.g., Software Engineer"
             disabled={isLoading}
+            labelBg="bg-white dark:bg-neutral-900"
           />
 
           <div>
@@ -158,6 +160,7 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
               value={formData.start_date}
               onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
               disabled={isLoading}
+              labelBg="bg-white dark:bg-neutral-900"
             />
 
             <Input
@@ -166,6 +169,7 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
               value={formData.end_date}
               onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
               disabled={isLoading || formData.is_current}
+              labelBg="bg-white dark:bg-neutral-900"
             />
           </div>
 
@@ -193,7 +197,7 @@ export default function ExperienceModal({ isOpen, experience, onClose, onSave }:
               maxLength={200}
               rows={3}
               disabled={isLoading}
-              className="w-full px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base rounded-xl border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-brand-purple-500 resize-none"
+              className="w-full px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-brand-purple-500 focus:border-brand-purple-500 resize-none"
             />
             <div className="mt-1 text-xs text-neutral-500 text-right">
               {formData.description.length} / 200

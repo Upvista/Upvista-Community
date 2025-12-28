@@ -4,7 +4,19 @@
 /// For production, these values should be loaded from environment variables.
 class ApiConfig {
   // Base URLs
-  static const String baseUrl = 'http://localhost:8081/api/v1';
+  // IMPORTANT: Choose the correct URL based on your testing environment:
+  //
+  // For Android Emulator (MUST USE THIS):
+  // static const String baseUrl = 'http://10.0.2.2:8081/api/v1';
+  //
+  // For Physical Android Device (use your PC's IP):
+  // static const String baseUrl = 'http://192.168.100.187:8081/api/v1';
+  //
+  // For iOS Simulator:
+  // static const String baseUrl = 'http://localhost:8081/api/v1';
+  //
+  // Find your IP: Windows (ipconfig) or Mac/Linux (ifconfig)
+  static const String baseUrl = 'http://192.168.100.187:8081/api/v1';
   static const String wsUrl = 'ws://localhost:8081/ws';
 
   // For production, use:
@@ -23,14 +35,16 @@ class ApiConfig {
   static const String relationships = '/relationships';
   static const String hashtags = '/hashtags';
 
-  // Timeouts (in milliseconds)
-  static const int connectTimeout = 30000; // 30 seconds
-  static const int receiveTimeout = 30000; // 30 seconds
-  static const int sendTimeout = 30000; // 30 seconds
+  // Timeouts (in milliseconds) - Optimized for speed
+  static const int connectTimeout = 10000; // 10 seconds (reduced from 30s)
+  static const int receiveTimeout = 10000; // 10 seconds (reduced from 30s)
+  static const int sendTimeout = 10000; // 10 seconds (reduced from 30s)
 
-  // Retry configuration
-  static const int maxRetries = 3;
-  static const Duration retryDelay = Duration(seconds: 1);
+  // Retry configuration - Optimized for speed
+  static const int maxRetries = 1; // Reduced from 3 (faster failure detection)
+  static const Duration retryDelay = Duration(
+    milliseconds: 500,
+  ); // Reduced from 1s
 
   // Headers
   static const String contentType = 'application/json';

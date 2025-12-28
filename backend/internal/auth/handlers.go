@@ -531,6 +531,191 @@ func (h *AuthHandlers) LinkedInCallbackHandler(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
 
+// SendSignupOTPHandler sends OTP for signup flow
+func (h *AuthHandlers) SendSignupOTPHandler(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" validate:"required,email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request data",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	response, err := h.authSvc.SendOTPForSignup(c.Request.Context(), req.Email)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+			"error":   appErr.Details,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// VerifySignupOTPHandler verifies OTP for signup flow (before registration)
+func (h *AuthHandlers) VerifySignupOTPHandler(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" validate:"required,email"`
+		Code  string `json:"code" validate:"required,len=6"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request data",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	verified, err := h.authSvc.VerifySignupOTP(c.Request.Context(), req.Email, req.Code)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+			"error":   appErr.Details,
+		})
+		return
+	}
+
+	if !verified {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid verification code",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Verification code is valid",
+	})
+}
+
+// CheckUsernameHandler handles username availability check
+func (h *AuthHandlers) CheckUsernameHandler(c *gin.Context) {
+	username := c.Query("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Username parameter is required",
+		})
+		return
+	}
+
+	// Normalize username
+	normalizedUsername := utils.NormalizeUsername(username)
+
+	// Validate username format
+	if len(normalizedUsername) < 3 || len(normalizedUsername) > 20 {
+		c.JSON(http.StatusOK, gin.H{
+			"success":   true,
+			"available": false,
+			"message":   "Username must be between 3 and 20 characters",
+		})
+		return
+	}
+
+	// Check if username exists
+	exists, err := h.authSvc.CheckUsernameExists(c.Request.Context(), normalizedUsername)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to check username availability",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"available": !exists,
+		"message":   map[bool]string{true: "Username is available", false: "Username is already taken"}[!exists],
+	})
+}
+
+// OAuthCompleteProfileHandler handles OAuth profile completion
+func (h *AuthHandlers) OAuthCompleteProfileHandler(c *gin.Context) {
+	// Get user ID from JWT (set by auth middleware)
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "User not authenticated",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid user ID",
+		})
+		return
+	}
+
+	var req struct {
+		Password       string  `json:"password" validate:"required,min=8"`
+		Username       string  `json:"username" validate:"required,min=3,max=20,alphanum"`
+		DisplayName    string  `json:"display_name" validate:"required,min=2,max=50"`
+		Gender         *string `json:"gender,omitempty"`
+		Age            *int    `json:"age,omitempty" validate:"omitempty,min=13,max=120"`
+		Bio            *string `json:"bio,omitempty" validate:"omitempty,max=200"`
+		ProfilePicture *string `json:"profile_picture,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request data",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// Convert to service struct format (without JSON tags)
+	serviceReq := struct {
+		Password       string
+		Username       string
+		DisplayName    string
+		Gender         *string
+		Age            *int
+		Bio            *string
+		ProfilePicture *string
+	}{
+		Password:       req.Password,
+		Username:       req.Username,
+		DisplayName:    req.DisplayName,
+		Gender:         req.Gender,
+		Age:            req.Age,
+		Bio:            req.Bio,
+		ProfilePicture: req.ProfilePicture,
+	}
+
+	response, err := h.authSvc.CompleteOAuthProfile(c.Request.Context(), userID, &serviceReq)
+	if err != nil {
+		appErr := errors.GetAppError(err)
+		c.JSON(appErr.Code, gin.H{
+			"success": false,
+			"message": appErr.Message,
+			"error":   appErr.Details,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 // SetupRoutes sets up authentication routes with rate limiting
 func (h *AuthHandlers) SetupRoutes(r *gin.RouterGroup) {
 	// Parse rate limit window duration
@@ -555,6 +740,15 @@ func (h *AuthHandlers) SetupRoutes(r *gin.RouterGroup) {
 			RateLimitMiddleware(h.config.RateLimit.Reset, window, h.rateLimiter),
 			h.ResetPasswordHandler)
 
+		// Send OTP for signup (before registration)
+		auth.POST("/send-signup-otp", h.SendSignupOTPHandler)
+
+		// Verify OTP for signup (before registration)
+		auth.POST("/verify-signup-otp", h.VerifySignupOTPHandler)
+
+		// Username availability check
+		auth.GET("/check-username", h.CheckUsernameHandler)
+
 		// OAuth routes
 		auth.GET("/google/login", h.GoogleLoginHandler)
 		auth.GET("/google/callback", h.GoogleCallbackHandler)
@@ -570,5 +764,6 @@ func (h *AuthHandlers) SetupRoutes(r *gin.RouterGroup) {
 		auth.GET("/me", JWTAuthMiddleware(h.jwtSvc), h.MeHandler)
 		auth.POST("/refresh", JWTAuthMiddleware(h.jwtSvc), h.RefreshHandler)
 		auth.POST("/logout", JWTAuthMiddleware(h.jwtSvc), h.LogoutHandler)
+		auth.POST("/oauth/complete-profile", JWTAuthMiddleware(h.jwtSvc), h.OAuthCompleteProfileHandler)
 	}
 }

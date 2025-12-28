@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
@@ -45,6 +46,24 @@ func (s *StorageService) UploadProfilePicture(ctx context.Context, userID uuid.U
 
 	// Validate file type
 	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		// Try to detect content type from file extension
+		ext := strings.ToLower(filepath.Ext(header.Filename))
+		switch ext {
+		case ".jpg", ".jpeg":
+			contentType = "image/jpeg"
+		case ".png":
+			contentType = "image/png"
+		case ".gif":
+			contentType = "image/gif"
+		case ".webp":
+			contentType = "image/webp"
+		default:
+			contentType = "image/jpeg" // Default fallback
+		}
+		log.Printf("[Storage] Content-Type not provided, detected as: %s", contentType)
+	}
+
 	if !s.isAllowedFileType(contentType) {
 		return "", apperr.NewAppError(400, fmt.Sprintf("File type %s is not allowed. Allowed types: %s", contentType, s.config.AllowedFileTypes))
 	}
@@ -56,30 +75,40 @@ func (s *StorageService) UploadProfilePicture(ctx context.Context, userID uuid.U
 	// Read file content
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		return "", apperr.ErrInternalServer
+		log.Printf("[Storage] Error reading file: %v", err)
+		return "", apperr.NewAppError(http.StatusInternalServerError, fmt.Sprintf("Failed to read file: %v", err))
 	}
 
 	// Upload to Supabase Storage
+	// Supabase Storage API format: POST /storage/v1/object/{bucket}/{path}
 	uploadURL := fmt.Sprintf("%s/storage/v1/object/%s/%s", s.supabaseURL, s.config.BucketName, filename)
+	log.Printf("[Storage] Uploading to: %s (bucket: %s, filename: %s, size: %d bytes, content-type: %s)",
+		uploadURL, s.config.BucketName, filename, len(fileBytes), contentType)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uploadURL, bytes.NewReader(fileBytes))
 	if err != nil {
-		return "", apperr.ErrInternalServer
+		log.Printf("[Storage] Error creating request: %v", err)
+		return "", apperr.NewAppError(http.StatusInternalServerError, fmt.Sprintf("Failed to create upload request: %v", err))
 	}
 
+	// Set required Supabase Storage headers
 	req.Header.Set("apikey", s.apiKey)
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
 	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("x-upsert", "true") // Allow overwriting existing files
 
 	resp, err := s.http.Do(req)
 	if err != nil {
-		return "", apperr.ErrInternalServer
+		log.Printf("[Storage] Error uploading file to Supabase: %v", err)
+		return "", apperr.NewAppError(http.StatusInternalServerError, fmt.Sprintf("Failed to upload to storage: %v", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return "", apperr.NewAppError(resp.StatusCode, fmt.Sprintf("Failed to upload file: %s", string(bodyBytes)))
+		errorMsg := fmt.Sprintf("Supabase storage error (status %d): %s", resp.StatusCode, string(bodyBytes))
+		log.Printf("[Storage] %s", errorMsg)
+		return "", apperr.NewAppError(resp.StatusCode, errorMsg)
 	}
 
 	// Get public URL

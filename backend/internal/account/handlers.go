@@ -12,15 +12,17 @@ import (
 
 // AccountHandlers handles HTTP requests for account management
 type AccountHandlers struct {
-	accountSvc *AccountService
-	profileSvc *ProfileService
+	accountSvc         *AccountService
+	profileSvc         *ProfileService
+	advancedProfileSvc *AdvancedProfileService
 }
 
 // NewAccountHandlers creates new account handlers
-func NewAccountHandlers(accountSvc *AccountService, profileSvc *ProfileService) *AccountHandlers {
+func NewAccountHandlers(accountSvc *AccountService, profileSvc *ProfileService, advancedProfileSvc *AdvancedProfileService) *AccountHandlers {
 	return &AccountHandlers{
-		accountSvc: accountSvc,
-		profileSvc: profileSvc,
+		accountSvc:         accountSvc,
+		profileSvc:         profileSvc,
+		advancedProfileSvc: advancedProfileSvc,
 	}
 }
 
@@ -565,9 +567,12 @@ func (h *AccountHandlers) UploadProfilePictureHandler(c *gin.Context) {
 	pictureURL, err := h.accountSvc.UploadProfilePicture(c.Request.Context(), id, file, header)
 	if err != nil {
 		appErr := errors.GetAppError(err)
+		// Log the full error for debugging
+		c.Error(err) // This will be logged by Gin's error logger
 		c.JSON(appErr.Code, gin.H{
 			"success": false,
 			"message": appErr.Message,
+			"error":   appErr.Details,
 		})
 		return
 	}
@@ -749,11 +754,11 @@ func (h *AccountHandlers) UpdateStory(c *gin.Context) {
 		return
 	}
 
-	// Validate story length if provided
-	if req.Story != nil && len(*req.Story) > 2000 {
+	// Validate story length if provided (1000 characters max)
+	if req.Story != nil && len(*req.Story) > 1000 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"message": "Story must be 2000 characters or less",
+			"message": "Story must be 1000 characters or less",
 		})
 		return
 	}
@@ -1014,6 +1019,53 @@ func (h *AccountHandlers) SetupRoutes(router *gin.RouterGroup) {
 		account.PATCH("/profile/ambition", h.UpdateAmbition)
 		account.PATCH("/profile/social-links", h.UpdateSocialLinks)
 		account.PATCH("/stat-visibility", h.UpdateStatVisibility)
+
+		// Advanced Profile Features
+		// Certifications
+		account.POST("/certifications", h.CreateCertification)
+		account.GET("/certifications", h.GetMyCertifications)
+		account.PATCH("/certifications/:id", h.UpdateCertification)
+		account.DELETE("/certifications/:id", h.DeleteCertification)
+
+		// Skills
+		account.POST("/skills", h.CreateSkill)
+		account.GET("/skills", h.GetMySkills)
+		account.PATCH("/skills/:id", h.UpdateSkill)
+		account.DELETE("/skills/:id", h.DeleteSkill)
+
+		// Languages
+		account.POST("/languages", h.CreateLanguage)
+		account.GET("/languages", h.GetMyLanguages)
+		account.PATCH("/languages/:id", h.UpdateLanguage)
+		account.DELETE("/languages/:id", h.DeleteLanguage)
+
+		// Volunteering
+		account.POST("/volunteering", h.CreateVolunteering)
+		account.GET("/volunteering", h.GetMyVolunteering)
+		account.PATCH("/volunteering/:id", h.UpdateVolunteering)
+		account.DELETE("/volunteering/:id", h.DeleteVolunteering)
+
+		// Publications
+		account.POST("/publications", h.CreatePublication)
+		account.GET("/publications", h.GetMyPublications)
+		account.PATCH("/publications/:id", h.UpdatePublication)
+		account.DELETE("/publications/:id", h.DeletePublication)
+
+		// Interests
+		account.POST("/interests", h.CreateInterest)
+		account.GET("/interests", h.GetMyInterests)
+		account.PATCH("/interests/:id", h.UpdateInterest)
+		account.DELETE("/interests/:id", h.DeleteInterest)
+
+		// Achievements
+		account.POST("/achievements", h.CreateAchievement)
+		account.GET("/achievements", h.GetMyAchievements)
+		account.PATCH("/achievements/:id", h.UpdateAchievement)
+		account.DELETE("/achievements/:id", h.DeleteAchievement)
+
+		// Companies
+		account.GET("/companies/search", h.SearchCompanies)
+		account.POST("/companies", h.CreateCompany)
 	}
 
 	// Public profile endpoint (no auth required, but optional auth for privacy checks)

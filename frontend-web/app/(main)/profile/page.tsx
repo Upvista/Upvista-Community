@@ -411,7 +411,7 @@ export default function ProfilePage() {
         {profile && (
           <div className="max-w-4xl mx-auto">
             {/* Instagram-Style Profile Header */}
-            <div className="bg-white dark:bg-neutral-900 rounded-xl p-4 md:p-6 mb-1">
+            <div className="p-4 md:p-6 mb-1">
               {/* Mobile Layout */}
               <div className="md:hidden">
                 {/* Avatar and Name - Full Width */}
@@ -446,19 +446,19 @@ export default function ProfilePage() {
                       {profile.is_own_profile && (
                         <>
                           {profile.profile_privacy === 'private' && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-500 dark:text-neutral-400">
+                            <div className="flex items-center gap-1 px-2 py-0.5 border border-neutral-200 dark:border-neutral-800 rounded-full text-xs text-neutral-500 dark:text-neutral-400">
                               <Lock className="w-3 h-3" />
                               <span>Private</span>
                             </div>
                           )}
                           {profile.profile_privacy === 'connections' && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-500 dark:text-neutral-400">
+                            <div className="flex items-center gap-1 px-2 py-0.5 border border-neutral-200 dark:border-neutral-800 rounded-full text-xs text-neutral-500 dark:text-neutral-400">
                               <Users className="w-3 h-3" />
                               <span>Connections</span>
                             </div>
                           )}
                           {profile.profile_privacy === 'public' && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-500 dark:text-neutral-400">
+                            <div className="flex items-center gap-1 px-2 py-0.5 border border-neutral-200 dark:border-neutral-800 rounded-full text-xs text-neutral-500 dark:text-neutral-400">
                               <Globe className="w-3 h-3" />
                               <span>Public</span>
                             </div>
@@ -567,7 +567,7 @@ export default function ProfilePage() {
                           href={link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer bg-neutral-100 dark:bg-neutral-800 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-900/20"
+                          className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer border border-neutral-200 dark:border-neutral-800 hover:border-brand-purple-500"
                           title={platform.label}
                         >
                           <Icon 
@@ -595,17 +595,8 @@ export default function ProfilePage() {
                     <Button 
                       variant="secondary" 
                       size="sm"
-                      onClick={handleShareProfile}
-                      className="flex-1 text-xs py-2"
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                      Share
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      size="sm"
                       onClick={() => setPreviewMode(true)}
-                      className="px-3 text-xs py-2"
+                      className="flex-1 text-xs py-2"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       Preview
@@ -745,19 +736,19 @@ export default function ProfilePage() {
                       {profile.is_own_profile && (
                         <>
                           {profile.profile_privacy === 'private' && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-600 dark:text-neutral-400">
+                            <div className="flex items-center gap-1 px-2 py-0.5 border border-neutral-200 dark:border-neutral-800 rounded-full text-xs text-neutral-600 dark:text-neutral-400">
                               <Lock className="w-3 h-3" />
                               <span>Private</span>
                             </div>
                           )}
                           {profile.profile_privacy === 'connections' && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-600 dark:text-neutral-400">
+                            <div className="flex items-center gap-1 px-2 py-0.5 border border-neutral-200 dark:border-neutral-800 rounded-full text-xs text-neutral-600 dark:text-neutral-400">
                               <Users className="w-3 h-3" />
                               <span>Connections</span>
                             </div>
                           )}
                           {profile.profile_privacy === 'public' && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs text-neutral-600 dark:text-neutral-400">
+                            <div className="flex items-center gap-1 px-2 py-0.5 border border-neutral-200 dark:border-neutral-800 rounded-full text-xs text-neutral-600 dark:text-neutral-400">
                               <Globe className="w-3 h-3" />
                               <span>Public</span>
                             </div>
@@ -851,7 +842,7 @@ export default function ProfilePage() {
                               href={link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer bg-neutral-100 dark:bg-neutral-800 hover:bg-brand-purple-50 dark:hover:bg-brand-purple-900/20"
+                              className="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 cursor-pointer border border-neutral-200 dark:border-neutral-800 hover:border-brand-purple-500"
                               title={platform.label}
                             >
                               <Icon 
@@ -887,7 +878,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Tabs - Instagram Style */}
-            <div className="mt-4 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+            <div className="mt-4 border-b border-neutral-200 dark:border-neutral-800">
               <div className="grid grid-cols-4 md:flex md:justify-center md:gap-12">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -914,9 +905,9 @@ export default function ProfilePage() {
 
             {/* Tab Content */}
             {activeTab === 'Feed' && (
-              <div className="mt-4 bg-white dark:bg-neutral-900 p-6 rounded-xl border border-neutral-200 dark:border-neutral-800">
+              <div className="mt-4 p-6">
                 <div className="text-center py-16">
-                  <div className="w-20 h-20 mx-auto mb-6 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+                  <div className="w-20 h-20 mx-auto mb-6 border border-neutral-200 dark:border-neutral-800 rounded-full flex items-center justify-center">
                     <Grid3x3 className="w-10 h-10 text-neutral-400" />
                   </div>
                   <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
@@ -930,9 +921,9 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'Communities' && (
-              <div className="mt-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+              <div className="mt-4 p-6">
                 <div className="text-center py-16">
-                  <div className="w-20 h-20 mx-auto mb-6 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+                  <div className="w-20 h-20 mx-auto mb-6 border border-neutral-200 dark:border-neutral-800 rounded-full flex items-center justify-center">
                     <Users className="w-10 h-10 text-neutral-400" />
                   </div>
                   <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
@@ -946,9 +937,9 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'Projects' && (
-              <div className="mt-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+              <div className="mt-4 p-6">
                 <div className="text-center py-16">
-                  <div className="w-20 h-20 mx-auto mb-6 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
+                  <div className="w-20 h-20 mx-auto mb-6 border border-neutral-200 dark:border-neutral-800 rounded-full flex items-center justify-center">
                     <Rocket className="w-10 h-10 text-neutral-400" />
                   </div>
                   <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
@@ -964,7 +955,7 @@ export default function ProfilePage() {
             {activeTab === 'About' && (
               <div className="mt-4 space-y-4">
                 {/* Tell Your Story */}
-                <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                <div className="p-6 border-b border-neutral-200 dark:border-neutral-800">
                   <div className="flex items-start justify-between mb-4">
                     <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
                       {(profile.is_own_profile && !previewMode) ? (profile.story ? 'My Story' : 'Add Your Story') : 'My Story'}
@@ -1016,7 +1007,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Ambition */}
-                <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                <div className="p-6 border-b border-neutral-200 dark:border-neutral-800">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <Target className="w-5 h-5 text-brand-purple-600" />
@@ -1058,7 +1049,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Experience Section */}
-                <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                <div className="p-6 border-b border-neutral-200 dark:border-neutral-800">
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center gap-2">
                       <Briefcase className="w-5 h-5 text-brand-purple-600" />
@@ -1113,7 +1104,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Education Section */}
-                <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl p-6 rounded-xl border border-white/20 dark:border-neutral-800/50 shadow-lg shadow-black/5 dark:shadow-black/20">
+                <div className="p-6 border-b border-neutral-200 dark:border-neutral-800">
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex items-center gap-2">
                       <GraduationCap className="w-5 h-5 text-brand-purple-600" />
@@ -1168,13 +1159,13 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Skills & Achievements - Coming Soon */}
-                <div className="bg-white dark:bg-neutral-900 p-6 rounded-xl">
+                <div className="p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Award className="w-5 h-5 text-neutral-400" />
                     <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
                       Skills & Achievements
                     </h3>
-                    <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-medium">
+                    <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-md border border-neutral-200 dark:border-neutral-800 text-neutral-500 font-medium">
                       Coming Soon
                     </span>
                   </div>

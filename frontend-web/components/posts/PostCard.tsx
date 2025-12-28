@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pin, ArrowRight, Clock, BookOpen } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { Post, formatPostTimestamp, highlightHashtagsAndMentions } from '@/lib/api/posts';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
@@ -50,14 +49,11 @@ export default function PostCard({
   if (isArticle && post.article) {
     return (
       <>
-        <motion.div
-          whileHover={{ y: -2 }}
-          transition={{ duration: 0.2 }}
-        >
+        <div>
           <Card
             variant="glass"
             hoverable={false}
-            className="-mx-4 md:mx-0 p-0 overflow-hidden rounded-none md:rounded-2xl bg-white/5 dark:bg-white/5 backdrop-blur-[5px] border-0 shadow-none"
+            className="max-w-2xl mx-auto p-0 overflow-hidden border-b border-neutral-200 dark:border-neutral-800 bg-transparent"
           >
             {/* Cover Image - Full Width */}
             {post.article.cover_image_url && (
@@ -118,7 +114,7 @@ export default function PostCard({
                     e.stopPropagation();
                     setShowMenu(!showMenu);
                   }}
-                  className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 p-1 rounded-full transition-colors"
                 >
                   <MoreVertical className="w-5 h-5" />
                 </button>
@@ -127,7 +123,7 @@ export default function PostCard({
               {/* Article Content */}
               <div className="mb-5">
                 {/* Article Type Badge */}
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-md mb-4">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-neutral-200 dark:border-neutral-800 rounded-md mb-4">
                   <BookOpen className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
                   <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">
                     Article
@@ -217,7 +213,7 @@ export default function PostCard({
               />
             </div>
           </Card>
-        </motion.div>
+        </div>
 
         {/* Comment Modal */}
         <CommentModal
@@ -239,16 +235,14 @@ export default function PostCard({
   };
 
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.2 }}
+    <div
       onClick={handlePostClick}
       className="cursor-pointer"
     >
       <Card
         variant="glass"
         hoverable={false}
-        className="-mx-4 md:mx-0 p-4 md:p-6 overflow-hidden rounded-none md:rounded-2xl bg-white/5 dark:bg-white/5 backdrop-blur-[5px] border-0 shadow-none"
+        className="max-w-2xl mx-auto p-4 md:p-6 overflow-hidden border-b border-neutral-200 dark:border-neutral-800 bg-transparent"
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-4 pt-0 md:pt-2">
@@ -376,7 +370,7 @@ export default function PostCard({
         isOpen={showCommentModal}
         onClose={() => setShowCommentModal(false)}
       />
-    </motion.div>
+    </div>
   );
 }
 

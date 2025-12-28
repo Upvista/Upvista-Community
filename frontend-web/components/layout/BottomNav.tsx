@@ -5,19 +5,19 @@
  * Created by: Hamza Hafeez - Founder & CEO of Upvista
  * 
  * Mobile bottom navigation bar
- * iOS-inspired minimal professional design
+ * Minimal transparent design
  */
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Home, Users, PlusSquare, Compass, User as UserIcon } from 'lucide-react';
+import { Home, Calendar, PlusSquare, Compass, User as UserIcon } from 'lucide-react';
 import { useUser } from '@/lib/hooks/useUser';
 import { Avatar } from '@/components/ui/Avatar';
 
 const navigation = [
   { name: 'Home', href: '/home', icon: Home },
-  { name: 'Communities', href: '/communities', icon: Users },
+  { name: 'Events', href: '/events', icon: Calendar },
   { name: 'Create', href: '/create', icon: PlusSquare, special: true },
   { name: 'Explore', href: '/explore', icon: Compass },
   { name: 'Profile', href: '/profile', icon: UserIcon, useAvatar: true },
@@ -30,7 +30,7 @@ export function BottomNav() {
   const isActive = (href: string) => pathname === href;
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-14 md:h-14 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-neutral-200/30 dark:border-neutral-800/30 shadow-lg">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-14 md:h-14 z-50 border-t border-neutral-200/50 dark:border-neutral-800/50">
       <div className="h-full px-2 flex items-center justify-around">
         {navigation.map((item) => {
           const Icon = item.icon;
@@ -118,5 +118,3 @@ export function BottomNav() {
     </nav>
   );
 }
-
-

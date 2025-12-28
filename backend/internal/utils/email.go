@@ -39,23 +39,33 @@ func (e *EmailService) SendVerificationEmail(to, code string) error {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		@media only screen and (max-width: 600px) {
+			.mobile-padding { padding: 30px 20px !important; }
+			.mobile-header-padding { padding: 30px 20px !important; }
+			.mobile-footer-padding { padding: 20px 20px !important; }
+			.mobile-content-padding { padding: 30px 20px 30px !important; }
+			.mobile-text { font-size: 14px !important; }
+			.mobile-title { font-size: 20px !important; }
+		}
+	</style>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; line-height: 1.6;">
 		<table width="100%%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
 		<tr>
 			<td align="center">
-					<table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 600px;">
+					<table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 600px; width: 100%%;">
 					<!-- Header -->
 					<tr>
-							<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
+							<td class="mobile-header-padding" style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
 								<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 						</td>
 					</tr>
 					<!-- Content -->
 					<tr>
-							<td style="padding: 50px 50px 40px;">
-								<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Email Verification Required</h2>
-								<p style="margin: 0 0 30px; color: #4a5568; font-size: 16px; line-height: 1.7;">Thank you for registering with Asteria. To complete your account setup, please verify your email address using the verification code below.</p>
+							<td class="mobile-content-padding" style="padding: 50px 50px 40px;">
+								<h2 class="mobile-title" style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Email Verification Required</h2>
+								<p class="mobile-text" style="margin: 0 0 30px; color: #4a5568; font-size: 16px; line-height: 1.7;">Thank you for registering with Asteria. To complete your account setup, please verify your email address using the verification code below.</p>
 							
 							<!-- Verification Code Box -->
 								<table width="100%%" cellpadding="0" cellspacing="0" style="margin: 35px 0;">
@@ -66,23 +76,23 @@ func (e *EmailService) SendVerificationEmail(to, code string) error {
 								</tr>
 							</table>
 							
-								<p style="margin: 25px 0 0; color: #718096; font-size: 14px; line-height: 1.6;">This verification code will expire in <strong style="color: #1a1f3a;">10 minutes</strong>.</p>
+								<p class="mobile-text" style="margin: 25px 0 0; color: #718096; font-size: 14px; line-height: 1.6;">This verification code will expire in <strong style="color: #1a1f3a;">10 minutes</strong>.</p>
 								
 								<div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #e2e8f0;">
-									<p style="margin: 0 0 15px; color: #718096; font-size: 13px; line-height: 1.6;">If you did not create an account with Asteria, please disregard this email. No further action is required.</p>
+									<p class="mobile-text" style="margin: 0 0 15px; color: #718096; font-size: 13px; line-height: 1.6;">If you did not create an account with Asteria, please disregard this email. No further action is required.</p>
 							</div>
 						</td>
 					</tr>
 					<!-- Footer -->
 					<tr>
-							<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-								<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
-								<p style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
+							<td class="mobile-footer-padding" style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+								<p class="mobile-text" style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
+								<p class="mobile-text" style="margin: 0; color: #a0aec0; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
 									</td>
 								</tr>
 							</table>
 					<!-- Footer Text -->
-					<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
+					<table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%%; margin-top: 20px;">
 						<tr>
 							<td align="center">
 								<p style="margin: 0; color: #a0aec0; font-size: 12px;">© %d Asteria. All rights reserved.</p>
@@ -181,62 +191,73 @@ func (e *EmailService) SendWelcomeEmail(to, displayName string) error {
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<style>
+			@media only screen and (max-width: 600px) {
+				.mobile-padding { padding: 30px 20px !important; }
+				.mobile-header-padding { padding: 30px 20px !important; }
+				.mobile-footer-padding { padding: 20px 20px !important; }
+				.mobile-content-padding { padding: 30px 20px 30px !important; }
+				.mobile-feature-padding { padding: 20px !important; }
+				.mobile-text { font-size: 14px !important; }
+				.mobile-title { font-size: 20px !important; }
+			}
+		</style>
 	</head>
 	<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; line-height: 1.6;">
 		<table width="100%%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fa; padding: 40px 20px;">
 			<tr>
 				<td align="center">
-					<table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 600px;">
+					<table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 600px; width: 100%%;">
 						<!-- Header -->
 						<tr>
-							<td style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
+							<td class="mobile-header-padding" style="background: linear-gradient(135deg, #1a1f3a 0%%, #2d3561 100%%); padding: 40px 50px; border-radius: 8px 8px 0 0;">
 								<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">Asteria</h1>
 							</td>
 						</tr>
 						<!-- Content -->
 						<tr>
-							<td style="padding: 50px 50px 40px;">
-								<h2 style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Welcome, %s</h2>
-								<p style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Your email address has been successfully verified. Your Asteria account is now active and ready to use.</p>
+							<td class="mobile-content-padding" style="padding: 50px 50px 40px;">
+								<h2 class="mobile-title" style="margin: 0 0 20px; color: #1a1f3a; font-size: 24px; font-weight: 600; letter-spacing: -0.3px;">Welcome, %s</h2>
+								<p class="mobile-text" style="margin: 0 0 25px; color: #4a5568; font-size: 16px; line-height: 1.7;">Your email address has been successfully verified. Your Asteria account is now active and ready to use.</p>
 								
 								<!-- Features Section -->
-								<div style="margin: 35px 0; padding: 30px; background-color: #f7f9fc; border-radius: 6px; border-left: 4px solid #1a1f3a;">
-									<p style="margin: 0 0 20px; color: #1a1f3a; font-size: 16px; font-weight: 600;">Get started with Asteria:</p>
+								<div class="mobile-feature-padding" style="margin: 35px 0; padding: 30px; background-color: #f7f9fc; border-radius: 6px; border-left: 4px solid #1a1f3a;">
+									<p class="mobile-text" style="margin: 0 0 20px; color: #1a1f3a; font-size: 16px; font-weight: 600;">Get started with Asteria:</p>
 									<table width="100%%" cellpadding="0" cellspacing="0">
 										<tr>
 											<td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-												<p style="margin: 0; color: #4a5568; font-size: 15px; line-height: 1.6;">Connect with industry professionals and expand your network</p>
+												<p class="mobile-text" style="margin: 0; color: #4a5568; font-size: 15px; line-height: 1.6;">Connect with industry professionals and expand your network</p>
 											</td>
 										</tr>
 										<tr>
 											<td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-												<p style="margin: 0; color: #4a5568; font-size: 15px; line-height: 1.6;">Showcase your projects and build your professional portfolio</p>
+												<p class="mobile-text" style="margin: 0; color: #4a5568; font-size: 15px; line-height: 1.6;">Showcase your projects and build your professional portfolio</p>
 											</td>
 										</tr>
 										<tr>
 											<td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-												<p style="margin: 0; color: #4a5568; font-size: 15px; line-height: 1.6;">Discover exclusive freelance and collaboration opportunities</p>
+												<p class="mobile-text" style="margin: 0; color: #4a5568; font-size: 15px; line-height: 1.6;">Discover exclusive freelance and collaboration opportunities</p>
 											</td>
 										</tr>
 										<tr>
 											<td style="padding: 12px 0;">
-												<p style="margin: 0; color: #4a5568; font-size: 15px; line-height: 1.6;">Access premium resources and industry insights</p>
+												<p class="mobile-text" style="margin: 0; color: #4a5568; font-size: 15px; line-height: 1.6;">Access premium resources and industry insights</p>
 											</td>
 										</tr>
 									</table>
 								</div>
 								
-								<div style="margin-top: 35px; padding: 25px; background-color: #f7f9fc; border-radius: 6px;">
-									<p style="margin: 0 0 10px; color: #1a1f3a; font-size: 15px; font-weight: 600;">Need assistance?</p>
-									<p style="margin: 0; color: #718096; font-size: 14px; line-height: 1.6;">Our support team is available to help you get the most out of your Asteria experience.</p>
+								<div class="mobile-feature-padding" style="margin-top: 35px; padding: 25px; background-color: #f7f9fc; border-radius: 6px;">
+									<p class="mobile-text" style="margin: 0 0 10px; color: #1a1f3a; font-size: 15px; font-weight: 600;">Need assistance?</p>
+									<p class="mobile-text" style="margin: 0; color: #718096; font-size: 14px; line-height: 1.6;">Our support team is available to help you get the most out of your Asteria experience.</p>
 								</div>
 							</td>
 						</tr>
 						<!-- Footer -->
 						<tr>
-							<td style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
-								<p style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
-								<p style="margin: 0; color: #a0aec0; font-size: 12px;">Thank you for joining our community.</p>
+							<td class="mobile-footer-padding" style="background-color: #f7f9fc; padding: 30px 50px; border-radius: 0 0 8px 8px; border-top: 1px solid #e2e8f0;">
+								<p class="mobile-text" style="margin: 0 0 10px; color: #718096; font-size: 13px; line-height: 1.6;">Asteria</p>
+								<p class="mobile-text" style="margin: 0; color: #a0aec0; font-size: 12px;">Thank you for joining our community.</p>
 							</td>
 						</tr>
 					</table>
@@ -324,7 +345,7 @@ func ValidateEmailFormat(email string) bool {
 
 // SendPasswordChangedEmail sends notification when password is changed
 func (e *EmailService) SendPasswordChangedEmail(to, displayName string) error {
-	subject := "Password Changed - Upvista Community"
+	subject := "Password Changed - Asteria"
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>

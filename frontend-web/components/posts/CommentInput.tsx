@@ -70,7 +70,7 @@ export default function CommentInput({
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-3 px-4 py-2">
+      <div className="flex items-center gap-3 px-4 py-3">
         {/* User Avatar */}
         <Avatar
           src={user?.profile_picture}
@@ -102,12 +102,12 @@ export default function CommentInput({
           />
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Button - Instagram Style */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {editingComment && onCancel && (
             <button
               onClick={onCancel}
-              className="p-1 hover:opacity-70 transition-opacity"
+              className="p-1 transition-opacity"
               type="button"
             >
               <X className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
@@ -120,7 +120,7 @@ export default function CommentInput({
               text-sm font-semibold transition-opacity
               ${isDisabled
                 ? 'text-blue-300 dark:text-blue-600 cursor-not-allowed opacity-50'
-                : 'text-blue-500 dark:text-blue-400 hover:opacity-70'
+                : 'text-blue-500 dark:text-blue-400'
               }
             `}
             type="button"

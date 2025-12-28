@@ -2,7 +2,7 @@
 
 /**
  * Main Layout Component
- * Created by: Hamza Hafeez - Founder & CEO of Upvista
+ * Created by: Hamza Hafeez - Founder & CEO of Asteria
  * 
  * Main application layout with sidebar and navigation
  * Responsive: Desktop sidebar, mobile top/bottom nav
@@ -13,6 +13,8 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { BottomNav } from './BottomNav';
 import { useMessages } from '@/lib/contexts/MessagesContext';
+import { useTheme } from '@/lib/contexts/ThemeContext';
+import { GradientBackground } from '@/components/ui/GradientBackground';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -22,6 +24,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, showRightPanel = false, rightPanel }: MainLayoutProps) {
   const { openMessages } = useMessages();
+  const { theme } = useTheme();
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const touchActiveRef = useRef<boolean>(false);
@@ -60,12 +63,8 @@ export function MainLayout({ children, showRightPanel = false, rightPanel }: Mai
     }
   };
 
-  return (
-    <div
-      className="min-h-screen bg-neutral-50 dark:bg-neutral-950"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+  const content = (
+    <>
       {/* Desktop Sidebar */}
       <Sidebar />
       
@@ -99,6 +98,31 @@ export function MainLayout({ children, showRightPanel = false, rightPanel }: Mai
       
       {/* Mobile Bottom Nav */}
       <BottomNav />
+    </>
+  );
+
+  // Use GradientBackground for Asteria theme
+  if (theme === 'asteria') {
+    return (
+      <GradientBackground>
+        <div
+          className="min-h-screen"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          {content}
+        </div>
+      </GradientBackground>
+    );
+  }
+
+  return (
+    <div
+      className="min-h-screen bg-neutral-50 dark:bg-neutral-950"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {content}
     </div>
   );
 }

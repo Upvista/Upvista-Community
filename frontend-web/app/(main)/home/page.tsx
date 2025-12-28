@@ -27,9 +27,9 @@ export default function HomePage() {
 
   return (
     <MainLayout showRightPanel={true} rightPanel={<RightPanel />}>
-      <div className="space-y-6">
+      <div className="space-y-4 max-w-2xl mx-auto px-4 md:px-0">
         {/* Feed Tabs */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
           {[
             { id: 'home' as const, label: 'For You' },
             { id: 'following' as const, label: 'Following' },
@@ -41,7 +41,7 @@ export default function HomePage() {
               className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                 activeTab === tab.id
                   ? 'bg-purple-600 text-white shadow-md'
-                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                  : 'border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-brand-purple-500'
               }`}
             >
               {tab.label}

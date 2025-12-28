@@ -31,9 +31,11 @@ func ValidateRegistration(req *models.RegisterRequest) error {
 		return errors.ErrInvalidUsername
 	}
 
-	// Validate age
-	if err := ValidateAge(req.Age); err != nil {
+	// Validate age if provided
+	if req.Age != nil {
+		if err := ValidateAge(*req.Age); err != nil {
 		return errors.ErrInvalidAge
+		}
 	}
 
 	return nil

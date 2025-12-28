@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart, MoreVertical, Reply, Trash2, Edit2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { MoreVertical, Reply, Trash2, Edit2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Comment, formatPostTimestamp } from '@/lib/api/posts';
 import { Avatar } from '../ui/Avatar';
 import VerifiedBadge from '../ui/VerifiedBadge';
@@ -49,12 +49,7 @@ export default function CommentItem({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
-      className="flex gap-3 group"
-    >
+    <div className="flex gap-3 group">
       <Avatar
         src={comment.author?.profile_picture}
         alt={comment.author?.display_name || comment.author?.username || 'User'}
@@ -88,7 +83,7 @@ export default function CommentItem({
               <div className="relative flex-shrink-0">
                 <button
                   onClick={() => onToggleMenu(comment.id)}
-                  className="p-1 hover:opacity-70 transition-opacity opacity-0 group-hover:opacity-100"
+                  className="p-1 transition-opacity opacity-0 group-hover:opacity-100"
                 >
                   <MoreVertical className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
                 </button>
@@ -100,24 +95,24 @@ export default function CommentItem({
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
                       transition={{ duration: 0.15 }}
                       className="absolute right-0 top-8 z-20
-                        bg-white dark:bg-neutral-800
-                        border border-neutral-200 dark:border-neutral-700
+                        bg-white dark:bg-neutral-900
+                        border border-neutral-200 dark:border-neutral-800
                         rounded-lg shadow-lg
                         py-1 min-w-[140px]
                       "
                     >
                       <button
                         onClick={onEdit}
-                        className="w-full px-4 py-2 text-left text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2 transition-colors"
+                        className="w-full px-4 py-2 text-left text-sm text-neutral-700 dark:text-neutral-300 transition-colors"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-4 h-4 inline mr-2" />
                         Edit
                       </button>
                       <button
                         onClick={onDelete}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 transition-colors"
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 transition-colors"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 inline mr-2" />
                         Delete
                       </button>
                     </motion.div>
@@ -128,7 +123,7 @@ export default function CommentItem({
           </div>
         </div>
 
-        {/* Comment Actions */}
+        {/* Comment Actions - Instagram Style */}
         <div className="flex items-center gap-4 mb-2">
           <span className="text-xs text-neutral-400 dark:text-neutral-500">
             {formatPostTimestamp(comment.created_at)}
@@ -140,7 +135,7 @@ export default function CommentItem({
               text-xs font-semibold transition-colors
               ${comment.is_liked
                 ? 'text-red-600 dark:text-red-400'
-                : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400'
+                : 'text-neutral-400 dark:text-neutral-500'
               }
               ${isLiking ? 'opacity-50' : ''}
             `}
@@ -150,13 +145,13 @@ export default function CommentItem({
           {depth < 2 && (
             <button
               onClick={onReply}
-              className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
+              className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 transition-colors"
             >
               Reply
             </button>
           )}
           {comment.likes_count > 0 && (
-            <span className="text-xs text-neutral-400 dark:text-neutral-500">
+            <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-50">
               {comment.likes_count} {comment.likes_count === 1 ? 'like' : 'likes'}
             </span>
           )}
@@ -164,12 +159,7 @@ export default function CommentItem({
 
         {/* Replies */}
         {showReplies && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            transition={{ duration: 0.3 }}
-            className="ml-4 mt-2 space-y-3 border-l-2 border-neutral-200/50 dark:border-neutral-700/50 pl-4"
-          >
+          <div className="ml-4 mt-3 space-y-4 pl-4 border-l border-neutral-200 dark:border-neutral-800">
             {comment.replies?.map((reply) => (
               <CommentItem
                 key={reply.id}
@@ -188,23 +178,23 @@ export default function CommentItem({
             {comment.replies_count > (comment.replies?.length || 0) && (
               <button
                 onClick={onLoadReplies}
-                className="text-xs text-purple-600 dark:text-purple-400 font-semibold hover:underline transition-colors"
+                className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-2 transition-colors"
               >
                 View {comment.replies_count - (comment.replies?.length || 0)} more replies
               </button>
             )}
-          </motion.div>
+          </div>
         )}
         {hasReplies && !showReplies && (
           <button
             onClick={onLoadReplies}
-            className="text-xs text-purple-600 dark:text-purple-400 font-semibold hover:underline mt-2 transition-colors"
+            className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-2 transition-colors"
           >
             View {comment.replies_count} {comment.replies_count === 1 ? 'reply' : 'replies'}
           </button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
 

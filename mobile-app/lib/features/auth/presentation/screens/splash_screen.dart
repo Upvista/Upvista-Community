@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/gradient_background.dart';
+import '../../data/providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -41,10 +43,15 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Navigate after animation
+    // Check auth status and navigate
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
+        final authProvider = context.read<AuthProvider>();
+        if (authProvider.isAuthenticated) {
+          context.go('/home');
+        } else {
         context.go('/welcome');
+        }
       }
     });
   }

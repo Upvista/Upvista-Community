@@ -57,15 +57,13 @@ class _WelcomeCompleteScreenState extends State<WelcomeCompleteScreen>
     _scaleController.forward();
     _rotationController.repeat();
 
-    // Show button after animations
-    Future.delayed(const Duration(milliseconds: 1200), () {
+    // Show button immediately (no delay for speed)
       if (mounted) {
         setState(() {
           _showButton = true;
         });
         _fadeController.forward();
       }
-    });
   }
 
   @override

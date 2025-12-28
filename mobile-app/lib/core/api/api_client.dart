@@ -157,13 +157,9 @@ class ApiClient {
     int retryCount = 0,
   }) async {
     try {
-      // Check connectivity before making request
-      final isConnected = await _connectivity.checkConnectivity();
-      if (!isConnected) {
-        throw const NetworkException(
-          'No internet connection. Please check your network settings.',
-        );
-      }
+      // Note: Connectivity check is now non-blocking
+      // We let the actual request handle network errors
+      // This prevents false "no internet" errors
 
       // Make request
       final response = await request();
@@ -210,12 +206,8 @@ class ApiClient {
     T Function(dynamic)? fromJson,
   }) async {
     try {
-      final isConnected = await _connectivity.checkConnectivity();
-      if (!isConnected) {
-        throw const NetworkException(
-          'No internet connection. Please check your network settings.',
-        );
-      }
+      // Note: Connectivity check is now non-blocking
+      // We let the actual request handle network errors
 
       final formData = FormData.fromMap({
         fileKey: await MultipartFile.fromFile(filePath),
