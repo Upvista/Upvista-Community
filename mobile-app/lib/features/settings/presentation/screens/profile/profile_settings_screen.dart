@@ -18,7 +18,10 @@ class ProfileSettingsScreen extends StatelessWidget {
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     GestureDetector(
@@ -45,7 +48,10 @@ class ProfileSettingsScreen extends StatelessWidget {
                   physics: const BouncingScrollPhysics(
                     parent: AlwaysScrollableScrollPhysics(),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
                   children: [
                     // Profile Preview Card
                     Container(
@@ -129,7 +135,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Basic Information Section
                     _SectionHeader(title: 'Basic Information'),
                     _SettingsItem(
@@ -196,11 +202,11 @@ class ProfileSettingsScreen extends StatelessWidget {
                         context.push('/settings/profile/social-links');
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
                     _SectionDivider(),
                     const SizedBox(height: 16),
-                    
+
                     // About Section
                     _SectionHeader(title: 'About Section'),
                     _SettingsItem(
@@ -291,11 +297,11 @@ class ProfileSettingsScreen extends StatelessWidget {
                         context.push('/settings/profile/more-sections');
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
                     _SectionDivider(),
                     const SizedBox(height: 16),
-                    
+
                     // Profile Visibility
                     _SectionHeader(title: 'Profile Visibility'),
                     _SettingsItem(
@@ -330,11 +336,11 @@ class ProfileSettingsScreen extends StatelessWidget {
                         context.push('/settings/profile/search-indexing');
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
                     _SectionDivider(),
                     const SizedBox(height: 16),
-                    
+
                     // Professional Information
                     _SectionHeader(title: 'Professional Information'),
                     _SettingsItem(
@@ -361,11 +367,11 @@ class ProfileSettingsScreen extends StatelessWidget {
                         context.push('/settings/profile/industry');
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
                     _SectionDivider(),
                     const SizedBox(height: 16),
-                    
+
                     // Profile Sections Management
                     _SectionHeader(title: 'Profile Sections'),
                     _SettingsItem(
@@ -392,11 +398,11 @@ class ProfileSettingsScreen extends StatelessWidget {
                         context.push('/settings/profile/highlights');
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
                     _SectionDivider(),
                     const SizedBox(height: 16),
-                    
+
                     // Profile Customization
                     _SectionHeader(title: 'Customization'),
                     _SettingsItem(
@@ -415,11 +421,11 @@ class ProfileSettingsScreen extends StatelessWidget {
                         context.push('/settings/profile/layout');
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
                     _SectionDivider(),
                     const SizedBox(height: 16),
-                    
+
                     // QR Code & Sharing
                     _SectionHeader(title: 'QR Code & Sharing'),
                     _SettingsItem(
@@ -446,11 +452,11 @@ class ProfileSettingsScreen extends StatelessWidget {
                         context.push('/settings/profile/custom-url');
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
                     _SectionDivider(),
                     const SizedBox(height: 16),
-                    
+
                     // Advanced Settings
                     _SectionHeader(title: 'Advanced'),
                     _SettingsItem(
@@ -485,7 +491,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                         context.push('/settings/profile/deactivate');
                       },
                     ),
-                    
+
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -562,11 +568,7 @@ class _SettingsItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           child: Row(
             children: [
-              Icon(
-                icon,
-                color: AppColors.textSecondary,
-                size: 24,
-              ),
+              Icon(icon, color: AppColors.textSecondary, size: 24),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -574,9 +576,7 @@ class _SettingsItem extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTextStyles.bodyMedium(
-                        weight: FontWeight.w500,
-                      ),
+                      style: AppTextStyles.bodyMedium(weight: FontWeight.w500),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -601,4 +601,3 @@ class _SettingsItem extends StatelessWidget {
     );
   }
 }
-

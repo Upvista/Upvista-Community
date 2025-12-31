@@ -253,6 +253,7 @@ func main() {
 	wsHandlers := websocket.NewHandlers(wsManager, jwtSvc)
 	notificationHandlers := notifications.NewHandlers(notificationSvc)
 	eventHandlers := events.NewHandlers(eventSvc, storageSvc)
+	courseHandlers := courses.NewHandlers(courseSvc)
 
 	// Create Gin router with middleware
 	r := gin.Default()

@@ -235,9 +235,7 @@ class _RecentSearches extends StatelessWidget {
               },
               child: Text(
                 'Clear All',
-                style: AppTextStyles.bodySmall(
-                  color: AppColors.accentPrimary,
-                ),
+                style: AppTextStyles.bodySmall(color: AppColors.accentPrimary),
               ),
             ),
           ],
@@ -278,11 +276,7 @@ class _RecentSearchItem extends StatelessWidget {
           color: AppColors.backgroundSecondary.withOpacity(0.5),
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          _getIcon(),
-          color: AppColors.textSecondary,
-          size: 22,
-        ),
+        child: Icon(_getIcon(), color: AppColors.textSecondary, size: 22),
       ),
       title: Text(
         search['name'] ?? search['content'] ?? '',
@@ -296,11 +290,11 @@ class _RecentSearchItem extends StatelessWidget {
               style: AppTextStyles.bodySmall(color: AppColors.textSecondary),
             )
           : search['members'] != null
-              ? Text(
-                  '${search['members']} members',
-                  style: AppTextStyles.bodySmall(color: AppColors.textSecondary),
-                )
-              : null,
+          ? Text(
+              '${search['members']} members',
+              style: AppTextStyles.bodySmall(color: AppColors.textSecondary),
+            )
+          : null,
       trailing: IconButton(
         icon: Icon(Icons.close, color: AppColors.textTertiary, size: 20),
         onPressed: () {
@@ -461,9 +455,7 @@ class _CommunitiesTab extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'Communities',
-              style: AppTextStyles.headlineSmall(
-                weight: FontWeight.bold,
-              ),
+              style: AppTextStyles.headlineSmall(weight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text(
@@ -476,9 +468,7 @@ class _CommunitiesTab extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Currently under development',
-              style: AppTextStyles.bodySmall(
-                color: AppColors.textSecondary,
-              ),
+              style: AppTextStyles.bodySmall(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
           ],
@@ -533,11 +523,7 @@ class _UserResultItem extends StatelessWidget {
             color: AppColors.accentPrimary.withOpacity(0.2),
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            Icons.person,
-            color: AppColors.accentPrimary,
-            size: 28,
-          ),
+          child: Icon(Icons.person, color: AppColors.accentPrimary, size: 28),
         ),
         title: Row(
           children: [
@@ -550,11 +536,7 @@ class _UserResultItem extends StatelessWidget {
             ),
             if (isVerified) ...[
               const SizedBox(width: 4),
-              Icon(
-                Icons.verified,
-                color: AppColors.success,
-                size: 16,
-              ),
+              Icon(Icons.verified, color: AppColors.success, size: 16),
             ],
           ],
         ),
@@ -630,11 +612,7 @@ class _CommunityResultItem extends StatelessWidget {
             color: AppColors.accentPrimary.withOpacity(0.2),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            icon,
-            color: AppColors.accentPrimary,
-            size: 28,
-          ),
+          child: Icon(icon, color: AppColors.accentPrimary, size: 28),
         ),
         title: Text(
           name,
@@ -809,4 +787,3 @@ class _PostResultItem extends StatelessWidget {
     );
   }
 }
-
